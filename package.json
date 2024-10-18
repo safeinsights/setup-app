@@ -15,7 +15,6 @@
         "test:unit": "vitest",
         "test": "run-p -c test:*"
     },
-    "author": "Nathan Stitt",
     "license": "AGPL-3.0-or-later",
     "devDependencies": {
         "@playwright/test": "^1.47",
@@ -24,6 +23,7 @@
         "@vanilla-extract/vite-plugin": "^4.0.16",
         "@vitejs/plugin-react": "^4.3.2",
         "@vitest/coverage-v8": "^2.1.1",
+        "aws-sdk-client-mock": "^4.1.0",
         "dotenv": "*",
         "eslint": "*",
         "eslint-config-next": "*",
