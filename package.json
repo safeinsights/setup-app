@@ -20,6 +20,7 @@
     "devDependencies": {
         "@playwright/test": "^1.47",
         "@testing-library/react": "^16.0",
+        "@types/jsonwebtoken": "^9.0.7",
         "@types/react": "18.3",
         "@vanilla-extract/vite-plugin": "^4.0.16",
         "@vitejs/plugin-react": "^4.3.2",
@@ -44,6 +45,7 @@
         "@vanilla-extract/css": "^1.16",
         "@vanilla-extract/next-plugin": "^2.4",
         "clsx": "*",
+        "jsonwebtoken": "^9.0.2",
         "next-swagger-doc": "^0.4",
         "tsx": "^4.19.1"
     }

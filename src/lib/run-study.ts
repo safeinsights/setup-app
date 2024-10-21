@@ -11,6 +11,7 @@ import {
     RunTaskCommandOutput,
 } from '@aws-sdk/client-ecs'
 import { GetResourcesCommand, ResourceGroupsTaggingAPIClient } from '@aws-sdk/client-resource-groups-tagging-api'
+import { managementAppRequest } from './utils'
 
 async function launchStudy(
     client: ECSClient,
@@ -18,8 +19,9 @@ async function launchStudy(
     baseTaskDefinition: string,
     subnets: string,
     securityGroup: string,
-    studyId: string,
+    runId: string,
     studyImage: string,
+    studyTitle: string,
 ): Promise<RunTaskCommandOutput> {
     const baseTaskDefinitionData = await getTaskDefinition(client, cluster, baseTaskDefinition)
     const containerDefinition = baseTaskDefinitionData.taskDefinition?.containerDefinitions?.map((container) => {
@@ -29,17 +31,22 @@ async function launchStudy(
         }
     })
 
+    const taskTags = [
+        { key: 'runId', value: runId },
+        { key: 'title', value: studyTitle },
+    ]
+
     // Create a derived task definition for the study using the base
     // The following defines a new family versus versioning the base family
     const registerTaskDefInput: RegisterTaskDefinitionCommandInput = {
-        family: `${baseTaskDefinitionData.taskDefinition?.family}-${studyId}`,
+        family: `${baseTaskDefinitionData.taskDefinition?.family}-${runId}`,
         containerDefinitions: containerDefinition,
         taskRoleArn: baseTaskDefinitionData.taskDefinition?.taskRoleArn,
         executionRoleArn: baseTaskDefinitionData.taskDefinition?.executionRoleArn,
         networkMode: baseTaskDefinitionData.taskDefinition?.networkMode,
         cpu: baseTaskDefinitionData.taskDefinition?.cpu,
         memory: baseTaskDefinitionData.taskDefinition?.memory,
-        tags: [{ key: 'studyId', value: studyId }],
+        tags: taskTags,
         requiresCompatibilities: baseTaskDefinitionData.taskDefinition?.requiresCompatibilities,
     }
     const registerTaskDefCommand = new RegisterTaskDefinitionCommand(registerTaskDefInput)
@@ -55,7 +62,7 @@ async function launchStudy(
                 securityGroups: [securityGroup],
             },
         },
-        tags: [{ key: 'studyId', value: studyId }],
+        tags: taskTags,
     }
     const runTaskCommand = new RunTaskCommand(runTaskInput)
     const runTaskResponse = await client.send(runTaskCommand)
@@ -63,12 +70,12 @@ async function launchStudy(
     return runTaskResponse
 }
 
-async function checkForStudyTask(client: ResourceGroupsTaggingAPIClient, studyId: string): Promise<boolean> {
+async function checkForStudyTask(client: ResourceGroupsTaggingAPIClient, runId: string): Promise<boolean> {
     const getResourcesCommand = new GetResourcesCommand({
         TagFilters: [
             {
-                Key: 'studyId',
-                Values: [studyId],
+                Key: 'runId',
+                Values: [runId],
             },
         ],
         ResourceTypeFilters: ['ecs:task', 'ecs:task-definition'],
@@ -108,11 +115,25 @@ const subnets = process.env.VPC_SUBNETS || ''
 const securityGroup = process.env.SECURITY_GROUP || ''
 
 // Things that we expect to get from management app
-const studyId = 'unique-study-id-3'
-const studyImage = '084375557107.dkr.ecr.us-east-1.amazonaws.com/research-app:v1' // Change this by region
+// const studyId = 'unique-study-id-3'
+// const studyImage = '084375557107.dkr.ecr.us-east-1.amazonaws.com/research-app:v1' // Change this by region
 
-launchStudy(ecsClient, cluster, baseTaskDefinition, subnets, securityGroup, studyId, studyImage).then(() => {
-    checkForStudyTask(taggingClient, studyId).then((res) => {
-        console.log(res)
+managementAppRequest().then((res) => {
+    res.runs.forEach((run) => {
+        console.log(run)
+        launchStudy(
+            ecsClient,
+            cluster,
+            baseTaskDefinition,
+            subnets,
+            securityGroup,
+            run.runId,
+            run.containerLocation,
+            run.title,
+        ).then(() => {
+            checkForStudyTask(taggingClient, run.runId).then((res) => {
+                console.log(res)
+            })
+        })
     })
 })
