@@ -20,14 +20,14 @@ async function launchStudy(
     subnets: string,
     securityGroup: string,
     runId: string,
-    studyImage: string,
+    imageLocation: string,
     studyTitle: string,
 ): Promise<RunTaskCommandOutput> {
     const baseTaskDefinitionData = await getTaskDefinition(client, cluster, baseTaskDefinition)
     const containerDefinition = baseTaskDefinitionData.taskDefinition?.containerDefinitions?.map((container) => {
         return {
             ...container,
-            image: studyImage,
+            image: imageLocation,
         }
     })
 
@@ -70,7 +70,7 @@ async function launchStudy(
     return runTaskResponse
 }
 
-async function checkForStudyTask(client: ResourceGroupsTaggingAPIClient, runId: string): Promise<boolean> {
+async function checkRunExists(client: ResourceGroupsTaggingAPIClient, runId: string): Promise<boolean> {
     const getResourcesCommand = new GetResourcesCommand({
         TagFilters: [
             {
@@ -114,14 +114,23 @@ const baseTaskDefinition = process.env.BASE_TASK_DEFINITION_FAMILY || ''
 const subnets = process.env.VPC_SUBNETS || ''
 const securityGroup = process.env.SECURITY_GROUP || ''
 
-// Things that we expect to get from management app
-// const studyId = 'unique-study-id-3'
-// const studyImage = '084375557107.dkr.ecr.us-east-1.amazonaws.com/research-app:v1' // Change this by region
+// In case we want to test stuff without connecting to mgmt app
+const _managementAppSampleData = {
+    runs: [
+        {
+            runId: 'unique-run-id-3',
+            containerLocation: '084375557107.dkr.ecr.us-east-1.amazonaws.com/research-app:v1',
+            title: 'my-run-1',
+        },
+    ],
+}
 
-managementAppRequest().then((res) => {
-    res.runs.forEach((run) => {
-        console.log(run)
-        launchStudy(
+// Wrap calls in a function to avoid layers of promise resolves
+const main = async (): Promise<void> => {
+    // const result = _managementAppSampleData
+    const result = await managementAppRequest()
+    result.runs.forEach(async (run) => {
+        await launchStudy(
             ecsClient,
             cluster,
             baseTaskDefinition,
@@ -130,10 +139,10 @@ managementAppRequest().then((res) => {
             run.runId,
             run.containerLocation,
             run.title,
-        ).then(() => {
-            checkForStudyTask(taggingClient, run.runId).then((res) => {
-                console.log(res)
-            })
-        })
+        )
+        const exists = await checkRunExists(taggingClient, run.runId)
+        console.log(exists)
     })
-})
+}
+
+main()
