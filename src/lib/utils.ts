@@ -4,10 +4,10 @@ import { ManagementAppResponse } from './types'
 // Functions for interacting with the Management App
 const generateToken = (): string => {
     const privateKey: string | undefined = process.env.MANAGEMENT_APP_PRIVATE_KEY
-    const memberId = 'openstax' // TODO: make depend on who's asking (post pilot)
+    const memberId = process.env.MANAGEMENT_APP_MEMBER_ID
 
     let token = ''
-    if (privateKey) {
+    if (privateKey && memberId) {
         token = jwt.sign({ iss: memberId }, privateKey, { algorithm: 'RS256' })
     }
     return token
