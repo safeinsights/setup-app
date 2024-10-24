@@ -11,7 +11,7 @@ import {
     RunTaskCommandOutput,
 } from '@aws-sdk/client-ecs'
 import { GetResourcesCommand, ResourceGroupsTaggingAPIClient } from '@aws-sdk/client-resource-groups-tagging-api'
-import { managementAppRequest, toaRequest } from './utils'
+import { managementAppRequest, toaRequest, filterManagmentAppRuns } from './utils'
 
 async function launchStudy(
     client: ECSClient,
@@ -144,7 +144,9 @@ const main = async (): Promise<void> => {
     const result = await managementAppRequest()
     const toaResult = await toaRequest()
 
-    result.runs.forEach(async (run) => {
+    const filteredResult = filterManagmentAppRuns(result, toaResult)
+
+    filteredResult.runs.forEach(async (run) => {
         console.log(run)
 
         await launchStudy(

@@ -49,3 +49,18 @@ export const toaRequest = async (): Promise<TOAResponse> => {
     const data = await response.json()
     return data
 }
+
+// Other
+export const filterManagmentAppRuns = (
+    managementAppResponse: ManagementAppResponse,
+    toaResponse: TOAResponse,
+): ManagementAppResponse => {
+    // TODO: also filter out in-progress runs
+    const runIdArray: string[] = toaResponse.runs.map((run) => run.runId) // flatten runsInTOA
+
+    return {
+        runs: managementAppResponse.runs.filter((run) => {
+            return !runIdArray.includes(run.runId)
+        }),
+    }
+}

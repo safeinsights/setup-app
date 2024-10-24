@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { managementAppRequest, toaRequest } from '../lib/utils'
+import { managementAppRequest, toaRequest, filterManagmentAppRuns } from '../lib/utils'
 import jwt from 'jsonwebtoken'
 
 beforeEach(() => {
@@ -79,5 +79,34 @@ describe('toaRequest', () => {
     it('should error if token not found', async () => {
         process.env.TOA_BASIC_AUTH = ''
         await expect(toaRequest()).rejects.toThrow('TOA token failed to generate')
+    })
+})
+
+describe('filterManagementAppRuns', () => {
+    it('filters out runs in the TOA', () => {
+        const mockManagementAppResponse = {
+            runs: [
+                {
+                    runId: 'not-in-TOA',
+                    containerLocation: '',
+                    title: '',
+                },
+                {
+                    runId: 'finished-run',
+                    containerLocation: '',
+                    title: '',
+                },
+            ],
+        }
+        const mockTOAResponse = { runs: [{ runId: 'finished-run' }] }
+        expect(filterManagmentAppRuns(mockManagementAppResponse, mockTOAResponse)).toStrictEqual({
+            runs: [
+                {
+                    runId: 'not-in-TOA',
+                    containerLocation: '',
+                    title: '',
+                },
+            ],
+        })
     })
 })
