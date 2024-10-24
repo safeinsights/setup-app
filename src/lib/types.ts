@@ -7,3 +7,11 @@ type ManagementAppRun = {
 export type ManagementAppResponse = {
     runs: ManagementAppRun[]
 }
+
+type TOARun = {
+    runId: string
+}
+
+export type TOAResponse = {
+    runs: TOARun[]
+}

@@ -11,7 +11,7 @@ import {
     RunTaskCommandOutput,
 } from '@aws-sdk/client-ecs'
 import { GetResourcesCommand, ResourceGroupsTaggingAPIClient } from '@aws-sdk/client-resource-groups-tagging-api'
-import { managementAppRequest } from './utils'
+import { managementAppRequest, toaRequest } from './utils'
 
 async function launchStudy(
     client: ECSClient,
@@ -122,14 +122,31 @@ const _managementAppSampleData = {
             containerLocation: '084375557107.dkr.ecr.us-east-1.amazonaws.com/research-app:v1',
             title: 'my-run-1',
         },
+        {
+            runId: '1234',
+            containerLocation: '',
+            title: '',
+        },
+        {
+            runId: '456',
+            containerLocation: '',
+            title: '',
+        },
     ],
 }
 
 // Wrap calls in a function to avoid layers of promise resolves
 const main = async (): Promise<void> => {
+    // Uncomment to use local variables
     // const result = _managementAppSampleData
+    // const toaResult = { runs: { runId: '456' } }
+
     const result = await managementAppRequest()
+    const toaResult = await toaRequest()
+
     result.runs.forEach(async (run) => {
+        console.log(run)
+
         await launchStudy(
             ecsClient,
             cluster,
