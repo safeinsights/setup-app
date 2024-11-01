@@ -12,6 +12,7 @@ import {
 } from '@aws-sdk/client-ecs'
 import { GetResourcesCommand, ResourceGroupsTaggingAPIClient } from '@aws-sdk/client-resource-groups-tagging-api'
 import { managementAppRequest, toaRequest, filterManagmentAppRuns } from './utils'
+import 'dotenv/config'
 
 async function launchStudy(
     client: ECSClient,

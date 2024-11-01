@@ -26,5 +26,5 @@ Run the script (make sure you have AWS credentials for your target region create
 
 ```bash
 $ npm install
-$ npx tsx --env-file=.env ./src/lib/run-studies.ts
+$ npx tsx ./src/lib/run-studies.ts
 ```

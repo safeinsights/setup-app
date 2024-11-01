@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken'
 beforeEach(() => {
     process.env.MANAGEMENT_APP_PRIVATE_KEY = 'mockprivatekeyvalue'
     process.env.MANAGEMENT_APP_BASE_URL = 'http://bma:12345'
+    process.env.MANAGEMENT_APP_MEMBER_ID = 'openstax'
     process.env.TOA_BASE_URL = 'http://toa:67890'
     process.env.TOA_BASIC_AUTH = 'testusername:testpassword'
 })
