@@ -11,7 +11,7 @@ import {
     RunTaskCommandOutput,
 } from '@aws-sdk/client-ecs'
 import { GetResourcesCommand, ResourceGroupsTaggingAPIClient } from '@aws-sdk/client-resource-groups-tagging-api'
-import { managementAppRequest, toaRequest, filterManagmentAppRuns } from './utils'
+import { managementAppRequest, toaGetRunsRequest, filterManagmentAppRuns } from './utils'
 import 'dotenv/config'
 
 async function launchStudy(
@@ -140,12 +140,12 @@ const _managementAppSampleData = {
 const main = async (): Promise<void> => {
     // Uncomment to use local variables
     // const result = _managementAppSampleData
-    // const toaResult = { runs: { runId: '456' } }
+    // const toaGetRunsResult = { runs: { runId: '456' } }
 
     const result = await managementAppRequest()
-    const toaResult = await toaRequest()
+    const toaGetRunsResult = await toaGetRunsRequest()
 
-    const filteredResult = filterManagmentAppRuns(result, toaResult)
+    const filteredResult = filterManagmentAppRuns(result, toaGetRunsResult)
 
     filteredResult.runs.forEach(async (run) => {
         console.log(run)

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { managementAppRequest, toaRequest, filterManagmentAppRuns } from '../lib/utils'
+import { managementAppRequest, toaGetRunsRequest, filterManagmentAppRuns } from '../lib/utils'
 import jwt from 'jsonwebtoken'
 
 beforeEach(() => {
@@ -55,7 +55,7 @@ describe('managementAppRequest', () => {
     })
 })
 
-describe('toaRequest', () => {
+describe('toaGetRunsRequest', () => {
     it('should make a GET request', async () => {
         const mockTOAData = {
             runs: [{ runId: '1234' }],
@@ -64,7 +64,7 @@ describe('toaRequest', () => {
             json: async () => await Promise.resolve(mockTOAData),
         })
 
-        const result = await toaRequest()
+        const result = await toaGetRunsRequest()
 
         const mockToken = Buffer.from('testusername:testpassword').toString('base64')
         expect(global.fetch).toHaveBeenCalledWith('http://toa:67890/api/runs', {
@@ -79,7 +79,7 @@ describe('toaRequest', () => {
 
     it('should error if token not found', async () => {
         process.env.TOA_BASIC_AUTH = ''
-        await expect(toaRequest()).rejects.toThrow('TOA token failed to generate')
+        await expect(toaGetRunsRequest()).rejects.toThrow('TOA token failed to generate')
     })
 })
 

@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken'
-import { ManagementAppResponse, TOAResponse } from './types'
+import { ManagementAppResponse, TOAGetRunsResponse } from './types'
 
 // Functions for interacting with the Management App
 const generateToken = (): string => {
@@ -32,7 +32,7 @@ export const managementAppRequest = async (): Promise<ManagementAppResponse> => 
 }
 
 // Functions for interacting with the Trusted Output App
-export const toaRequest = async (): Promise<TOAResponse> => {
+export const toaGetRunsRequest = async (): Promise<TOAGetRunsResponse> => {
     const endpoint = process.env.TOA_BASE_URL + '/api/runs' // `http://localhost:3002/api/runs`
     const token = Buffer.from(process.env.TOA_BASIC_AUTH || '').toString('base64')
     if (token.length === 0) {
@@ -53,7 +53,7 @@ export const toaRequest = async (): Promise<TOAResponse> => {
 // Other
 export const filterManagmentAppRuns = (
     managementAppResponse: ManagementAppResponse,
-    toaResponse: TOAResponse,
+    toaResponse: TOAGetRunsResponse,
 ): ManagementAppResponse => {
     // TODO: also filter out in-progress runs
     const runIdArray: string[] = toaResponse.runs.map((run) => run.runId) // flatten runsInTOA

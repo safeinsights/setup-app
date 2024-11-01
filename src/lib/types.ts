@@ -12,6 +12,6 @@ type TOARun = {
     runId: string
 }
 
-export type TOAResponse = {
+export type TOAGetRunsResponse = {
     runs: TOARun[]
 }
