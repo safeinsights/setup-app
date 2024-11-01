@@ -11,6 +11,8 @@ import {
     RunTaskCommandOutput,
 } from '@aws-sdk/client-ecs'
 import { GetResourcesCommand, ResourceGroupsTaggingAPIClient } from '@aws-sdk/client-resource-groups-tagging-api'
+import { managementAppRequest } from './utils'
+import 'dotenv/config'
 
 async function launchStudy(
     client: ECSClient,
@@ -18,28 +20,34 @@ async function launchStudy(
     baseTaskDefinition: string,
     subnets: string,
     securityGroup: string,
-    studyId: string,
-    studyImage: string,
+    runId: string,
+    imageLocation: string,
+    studyTitle: string,
 ): Promise<RunTaskCommandOutput> {
     const baseTaskDefinitionData = await getTaskDefinition(client, cluster, baseTaskDefinition)
     const containerDefinition = baseTaskDefinitionData.taskDefinition?.containerDefinitions?.map((container) => {
         return {
             ...container,
-            image: studyImage,
+            image: imageLocation,
         }
     })
+
+    const taskTags = [
+        { key: 'runId', value: runId },
+        { key: 'title', value: studyTitle },
+    ]
 
     // Create a derived task definition for the study using the base
     // The following defines a new family versus versioning the base family
     const registerTaskDefInput: RegisterTaskDefinitionCommandInput = {
-        family: `${baseTaskDefinitionData.taskDefinition?.family}-${studyId}`,
+        family: `${baseTaskDefinitionData.taskDefinition?.family}-${runId}`,
         containerDefinitions: containerDefinition,
         taskRoleArn: baseTaskDefinitionData.taskDefinition?.taskRoleArn,
         executionRoleArn: baseTaskDefinitionData.taskDefinition?.executionRoleArn,
         networkMode: baseTaskDefinitionData.taskDefinition?.networkMode,
         cpu: baseTaskDefinitionData.taskDefinition?.cpu,
         memory: baseTaskDefinitionData.taskDefinition?.memory,
-        tags: [{ key: 'studyId', value: studyId }],
+        tags: taskTags,
         requiresCompatibilities: baseTaskDefinitionData.taskDefinition?.requiresCompatibilities,
     }
     const registerTaskDefCommand = new RegisterTaskDefinitionCommand(registerTaskDefInput)
@@ -55,7 +63,7 @@ async function launchStudy(
                 securityGroups: [securityGroup],
             },
         },
-        tags: [{ key: 'studyId', value: studyId }],
+        tags: taskTags,
     }
     const runTaskCommand = new RunTaskCommand(runTaskInput)
     const runTaskResponse = await client.send(runTaskCommand)
@@ -63,12 +71,12 @@ async function launchStudy(
     return runTaskResponse
 }
 
-async function checkForStudyTask(client: ResourceGroupsTaggingAPIClient, studyId: string): Promise<boolean> {
+async function checkRunExists(client: ResourceGroupsTaggingAPIClient, runId: string): Promise<boolean> {
     const getResourcesCommand = new GetResourcesCommand({
         TagFilters: [
             {
-                Key: 'studyId',
-                Values: [studyId],
+                Key: 'runId',
+                Values: [runId],
             },
         ],
         ResourceTypeFilters: ['ecs:task', 'ecs:task-definition'],
@@ -107,12 +115,35 @@ const baseTaskDefinition = process.env.BASE_TASK_DEFINITION_FAMILY || ''
 const subnets = process.env.VPC_SUBNETS || ''
 const securityGroup = process.env.SECURITY_GROUP || ''
 
-// Things that we expect to get from management app
-const studyId = 'unique-study-id-3'
-const studyImage = '084375557107.dkr.ecr.us-east-1.amazonaws.com/research-app:v1' // Change this by region
+// In case we want to test stuff without connecting to mgmt app
+const _managementAppSampleData = {
+    runs: [
+        {
+            runId: 'unique-run-id-3',
+            containerLocation: '084375557107.dkr.ecr.us-east-1.amazonaws.com/research-app:v1',
+            title: 'my-run-1',
+        },
+    ],
+}
 
-launchStudy(ecsClient, cluster, baseTaskDefinition, subnets, securityGroup, studyId, studyImage).then(() => {
-    checkForStudyTask(taggingClient, studyId).then((res) => {
-        console.log(res)
+// Wrap calls in a function to avoid layers of promise resolves
+const main = async (): Promise<void> => {
+    // const result = _managementAppSampleData
+    const result = await managementAppRequest()
+    result.runs.forEach(async (run) => {
+        await launchStudy(
+            ecsClient,
+            cluster,
+            baseTaskDefinition,
+            subnets,
+            securityGroup,
+            run.runId,
+            run.containerLocation,
+            run.title,
+        )
+        const exists = await checkRunExists(taggingClient, run.runId)
+        console.log(exists)
     })
-})
+}
+
+main()
