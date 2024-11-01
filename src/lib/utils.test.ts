@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { managementAppRequest, toaGetRunsRequest, filterManagmentAppRuns } from '../lib/utils'
+import { managementAppGetRunnableStudiesRequest, toaGetRunsRequest, filterManagmentAppRuns } from '../lib/utils'
 import jwt from 'jsonwebtoken'
 
 beforeEach(() => {
@@ -10,7 +10,7 @@ beforeEach(() => {
     process.env.TOA_BASIC_AUTH = 'testusername:testpassword'
 })
 
-describe('managementAppRequest', () => {
+describe('managementAppGetRunnableStudiesRequest', () => {
     it('should generate a token and make a GET request', async () => {
         const mockSignToken = vi.fn().mockReturnValue('mocktokenvalue')
         const mockStudiesData = {
@@ -32,7 +32,7 @@ describe('managementAppRequest', () => {
         })
         vi.spyOn(jwt, 'sign').mockImplementation(mockSignToken)
 
-        const result = await managementAppRequest()
+        const result = await managementAppGetRunnableStudiesRequest()
 
         expect(mockSignToken).toHaveBeenCalledOnce()
         expect(mockSignToken).toHaveBeenCalledWith({ iss: 'openstax' }, 'mockprivatekeyvalue', { algorithm: 'RS256' })
@@ -51,7 +51,7 @@ describe('managementAppRequest', () => {
         const mockSignToken = vi.fn().mockReturnValue('')
         vi.spyOn(jwt, 'sign').mockImplementation(mockSignToken)
 
-        await expect(managementAppRequest()).rejects.toThrow('Managment App token failed to generate')
+        await expect(managementAppGetRunnableStudiesRequest()).rejects.toThrow('Managment App token failed to generate')
     })
 })
 

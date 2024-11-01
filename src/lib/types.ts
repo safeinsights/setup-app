@@ -4,7 +4,7 @@ type ManagementAppRun = {
     containerLocation: string
 }
 
-export type ManagementAppResponse = {
+export type ManagementAppGetRunnableStudiesResponse = {
     runs: ManagementAppRun[]
 }
 

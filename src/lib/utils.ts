@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken'
-import { ManagementAppResponse, TOAGetRunsResponse } from './types'
+import { ManagementAppGetRunnableStudiesResponse, TOAGetRunsResponse } from './types'
 
 // Functions for interacting with the Management App
 const generateToken = (): string => {
@@ -16,7 +16,7 @@ const generateToken = (): string => {
     return token
 }
 
-export const managementAppRequest = async (): Promise<ManagementAppResponse> => {
+export const managementAppGetRunnableStudiesRequest = async (): Promise<ManagementAppGetRunnableStudiesResponse> => {
     const endpoint = process.env.MANAGEMENT_APP_BASE_URL + '/api/studies/runnable' // `http://localhost:4000/api/studies/runnable`
     const token = generateToken()
     const response = await fetch(endpoint, {
@@ -52,9 +52,9 @@ export const toaGetRunsRequest = async (): Promise<TOAGetRunsResponse> => {
 
 // Other
 export const filterManagmentAppRuns = (
-    managementAppResponse: ManagementAppResponse,
+    managementAppResponse: ManagementAppGetRunnableStudiesResponse,
     toaResponse: TOAGetRunsResponse,
-): ManagementAppResponse => {
+): ManagementAppGetRunnableStudiesResponse => {
     // TODO: also filter out in-progress runs
     const runIdArray: string[] = toaResponse.runs.map((run) => run.runId) // flatten runsInTOA
 
