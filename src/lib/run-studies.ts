@@ -56,8 +56,6 @@ async function checkRunExists(client: ResourceGroupsTaggingAPIClient, runId: str
         return false
     }
 
-    console.log(taggedResources.ResourceTagMappingList)
-
     return true
 }
 
@@ -99,11 +97,18 @@ const main = async (): Promise<void> => {
 
     const result = await managementAppGetRunnableStudiesRequest()
     const toaGetRunsResult = await toaGetRunsRequest()
+    const existingAwsRuns: string[] = []
 
-    const filteredResult = filterManagmentAppRuns(result, toaGetRunsResult)
+    for (const run of result.runs) {
+        if (await checkRunExists(taggingClient, run.runId)) {
+            existingAwsRuns.push(run.runId)
+        }
+    }
+
+    const filteredResult = filterManagmentAppRuns(result, toaGetRunsResult, existingAwsRuns)
 
     filteredResult.runs.forEach(async (run) => {
-        console.log(run)
+        console.log(`Launching study for run ID ${run.runId}`)
 
         await launchStudy(
             ecsClient,
@@ -115,8 +120,6 @@ const main = async (): Promise<void> => {
             run.containerLocation,
             run.title,
         )
-        const exists = await checkRunExists(taggingClient, run.runId)
-        console.log(exists)
     })
 }
 
