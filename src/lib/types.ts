@@ -4,6 +4,14 @@ type ManagementAppRun = {
     containerLocation: string
 }
 
-export type ManagementAppResponse = {
+export type ManagementAppGetRunnableStudiesResponse = {
     runs: ManagementAppRun[]
+}
+
+type TOARun = {
+    runId: string
+}
+
+export type TOAGetRunsResponse = {
+    runs: TOARun[]
 }

@@ -11,7 +11,7 @@ import {
     RunTaskCommandOutput,
 } from '@aws-sdk/client-ecs'
 import { GetResourcesCommand, ResourceGroupsTaggingAPIClient } from '@aws-sdk/client-resource-groups-tagging-api'
-import { managementAppRequest } from './utils'
+import { managementAppGetRunnableStudiesRequest, toaGetRunsRequest, filterManagmentAppRuns } from './utils'
 import 'dotenv/config'
 
 async function launchStudy(
@@ -123,14 +123,33 @@ const _managementAppSampleData = {
             containerLocation: '084375557107.dkr.ecr.us-east-1.amazonaws.com/research-app:v1',
             title: 'my-run-1',
         },
+        {
+            runId: '1234',
+            containerLocation: '',
+            title: '',
+        },
+        {
+            runId: '456',
+            containerLocation: '',
+            title: '',
+        },
     ],
 }
 
 // Wrap calls in a function to avoid layers of promise resolves
 const main = async (): Promise<void> => {
+    // Uncomment to use local variables
     // const result = _managementAppSampleData
-    const result = await managementAppRequest()
-    result.runs.forEach(async (run) => {
+    // const toaGetRunsResult = { runs: { runId: '456' } }
+
+    const result = await managementAppGetRunnableStudiesRequest()
+    const toaGetRunsResult = await toaGetRunsRequest()
+
+    const filteredResult = filterManagmentAppRuns(result, toaGetRunsResult)
+
+    filteredResult.runs.forEach(async (run) => {
+        console.log(run)
+
         await launchStudy(
             ecsClient,
             cluster,

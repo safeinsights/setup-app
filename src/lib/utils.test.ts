@@ -1,14 +1,16 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { managementAppRequest } from '../lib/utils'
+import { managementAppGetRunnableStudiesRequest, toaGetRunsRequest, filterManagmentAppRuns } from '../lib/utils'
 import jwt from 'jsonwebtoken'
 
 beforeEach(() => {
     process.env.MANAGEMENT_APP_PRIVATE_KEY = 'mockprivatekeyvalue'
     process.env.MANAGEMENT_APP_BASE_URL = 'http://bma:12345'
     process.env.MANAGEMENT_APP_MEMBER_ID = 'openstax'
+    process.env.TOA_BASE_URL = 'http://toa:67890'
+    process.env.TOA_BASIC_AUTH = 'testusername:testpassword'
 })
 
-describe('managementAppRequest', () => {
+describe('managementAppGetRunnableStudiesRequest', () => {
     it('should generate a token and make a GET request', async () => {
         const mockSignToken = vi.fn().mockReturnValue('mocktokenvalue')
         const mockStudiesData = {
@@ -30,7 +32,7 @@ describe('managementAppRequest', () => {
         })
         vi.spyOn(jwt, 'sign').mockImplementation(mockSignToken)
 
-        const result = await managementAppRequest()
+        const result = await managementAppGetRunnableStudiesRequest()
 
         expect(mockSignToken).toHaveBeenCalledOnce()
         expect(mockSignToken).toHaveBeenCalledWith({ iss: 'openstax' }, 'mockprivatekeyvalue', { algorithm: 'RS256' })
@@ -49,6 +51,63 @@ describe('managementAppRequest', () => {
         const mockSignToken = vi.fn().mockReturnValue('')
         vi.spyOn(jwt, 'sign').mockImplementation(mockSignToken)
 
-        expect(managementAppRequest()).rejects.toThrow('Failed to generate token')
+        await expect(managementAppGetRunnableStudiesRequest()).rejects.toThrow('Managment App token failed to generate')
+    })
+})
+
+describe('toaGetRunsRequest', () => {
+    it('should make a GET request', async () => {
+        const mockTOAData = {
+            runs: [{ runId: '1234' }],
+        }
+        global.fetch = vi.fn().mockResolvedValue({
+            json: async () => await Promise.resolve(mockTOAData),
+        })
+
+        const result = await toaGetRunsRequest()
+
+        const mockToken = Buffer.from('testusername:testpassword').toString('base64')
+        expect(global.fetch).toHaveBeenCalledWith('http://toa:67890/api/runs', {
+            method: 'GET',
+            headers: {
+                Authorization: `Basic ${mockToken}`,
+                'Content-Type': 'application/json',
+            },
+        })
+        expect(result).toEqual(mockTOAData)
+    })
+
+    it('should error if token not found', async () => {
+        process.env.TOA_BASIC_AUTH = ''
+        await expect(toaGetRunsRequest()).rejects.toThrow('TOA token failed to generate')
+    })
+})
+
+describe('filterManagementAppRuns', () => {
+    it('filters out runs in the TOA', () => {
+        const mockManagementAppResponse = {
+            runs: [
+                {
+                    runId: 'not-in-TOA',
+                    containerLocation: '',
+                    title: '',
+                },
+                {
+                    runId: 'finished-run',
+                    containerLocation: '',
+                    title: '',
+                },
+            ],
+        }
+        const mockTOAResponse = { runs: [{ runId: 'finished-run' }] }
+        expect(filterManagmentAppRuns(mockManagementAppResponse, mockTOAResponse)).toStrictEqual({
+            runs: [
+                {
+                    runId: 'not-in-TOA',
+                    containerLocation: '',
+                    title: '',
+                },
+            ],
+        })
     })
 })
