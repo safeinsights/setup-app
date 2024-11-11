@@ -100,10 +100,35 @@ describe('filterManagementAppRuns', () => {
             ],
         }
         const mockTOAResponse = { runs: [{ runId: 'finished-run' }] }
-        expect(filterManagmentAppRuns(mockManagementAppResponse, mockTOAResponse)).toStrictEqual({
+        expect(filterManagmentAppRuns(mockManagementAppResponse, mockTOAResponse, [])).toStrictEqual({
             runs: [
                 {
                     runId: 'not-in-TOA',
+                    containerLocation: '',
+                    title: '',
+                },
+            ],
+        })
+    })
+    it('filters out runs from AWS', () => {
+        const mockManagementAppResponse = {
+            runs: [
+                {
+                    runId: 'not-in-AWS',
+                    containerLocation: '',
+                    title: '',
+                },
+                {
+                    runId: 'existing-run',
+                    containerLocation: '',
+                    title: '',
+                },
+            ],
+        }
+        expect(filterManagmentAppRuns(mockManagementAppResponse, { runs: [] }, ['existing-run'])).toStrictEqual({
+            runs: [
+                {
+                    runId: 'not-in-AWS',
                     containerLocation: '',
                     title: '',
                 },

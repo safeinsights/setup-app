@@ -54,13 +54,14 @@ export const toaGetRunsRequest = async (): Promise<TOAGetRunsResponse> => {
 export const filterManagmentAppRuns = (
     managementAppResponse: ManagementAppGetRunnableStudiesResponse,
     toaResponse: TOAGetRunsResponse,
+    existingAwsRuns: string[],
 ): ManagementAppGetRunnableStudiesResponse => {
     // TODO: also filter out in-progress runs
     const runIdArray: string[] = toaResponse.runs.map((run) => run.runId) // flatten runsInTOA
 
     return {
         runs: managementAppResponse.runs.filter((run) => {
-            return !runIdArray.includes(run.runId)
+            return !runIdArray.includes(run.runId) && !existingAwsRuns.includes(run.runId)
         }),
     }
 }

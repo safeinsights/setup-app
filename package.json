@@ -25,6 +25,7 @@
         "@vanilla-extract/vite-plugin": "^4.0.16",
         "@vitejs/plugin-react": "^4.3.2",
         "@vitest/coverage-v8": "^2.1.1",
+        "aws-sdk-client-mock": "^4.1.0",
         "dotenv": "*",
         "eslint": "*",
         "eslint-config-next": "*",
