@@ -11,6 +11,7 @@ async function launchStudy(
     baseTaskDefinition: string,
     subnets: string[],
     securityGroup: string,
+    toaEndpointWithRunId: string,
     runId: string,
     imageLocation: string,
     studyTitle: string,
@@ -31,6 +32,7 @@ async function launchStudy(
         ecsClient,
         baseTaskDefinitionData.taskDefinition,
         newTaskDefinitionFamily,
+        toaEndpointWithRunId,
         imageLocation,
         taskTags,
     )
@@ -110,12 +112,15 @@ const main = async (): Promise<void> => {
     filteredResult.runs.forEach(async (run) => {
         console.log(`Launching study for run ID ${run.runId}`)
 
+        const toaEndpointWithRunId = `${process.env.TOA_BASE_URL}/api/run/${run.runId}`
+
         await launchStudy(
             ecsClient,
             cluster,
             baseTaskDefinition,
             subnets.split(','),
             securityGroup,
+            toaEndpointWithRunId,
             run.runId,
             run.containerLocation,
             run.title,
