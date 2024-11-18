@@ -32,6 +32,7 @@ export async function registerECSTaskDefinition(
     client: ECSClient,
     baseTaskDefinition: TaskDefinition,
     familyName: string,
+    toaEndpointWithRunId: string,
     imageLocation: string,
     tags: Tag[],
 ): Promise<RegisterTaskDefinitionCommandOutput> {
@@ -39,8 +40,16 @@ export async function registerECSTaskDefinition(
     // The following defines a new family versus versioning the base family
 
     const containerDefinition = baseTaskDefinition.containerDefinitions?.map((container) => {
+        const environment = container.environment || []
+
+        environment.push({
+            name: 'TRUSTED_OUTPUT_ENDPOINT',
+            value: toaEndpointWithRunId,
+        })
+
         return {
             ...container,
+            environment,
             image: imageLocation,
         }
     })

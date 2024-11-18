@@ -31,7 +31,7 @@ describe('registerECSTaskDefinition', () => {
     it('should send RegisterTaskDefinitionCommand and return response', async () => {
         const testTags = [{ key: 'testtagkey', value: 'testtagvalue' }]
         const testTaskDefinition = {
-            containerDefinitions: [{}],
+            containerDefinitions: [{ environment: [{ name: 'foo', value: 'bar' }] }],
             taskRoleArn: 'testTaskRoleArn',
             executionRoleArn: 'testexecutionRoleArn',
             networkMode: undefined,
@@ -41,7 +41,15 @@ describe('registerECSTaskDefinition', () => {
         }
         const expectedCommandInput = {
             family: 'testfamilyname',
-            containerDefinitions: [{ image: 'testImageLocation' }],
+            containerDefinitions: [
+                {
+                    image: 'testImageLocation',
+                    environment: [
+                        { name: 'foo', value: 'bar' },
+                        { name: 'TRUSTED_OUTPUT_ENDPOINT', value: 'http://toa:port/api/run/runid' },
+                    ],
+                },
+            ],
             taskRoleArn: 'testTaskRoleArn',
             executionRoleArn: 'testexecutionRoleArn',
             networkMode: undefined,
@@ -56,6 +64,7 @@ describe('registerECSTaskDefinition', () => {
             new ECSClient(),
             testTaskDefinition,
             'testfamilyname',
+            'http://toa:port/api/run/runid',
             'testImageLocation',
             testTags,
         )
