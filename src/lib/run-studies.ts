@@ -93,6 +93,16 @@ const _managementAppSampleData = {
 
 // Wrap calls in a function to avoid layers of promise resolves
 const main = async (): Promise<void> => {
+    let ignoreAWSRuns = false
+    if (process.argv.includes('--help')) {
+        printHelp()
+        process.exit(0)
+    }
+    if (process.argv.includes('--ignore-aws')) {
+        console.log('Ignoring AWS existing runs')
+        ignoreAWSRuns = true
+    }
+
     // Uncomment to use local variables
     // const result = _managementAppSampleData
     // const toaGetRunsResult = { runs: { runId: '456' } }
@@ -101,9 +111,12 @@ const main = async (): Promise<void> => {
     const toaGetRunsResult = await toaGetRunsRequest()
     const existingAwsRuns: string[] = []
 
-    for (const run of result.runs) {
-        if (await checkRunExists(taggingClient, run.runId)) {
-            existingAwsRuns.push(run.runId)
+    // Ignore AWS runs if --ignore-aws flag is passed
+    if (!ignoreAWSRuns) {
+        for (const run of result.runs) {
+            if (await checkRunExists(taggingClient, run.runId)) {
+                existingAwsRuns.push(run.runId)
+            }
         }
     }
 
@@ -126,6 +139,13 @@ const main = async (): Promise<void> => {
             run.title,
         )
     })
+}
+
+const printHelp = () => {
+    console.log('Usage: npx tsx run-studies.ts')
+    console.log('Options:')
+    console.log('--help             Display this help message')
+    console.log('--ignore-aws       Ignore AWS existing runs and start a new run')
 }
 
 main()
