@@ -93,7 +93,7 @@ const _managementAppSampleData = {
 
 // Wrap calls in a function to avoid layers of promise resolves
 const main = async (): Promise<void> => {
-    let ignoreAWSRuns: boolean = false
+    let ignoreAWSRuns = false
     if (process.argv.includes('--help')) {
         printHelp()
         process.exit(0)
@@ -111,8 +111,8 @@ const main = async (): Promise<void> => {
     const toaGetRunsResult = await toaGetRunsRequest()
     const existingAwsRuns: string[] = []
 
+    // Ignore AWS runs if --ignore-aws flag is passed
     if (!ignoreAWSRuns) {
-        // Ignore AWS runs
         for (const run of result.runs) {
             if (await checkRunExists(taggingClient, run.runId)) {
                 existingAwsRuns.push(run.runId)
