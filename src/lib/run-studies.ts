@@ -5,6 +5,36 @@ import { getECSTaskDefinition, registerECSTaskDefinition, runECSFargateTask, get
 import { managementAppGetRunnableStudiesRequest, toaGetRunsRequest, filterManagmentAppRuns } from './utils'
 import 'dotenv/config'
 
+const ecsClient = new ECSClient()
+const taggingClient = new ResourceGroupsTaggingAPIClient()
+
+// Set in IaC
+const cluster = process.env.ECS_CLUSTER || ''
+const baseTaskDefinition = process.env.BASE_TASK_DEFINITION_FAMILY || ''
+const subnets = process.env.VPC_SUBNETS || ''
+const securityGroup = process.env.SECURITY_GROUP || ''
+
+// In case we want to test stuff without connecting to mgmt app
+const _managementAppSampleData = {
+    runs: [
+        {
+            runId: 'unique-run-id-3',
+            containerLocation: '084375557107.dkr.ecr.us-east-1.amazonaws.com/research-app:v1',
+            title: 'my-run-1',
+        },
+        {
+            runId: '1234',
+            containerLocation: '',
+            title: '',
+        },
+        {
+            runId: '456',
+            containerLocation: '',
+            title: '',
+        },
+    ],
+}
+
 async function launchStudy(
     client: ECSClient,
     cluster: string,
@@ -61,48 +91,7 @@ async function checkRunExists(client: ResourceGroupsTaggingAPIClient, runId: str
     return true
 }
 
-const ecsClient = new ECSClient()
-const taggingClient = new ResourceGroupsTaggingAPIClient()
-
-// Set in IaC
-const cluster = process.env.ECS_CLUSTER || ''
-const baseTaskDefinition = process.env.BASE_TASK_DEFINITION_FAMILY || ''
-const subnets = process.env.VPC_SUBNETS || ''
-const securityGroup = process.env.SECURITY_GROUP || ''
-
-// In case we want to test stuff without connecting to mgmt app
-const _managementAppSampleData = {
-    runs: [
-        {
-            runId: 'unique-run-id-3',
-            containerLocation: '084375557107.dkr.ecr.us-east-1.amazonaws.com/research-app:v1',
-            title: 'my-run-1',
-        },
-        {
-            runId: '1234',
-            containerLocation: '',
-            title: '',
-        },
-        {
-            runId: '456',
-            containerLocation: '',
-            title: '',
-        },
-    ],
-}
-
-// Wrap calls in a function to avoid layers of promise resolves
-const main = async (): Promise<void> => {
-    let ignoreAWSRuns = false
-    if (process.argv.includes('--help')) {
-        printHelp()
-        process.exit(0)
-    }
-    if (process.argv.includes('--ignore-aws')) {
-        console.log('Ignoring AWS existing runs')
-        ignoreAWSRuns = true
-    }
-
+export async function runStudies(ignoreAWSRuns: boolean): Promise<void> {
     // Uncomment to use local variables
     // const result = _managementAppSampleData
     // const toaGetRunsResult = { runs: { runId: '456' } }
@@ -139,6 +128,21 @@ const main = async (): Promise<void> => {
             run.title,
         )
     })
+}
+
+// Wrap calls in a function to avoid layers of promise resolves
+const main = async (): Promise<void> => {
+    let ignoreAWSRuns = false
+    if (process.argv.includes('--help')) {
+        printHelp()
+        process.exit(0)
+    }
+    if (process.argv.includes('--ignore-aws')) {
+        console.log('Ignoring AWS existing runs')
+        ignoreAWSRuns = true
+    }
+
+    await runStudies(ignoreAWSRuns)
 }
 
 const printHelp = () => {
