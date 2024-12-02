@@ -7,7 +7,13 @@ import {
     RegisterTaskDefinitionCommand,
     RunTaskCommand,
 } from '@aws-sdk/client-ecs'
-import { getECSTaskDefinition, getTaskResourcesByRunId, registerECSTaskDefinition, runECSFargateTask } from './aws'
+import {
+    getECSTaskDefinition,
+    getTaskDefinitionsWithRunId,
+    getTaskResourcesByRunId,
+    registerECSTaskDefinition,
+    runECSFargateTask,
+} from './aws'
 import { GetResourcesCommand, ResourceGroupsTaggingAPIClient } from '@aws-sdk/client-resource-groups-tagging-api'
 
 const ecsMockClient = mockClient(ECSClient)
@@ -114,6 +120,23 @@ describe('getTaskResourcesByRunId', () => {
         taggingMockClient.on(GetResourcesCommand, expectedCommandInput).resolves({})
 
         const res = await getTaskResourcesByRunId(new ResourceGroupsTaggingAPIClient(), 'testrun1234')
+        expect(res).toStrictEqual({})
+    })
+})
+
+describe('getTaskDefinitionsWithRunId', () => {
+    it('should send GetResourcesCommand and return response', async () => {
+        const expectedCommandInput = {
+            TagFilters: [
+                {
+                    Key: 'runId',
+                },
+            ],
+            ResourceTypeFilters: ['ecs:task-definition'],
+        }
+        taggingMockClient.on(GetResourcesCommand, expectedCommandInput).resolves({})
+
+        const res = await getTaskDefinitionsWithRunId(new ResourceGroupsTaggingAPIClient())
         expect(res).toStrictEqual({})
     })
 })

@@ -108,3 +108,18 @@ export async function getTaskResourcesByRunId(
 
     return await client.send(command)
 }
+
+export async function getTaskDefinitionsWithRunId(
+    client: ResourceGroupsTaggingAPIClient,
+): Promise<GetResourcesCommandOutput> {
+    const command = new GetResourcesCommand({
+        TagFilters: [
+            {
+                Key: 'runId',
+            },
+        ],
+        ResourceTypeFilters: ['ecs:task-definition'],
+    })
+
+    return await client.send(command)
+}
