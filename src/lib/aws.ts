@@ -10,6 +10,9 @@ import {
     RunTaskCommandInput,
     LaunchType,
     RunTaskCommand,
+    DeleteTaskDefinitionsCommand,
+    DeregisterTaskDefinitionCommand,
+    TaskDefinitionStatus,
 } from '@aws-sdk/client-ecs'
 import {
     GetResourcesCommand,
@@ -69,6 +72,29 @@ export async function registerECSTaskDefinition(
         tags: tags,
     })
     return await client.send(command)
+}
+
+export async function deleteECSTaskDefinitions(client: ECSClient, taskDefinitions: string[]): Promise<void> {
+    for (const task of taskDefinitions) {
+        // Query task definition status to determine appropriate actions
+        const taskDefinitionDetails = await getECSTaskDefinition(client, task)
+
+        // If the task definition is currently ACTIVE, we must deregister
+        if (taskDefinitionDetails.taskDefinition?.status === TaskDefinitionStatus.ACTIVE) {
+            const deregisterCommand = new DeregisterTaskDefinitionCommand({
+                taskDefinition: task,
+            })
+            await client.send(deregisterCommand)
+        }
+
+        // If the task definition is not DELETE_IN_PROGRESS, we request a deletion
+        if (taskDefinitionDetails.taskDefinition?.status !== TaskDefinitionStatus.DELETE_IN_PROGRESS) {
+            const deleteCommand = new DeleteTaskDefinitionsCommand({
+                taskDefinitions: [task],
+            })
+            await client.send(deleteCommand)
+        }
+    }
 }
 
 export async function runECSFargateTask(

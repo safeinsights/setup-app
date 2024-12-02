@@ -6,6 +6,9 @@ import {
     DescribeTaskDefinitionCommand,
     RegisterTaskDefinitionCommand,
     RunTaskCommand,
+    DeleteTaskDefinitionsCommand,
+    DeregisterTaskDefinitionCommand,
+    TaskDefinitionStatus,
 } from '@aws-sdk/client-ecs'
 import {
     getECSTaskDefinition,
@@ -14,6 +17,7 @@ import {
     registerECSTaskDefinition,
     runECSFargateTask,
     RUN_ID_TAG_KEY,
+    deleteECSTaskDefinitions,
 } from './aws'
 import { GetResourcesCommand, ResourceGroupsTaggingAPIClient } from '@aws-sdk/client-resource-groups-tagging-api'
 
@@ -76,6 +80,34 @@ describe('registerECSTaskDefinition', () => {
             testTags,
         )
         expect(res).toStrictEqual({})
+    })
+})
+
+describe('deleteECSTaskDefinitions', () => {
+    it('should send expected AWS commands and respect current status', async () => {
+        ecsMockClient
+            .on(DescribeTaskDefinitionCommand, { taskDefinition: '1' })
+            .resolves({ taskDefinition: { status: TaskDefinitionStatus.ACTIVE } })
+        ecsMockClient
+            .on(DescribeTaskDefinitionCommand, { taskDefinition: '2' })
+            .resolves({ taskDefinition: { status: TaskDefinitionStatus.ACTIVE } })
+        ecsMockClient
+            .on(DescribeTaskDefinitionCommand, { taskDefinition: '3' })
+            .resolves({ taskDefinition: { status: TaskDefinitionStatus.INACTIVE } })
+        ecsMockClient
+            .on(DescribeTaskDefinitionCommand, { taskDefinition: '4' })
+            .resolves({ taskDefinition: { status: TaskDefinitionStatus.DELETE_IN_PROGRESS } })
+
+        await deleteECSTaskDefinitions(new ECSClient(), ['1', '2', '3', '4'])
+
+        expect(ecsMockClient.commandCalls(DeregisterTaskDefinitionCommand, { taskDefinition: '1' })).toHaveLength(1)
+        expect(ecsMockClient.commandCalls(DeleteTaskDefinitionsCommand, { taskDefinitions: ['1'] })).toHaveLength(1)
+        expect(ecsMockClient.commandCalls(DeregisterTaskDefinitionCommand, { taskDefinition: '2' })).toHaveLength(1)
+        expect(ecsMockClient.commandCalls(DeleteTaskDefinitionsCommand, { taskDefinitions: ['2'] })).toHaveLength(1)
+        expect(ecsMockClient.commandCalls(DeregisterTaskDefinitionCommand, { taskDefinition: '3' })).toHaveLength(0)
+        expect(ecsMockClient.commandCalls(DeleteTaskDefinitionsCommand, { taskDefinitions: ['3'] })).toHaveLength(1)
+        expect(ecsMockClient.commandCalls(DeregisterTaskDefinitionCommand, { taskDefinition: '4' })).toHaveLength(0)
+        expect(ecsMockClient.commandCalls(DeleteTaskDefinitionsCommand, { taskDefinitions: ['4'] })).toHaveLength(0)
     })
 })
 
