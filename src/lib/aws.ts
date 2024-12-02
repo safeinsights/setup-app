@@ -17,6 +17,9 @@ import {
     ResourceGroupsTaggingAPIClient,
 } from '@aws-sdk/client-resource-groups-tagging-api'
 
+export const RUN_ID_TAG_KEY = 'runId'
+export const TITLE_TAG_KEY = 'title'
+
 export async function getECSTaskDefinition(
     client: ECSClient,
     taskDefinition: string,
@@ -99,7 +102,7 @@ export async function getTaskResourcesByRunId(
     const command = new GetResourcesCommand({
         TagFilters: [
             {
-                Key: 'runId',
+                Key: RUN_ID_TAG_KEY,
                 Values: [runId],
             },
         ],
@@ -115,7 +118,7 @@ export async function getTaskDefinitionsWithRunId(
     const command = new GetResourcesCommand({
         TagFilters: [
             {
-                Key: 'runId',
+                Key: RUN_ID_TAG_KEY,
             },
         ],
         ResourceTypeFilters: ['ecs:task-definition'],

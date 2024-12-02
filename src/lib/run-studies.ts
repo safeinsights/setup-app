@@ -1,7 +1,14 @@
 /* eslint-disable no-console */
 import { ECSClient, RunTaskCommandOutput } from '@aws-sdk/client-ecs'
 import { ResourceGroupsTaggingAPIClient } from '@aws-sdk/client-resource-groups-tagging-api'
-import { getECSTaskDefinition, registerECSTaskDefinition, runECSFargateTask, getTaskResourcesByRunId } from './aws'
+import {
+    getECSTaskDefinition,
+    registerECSTaskDefinition,
+    runECSFargateTask,
+    getTaskResourcesByRunId,
+    RUN_ID_TAG_KEY,
+    TITLE_TAG_KEY,
+} from './aws'
 import { managementAppGetRunnableStudiesRequest, toaGetRunsRequest, filterManagmentAppRuns } from './utils'
 import 'dotenv/config'
 
@@ -47,8 +54,8 @@ async function launchStudy(
     studyTitle: string,
 ): Promise<RunTaskCommandOutput> {
     const taskTags = [
-        { key: 'runId', value: runId },
-        { key: 'title', value: studyTitle },
+        { key: RUN_ID_TAG_KEY, value: runId },
+        { key: TITLE_TAG_KEY, value: studyTitle },
     ]
     const baseTaskDefinitionData = await getECSTaskDefinition(client, baseTaskDefinition)
 

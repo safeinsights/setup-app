@@ -13,6 +13,7 @@ import {
     getTaskResourcesByRunId,
     registerECSTaskDefinition,
     runECSFargateTask,
+    RUN_ID_TAG_KEY,
 } from './aws'
 import { GetResourcesCommand, ResourceGroupsTaggingAPIClient } from '@aws-sdk/client-resource-groups-tagging-api'
 
@@ -111,7 +112,7 @@ describe('getTaskResourcesByRunId', () => {
         const expectedCommandInput = {
             TagFilters: [
                 {
-                    Key: 'runId',
+                    Key: RUN_ID_TAG_KEY,
                     Values: ['testrun1234'],
                 },
             ],
@@ -129,7 +130,7 @@ describe('getTaskDefinitionsWithRunId', () => {
         const expectedCommandInput = {
             TagFilters: [
                 {
-                    Key: 'runId',
+                    Key: RUN_ID_TAG_KEY,
                 },
             ],
             ResourceTypeFilters: ['ecs:task-definition'],
