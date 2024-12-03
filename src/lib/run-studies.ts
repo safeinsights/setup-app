@@ -8,8 +8,15 @@ import {
     getTaskResourcesByRunId,
     RUN_ID_TAG_KEY,
     TITLE_TAG_KEY,
+    getTaskDefinitionsWithRunId,
+    deleteECSTaskDefinitions,
 } from './aws'
-import { managementAppGetRunnableStudiesRequest, toaGetRunsRequest, filterManagmentAppRuns } from './utils'
+import {
+    managementAppGetRunnableStudiesRequest,
+    toaGetRunsRequest,
+    filterManagmentAppRuns,
+    filterOrphanTaskDefinitions,
+} from './utils'
 import 'dotenv/config'
 
 const ecsClient = new ECSClient()
@@ -118,7 +125,7 @@ export async function runStudies(ignoreAWSRuns: boolean): Promise<void> {
 
     const filteredResult = filterManagmentAppRuns(result, toaGetRunsResult, existingAwsRuns)
 
-    filteredResult.runs.forEach(async (run) => {
+    for (const run of filteredResult.runs) {
         console.log(`Launching study for run ID ${run.runId}`)
 
         const toaEndpointWithRunId = `${process.env.TOA_BASE_URL}/api/run/${run.runId}`
@@ -134,7 +141,15 @@ export async function runStudies(ignoreAWSRuns: boolean): Promise<void> {
             run.containerLocation,
             run.title,
         )
-    })
+    }
+
+    await deleteECSTaskDefinitions(
+        ecsClient,
+        filterOrphanTaskDefinitions(
+            result,
+            (await getTaskDefinitionsWithRunId(taggingClient)).ResourceTagMappingList || [],
+        ),
+    )
 }
 
 // Wrap calls in a function to avoid layers of promise resolves
