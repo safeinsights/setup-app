@@ -19,15 +19,6 @@ import {
 } from './utils'
 import 'dotenv/config'
 
-const ecsClient = new ECSClient()
-const taggingClient = new ResourceGroupsTaggingAPIClient()
-
-// Set in IaC
-const cluster = process.env.ECS_CLUSTER || ''
-const baseTaskDefinition = process.env.BASE_TASK_DEFINITION_FAMILY || ''
-const subnets = process.env.VPC_SUBNETS || ''
-const securityGroup = process.env.SECURITY_GROUP || ''
-
 async function launchStudy(
     client: ECSClient,
     cluster: string,
@@ -52,7 +43,7 @@ async function launchStudy(
     const newTaskDefinitionFamily = `${baseTaskDefinitionData.taskDefinition.family}-${runId}`
 
     const registerTaskDefResponse = await registerECSTaskDefinition(
-        ecsClient,
+        client,
         baseTaskDefinitionData.taskDefinition,
         newTaskDefinitionFamily,
         toaEndpointWithRunId,
@@ -65,7 +56,7 @@ async function launchStudy(
     }
 
     return await runECSFargateTask(
-        ecsClient,
+        client,
         cluster,
         registerTaskDefResponse.taskDefinition.family,
         subnets,
@@ -85,6 +76,15 @@ async function checkRunExists(client: ResourceGroupsTaggingAPIClient, runId: str
 }
 
 export async function runStudies(ignoreAWSRuns: boolean): Promise<void> {
+    const ecsClient = new ECSClient()
+    const taggingClient = new ResourceGroupsTaggingAPIClient()
+
+    // Set in IaC
+    const cluster = process.env.ECS_CLUSTER || ''
+    const baseTaskDefinition = process.env.BASE_TASK_DEFINITION_FAMILY || ''
+    const subnets = process.env.VPC_SUBNETS || ''
+    const securityGroup = process.env.SECURITY_GROUP || ''
+
     const bmaRunnablesResults = await managementAppGetRunnableStudiesRequest()
     const toaGetRunsResult = await toaGetRunsRequest()
     const existingAwsRuns: string[] = []
