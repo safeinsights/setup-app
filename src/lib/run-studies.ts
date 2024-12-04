@@ -1,8 +1,22 @@
 /* eslint-disable no-console */
 import { ECSClient, RunTaskCommandOutput } from '@aws-sdk/client-ecs'
 import { ResourceGroupsTaggingAPIClient } from '@aws-sdk/client-resource-groups-tagging-api'
-import { getECSTaskDefinition, registerECSTaskDefinition, runECSFargateTask, getTaskResourcesByRunId } from './aws'
-import { managementAppGetRunnableStudiesRequest, toaGetRunsRequest, filterManagmentAppRuns } from './utils'
+import {
+    getECSTaskDefinition,
+    registerECSTaskDefinition,
+    runECSFargateTask,
+    getTaskResourcesByRunId,
+    RUN_ID_TAG_KEY,
+    TITLE_TAG_KEY,
+    getTaskDefinitionsWithRunId,
+    deleteECSTaskDefinitions,
+} from './aws'
+import {
+    managementAppGetRunnableStudiesRequest,
+    toaGetRunsRequest,
+    filterManagmentAppRuns,
+    filterOrphanTaskDefinitions,
+} from './utils'
 import 'dotenv/config'
 
 async function launchStudy(
@@ -17,8 +31,8 @@ async function launchStudy(
     studyTitle: string,
 ): Promise<RunTaskCommandOutput> {
     const taskTags = [
-        { key: 'runId', value: runId },
-        { key: 'title', value: studyTitle },
+        { key: RUN_ID_TAG_KEY, value: runId },
+        { key: TITLE_TAG_KEY, value: studyTitle },
     ]
     const baseTaskDefinitionData = await getECSTaskDefinition(client, baseTaskDefinition)
 
@@ -29,7 +43,7 @@ async function launchStudy(
     const newTaskDefinitionFamily = `${baseTaskDefinitionData.taskDefinition.family}-${runId}`
 
     const registerTaskDefResponse = await registerECSTaskDefinition(
-        ecsClient,
+        client,
         baseTaskDefinitionData.taskDefinition,
         newTaskDefinitionFamily,
         toaEndpointWithRunId,
@@ -42,7 +56,7 @@ async function launchStudy(
     }
 
     return await runECSFargateTask(
-        ecsClient,
+        client,
         cluster,
         registerTaskDefResponse.taskDefinition.family,
         subnets,
@@ -61,68 +75,32 @@ async function checkRunExists(client: ResourceGroupsTaggingAPIClient, runId: str
     return true
 }
 
-const ecsClient = new ECSClient()
-const taggingClient = new ResourceGroupsTaggingAPIClient()
+export async function runStudies(ignoreAWSRuns: boolean): Promise<void> {
+    const ecsClient = new ECSClient()
+    const taggingClient = new ResourceGroupsTaggingAPIClient()
 
-// Set in IaC
-const cluster = process.env.ECS_CLUSTER || ''
-const baseTaskDefinition = process.env.BASE_TASK_DEFINITION_FAMILY || ''
-const subnets = process.env.VPC_SUBNETS || ''
-const securityGroup = process.env.SECURITY_GROUP || ''
+    // Set in IaC
+    const cluster = process.env.ECS_CLUSTER || ''
+    const baseTaskDefinition = process.env.BASE_TASK_DEFINITION_FAMILY || ''
+    const subnets = process.env.VPC_SUBNETS || ''
+    const securityGroup = process.env.SECURITY_GROUP || ''
 
-// In case we want to test stuff without connecting to mgmt app
-const _managementAppSampleData = {
-    runs: [
-        {
-            runId: 'unique-run-id-3',
-            containerLocation: '084375557107.dkr.ecr.us-east-1.amazonaws.com/research-app:v1',
-            title: 'my-run-1',
-        },
-        {
-            runId: '1234',
-            containerLocation: '',
-            title: '',
-        },
-        {
-            runId: '456',
-            containerLocation: '',
-            title: '',
-        },
-    ],
-}
-
-// Wrap calls in a function to avoid layers of promise resolves
-const main = async (): Promise<void> => {
-    let ignoreAWSRuns = false
-    if (process.argv.includes('--help')) {
-        printHelp()
-        process.exit(0)
-    }
-    if (process.argv.includes('--ignore-aws')) {
-        console.log('Ignoring AWS existing runs')
-        ignoreAWSRuns = true
-    }
-
-    // Uncomment to use local variables
-    // const result = _managementAppSampleData
-    // const toaGetRunsResult = { runs: { runId: '456' } }
-
-    const result = await managementAppGetRunnableStudiesRequest()
+    const bmaRunnablesResults = await managementAppGetRunnableStudiesRequest()
     const toaGetRunsResult = await toaGetRunsRequest()
     const existingAwsRuns: string[] = []
 
     // Ignore AWS runs if --ignore-aws flag is passed
     if (!ignoreAWSRuns) {
-        for (const run of result.runs) {
+        for (const run of bmaRunnablesResults.runs) {
             if (await checkRunExists(taggingClient, run.runId)) {
                 existingAwsRuns.push(run.runId)
             }
         }
     }
 
-    const filteredResult = filterManagmentAppRuns(result, toaGetRunsResult, existingAwsRuns)
+    const filteredResult = filterManagmentAppRuns(bmaRunnablesResults, toaGetRunsResult, existingAwsRuns)
 
-    filteredResult.runs.forEach(async (run) => {
+    for (const run of filteredResult.runs) {
         console.log(`Launching study for run ID ${run.runId}`)
 
         const toaEndpointWithRunId = `${process.env.TOA_BASE_URL}/api/run/${run.runId}`
@@ -138,7 +116,27 @@ const main = async (): Promise<void> => {
             run.containerLocation,
             run.title,
         )
-    })
+    }
+
+    // Garbage collect orphan task definitions
+    const taskDefsWithRunId = (await getTaskDefinitionsWithRunId(taggingClient)).ResourceTagMappingList || []
+    const orphanTaskDefinitions = filterOrphanTaskDefinitions(bmaRunnablesResults, taskDefsWithRunId)
+    await deleteECSTaskDefinitions(ecsClient, orphanTaskDefinitions)
+}
+
+// Wrap calls in a function to avoid layers of promise resolves
+const main = async (): Promise<void> => {
+    let ignoreAWSRuns = false
+    if (process.argv.includes('--help')) {
+        printHelp()
+        process.exit(0)
+    }
+    if (process.argv.includes('--ignore-aws')) {
+        console.log('Ignoring AWS existing runs')
+        ignoreAWSRuns = true
+    }
+
+    await runStudies(ignoreAWSRuns)
 }
 
 const printHelp = () => {

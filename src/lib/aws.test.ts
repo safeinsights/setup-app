@@ -6,8 +6,19 @@ import {
     DescribeTaskDefinitionCommand,
     RegisterTaskDefinitionCommand,
     RunTaskCommand,
+    DeleteTaskDefinitionsCommand,
+    DeregisterTaskDefinitionCommand,
+    TaskDefinitionStatus,
 } from '@aws-sdk/client-ecs'
-import { getECSTaskDefinition, getTaskResourcesByRunId, registerECSTaskDefinition, runECSFargateTask } from './aws'
+import {
+    getECSTaskDefinition,
+    getTaskDefinitionsWithRunId,
+    getTaskResourcesByRunId,
+    registerECSTaskDefinition,
+    runECSFargateTask,
+    RUN_ID_TAG_KEY,
+    deleteECSTaskDefinitions,
+} from './aws'
 import { GetResourcesCommand, ResourceGroupsTaggingAPIClient } from '@aws-sdk/client-resource-groups-tagging-api'
 
 const ecsMockClient = mockClient(ECSClient)
@@ -72,6 +83,34 @@ describe('registerECSTaskDefinition', () => {
     })
 })
 
+describe('deleteECSTaskDefinitions', () => {
+    it('should send expected AWS commands and respect current status', async () => {
+        ecsMockClient
+            .on(DescribeTaskDefinitionCommand, { taskDefinition: '1' })
+            .resolves({ taskDefinition: { status: TaskDefinitionStatus.ACTIVE } })
+        ecsMockClient
+            .on(DescribeTaskDefinitionCommand, { taskDefinition: '2' })
+            .resolves({ taskDefinition: { status: TaskDefinitionStatus.ACTIVE } })
+        ecsMockClient
+            .on(DescribeTaskDefinitionCommand, { taskDefinition: '3' })
+            .resolves({ taskDefinition: { status: TaskDefinitionStatus.INACTIVE } })
+        ecsMockClient
+            .on(DescribeTaskDefinitionCommand, { taskDefinition: '4' })
+            .resolves({ taskDefinition: { status: TaskDefinitionStatus.DELETE_IN_PROGRESS } })
+
+        await deleteECSTaskDefinitions(new ECSClient(), ['1', '2', '3', '4'])
+
+        expect(ecsMockClient.commandCalls(DeregisterTaskDefinitionCommand, { taskDefinition: '1' })).toHaveLength(1)
+        expect(ecsMockClient.commandCalls(DeleteTaskDefinitionsCommand, { taskDefinitions: ['1'] })).toHaveLength(1)
+        expect(ecsMockClient.commandCalls(DeregisterTaskDefinitionCommand, { taskDefinition: '2' })).toHaveLength(1)
+        expect(ecsMockClient.commandCalls(DeleteTaskDefinitionsCommand, { taskDefinitions: ['2'] })).toHaveLength(1)
+        expect(ecsMockClient.commandCalls(DeregisterTaskDefinitionCommand, { taskDefinition: '3' })).toHaveLength(0)
+        expect(ecsMockClient.commandCalls(DeleteTaskDefinitionsCommand, { taskDefinitions: ['3'] })).toHaveLength(1)
+        expect(ecsMockClient.commandCalls(DeregisterTaskDefinitionCommand, { taskDefinition: '4' })).toHaveLength(0)
+        expect(ecsMockClient.commandCalls(DeleteTaskDefinitionsCommand, { taskDefinitions: ['4'] })).toHaveLength(0)
+    })
+})
+
 describe('runECSFargateTask', () => {
     it('should send RunTaskCommand and return response', async () => {
         const testTags = [{ key: 'testtagkey', value: 'testtagvalue' }]
@@ -105,7 +144,7 @@ describe('getTaskResourcesByRunId', () => {
         const expectedCommandInput = {
             TagFilters: [
                 {
-                    Key: 'runId',
+                    Key: RUN_ID_TAG_KEY,
                     Values: ['testrun1234'],
                 },
             ],
@@ -114,6 +153,23 @@ describe('getTaskResourcesByRunId', () => {
         taggingMockClient.on(GetResourcesCommand, expectedCommandInput).resolves({})
 
         const res = await getTaskResourcesByRunId(new ResourceGroupsTaggingAPIClient(), 'testrun1234')
+        expect(res).toStrictEqual({})
+    })
+})
+
+describe('getTaskDefinitionsWithRunId', () => {
+    it('should send GetResourcesCommand and return response', async () => {
+        const expectedCommandInput = {
+            TagFilters: [
+                {
+                    Key: RUN_ID_TAG_KEY,
+                },
+            ],
+            ResourceTypeFilters: ['ecs:task-definition'],
+        }
+        taggingMockClient.on(GetResourcesCommand, expectedCommandInput).resolves({})
+
+        const res = await getTaskDefinitionsWithRunId(new ResourceGroupsTaggingAPIClient())
         expect(res).toStrictEqual({})
     })
 })

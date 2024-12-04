@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { managementAppGetRunnableStudiesRequest, toaGetRunsRequest, filterManagmentAppRuns } from '../lib/utils'
+import {
+    managementAppGetRunnableStudiesRequest,
+    toaGetRunsRequest,
+    filterManagmentAppRuns,
+    filterOrphanTaskDefinitions,
+} from '../lib/utils'
 import jwt from 'jsonwebtoken'
 
 beforeEach(() => {
@@ -134,5 +139,42 @@ describe('filterManagementAppRuns', () => {
                 },
             ],
         })
+    })
+})
+
+describe('filterOrphanTaskDefinitions', () => {
+    it('filters expected task definitions', () => {
+        const mockManagementAppResponse = {
+            runs: [
+                {
+                    runId: 'not-yet-run',
+                    containerLocation: '',
+                    title: '',
+                },
+                {
+                    runId: 'previously-run-but-still-pending',
+                    containerLocation: '',
+                    title: '',
+                },
+            ],
+        }
+
+        const mockTaskDefResources = [
+            {
+                runId: 'not-yet-run',
+                containerLocation: '',
+                title: '',
+            },
+            {
+                ResourceARN: 'arn1',
+                Tags: [{ Key: 'runId', Value: 'previously-run-but-still-pending' }],
+            },
+            {
+                ResourceARN: 'arn2',
+                Tags: [{ Key: 'runId', Value: 'orphaned-run' }],
+            },
+        ]
+
+        expect(filterOrphanTaskDefinitions(mockManagementAppResponse, mockTaskDefResources)).toStrictEqual(['arn2'])
     })
 })
