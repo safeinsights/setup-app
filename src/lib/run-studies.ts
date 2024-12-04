@@ -85,20 +85,20 @@ async function checkRunExists(client: ResourceGroupsTaggingAPIClient, runId: str
 }
 
 export async function runStudies(ignoreAWSRuns: boolean): Promise<void> {
-    const result = await managementAppGetRunnableStudiesRequest()
+    const bmaRunnablesResults = await managementAppGetRunnableStudiesRequest()
     const toaGetRunsResult = await toaGetRunsRequest()
     const existingAwsRuns: string[] = []
 
     // Ignore AWS runs if --ignore-aws flag is passed
     if (!ignoreAWSRuns) {
-        for (const run of result.runs) {
+        for (const run of bmaRunnablesResults.runs) {
             if (await checkRunExists(taggingClient, run.runId)) {
                 existingAwsRuns.push(run.runId)
             }
         }
     }
 
-    const filteredResult = filterManagmentAppRuns(result, toaGetRunsResult, existingAwsRuns)
+    const filteredResult = filterManagmentAppRuns(bmaRunnablesResults, toaGetRunsResult, existingAwsRuns)
 
     for (const run of filteredResult.runs) {
         console.log(`Launching study for run ID ${run.runId}`)
@@ -121,7 +121,7 @@ export async function runStudies(ignoreAWSRuns: boolean): Promise<void> {
     await deleteECSTaskDefinitions(
         ecsClient,
         filterOrphanTaskDefinitions(
-            result,
+            bmaRunnablesResults,
             (await getTaskDefinitionsWithRunId(taggingClient)).ResourceTagMappingList || [],
         ),
     )
