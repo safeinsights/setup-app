@@ -28,27 +28,6 @@ const baseTaskDefinition = process.env.BASE_TASK_DEFINITION_FAMILY || ''
 const subnets = process.env.VPC_SUBNETS || ''
 const securityGroup = process.env.SECURITY_GROUP || ''
 
-// In case we want to test stuff without connecting to mgmt app
-const _managementAppSampleData = {
-    runs: [
-        {
-            runId: 'unique-run-id-3',
-            containerLocation: '084375557107.dkr.ecr.us-east-1.amazonaws.com/research-app:v1',
-            title: 'my-run-1',
-        },
-        {
-            runId: '1234',
-            containerLocation: '',
-            title: '',
-        },
-        {
-            runId: '456',
-            containerLocation: '',
-            title: '',
-        },
-    ],
-}
-
 async function launchStudy(
     client: ECSClient,
     cluster: string,
@@ -106,10 +85,6 @@ async function checkRunExists(client: ResourceGroupsTaggingAPIClient, runId: str
 }
 
 export async function runStudies(ignoreAWSRuns: boolean): Promise<void> {
-    // Uncomment to use local variables
-    // const result = _managementAppSampleData
-    // const toaGetRunsResult = { runs: { runId: '456' } }
-
     const result = await managementAppGetRunnableStudiesRequest()
     const toaGetRunsResult = await toaGetRunsRequest()
     const existingAwsRuns: string[] = []
