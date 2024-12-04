@@ -10,12 +10,18 @@ import {
     RunTaskCommandInput,
     LaunchType,
     RunTaskCommand,
+    DeleteTaskDefinitionsCommand,
+    DeregisterTaskDefinitionCommand,
+    TaskDefinitionStatus,
 } from '@aws-sdk/client-ecs'
 import {
     GetResourcesCommand,
     GetResourcesCommandOutput,
     ResourceGroupsTaggingAPIClient,
 } from '@aws-sdk/client-resource-groups-tagging-api'
+
+export const RUN_ID_TAG_KEY = 'runId'
+export const TITLE_TAG_KEY = 'title'
 
 export async function getECSTaskDefinition(
     client: ECSClient,
@@ -68,6 +74,29 @@ export async function registerECSTaskDefinition(
     return await client.send(command)
 }
 
+export async function deleteECSTaskDefinitions(client: ECSClient, taskDefinitions: string[]): Promise<void> {
+    for (const task of taskDefinitions) {
+        // Query task definition status to determine appropriate actions
+        const taskDefinitionDetails = await getECSTaskDefinition(client, task)
+
+        // If the task definition is currently ACTIVE, we must deregister
+        if (taskDefinitionDetails.taskDefinition?.status === TaskDefinitionStatus.ACTIVE) {
+            const deregisterCommand = new DeregisterTaskDefinitionCommand({
+                taskDefinition: task,
+            })
+            await client.send(deregisterCommand)
+        }
+
+        // If the task definition is not DELETE_IN_PROGRESS, we request a deletion
+        if (taskDefinitionDetails.taskDefinition?.status !== TaskDefinitionStatus.DELETE_IN_PROGRESS) {
+            const deleteCommand = new DeleteTaskDefinitionsCommand({
+                taskDefinitions: [task],
+            })
+            await client.send(deleteCommand)
+        }
+    }
+}
+
 export async function runECSFargateTask(
     client: ECSClient,
     cluster: string,
@@ -99,11 +128,26 @@ export async function getTaskResourcesByRunId(
     const command = new GetResourcesCommand({
         TagFilters: [
             {
-                Key: 'runId',
+                Key: RUN_ID_TAG_KEY,
                 Values: [runId],
             },
         ],
         ResourceTypeFilters: ['ecs:task', 'ecs:task-definition'],
+    })
+
+    return await client.send(command)
+}
+
+export async function getTaskDefinitionsWithRunId(
+    client: ResourceGroupsTaggingAPIClient,
+): Promise<GetResourcesCommandOutput> {
+    const command = new GetResourcesCommand({
+        TagFilters: [
+            {
+                Key: RUN_ID_TAG_KEY,
+            },
+        ],
+        ResourceTypeFilters: ['ecs:task-definition'],
     })
 
     return await client.send(command)
