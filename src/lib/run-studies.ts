@@ -118,13 +118,10 @@ export async function runStudies(ignoreAWSRuns: boolean): Promise<void> {
         )
     }
 
-    await deleteECSTaskDefinitions(
-        ecsClient,
-        filterOrphanTaskDefinitions(
-            bmaRunnablesResults,
-            (await getTaskDefinitionsWithRunId(taggingClient)).ResourceTagMappingList || [],
-        ),
-    )
+    // Garbage collect orphan task definitions
+    const taskDefsWithRunId = (await getTaskDefinitionsWithRunId(taggingClient)).ResourceTagMappingList || []
+    const orphanTaskDefinitions = filterOrphanTaskDefinitions(bmaRunnablesResults, taskDefsWithRunId)
+    await deleteECSTaskDefinitions(ecsClient, orphanTaskDefinitions)
 }
 
 // Wrap calls in a function to avoid layers of promise resolves
