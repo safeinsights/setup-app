@@ -18,16 +18,30 @@ const generateToken = (): string => {
     return token
 }
 
-export const managementAppGetRunnableStudiesRequest = async (): Promise<ManagementAppGetRunnableStudiesResponse> => {
+export const managementAppGetRunnableStudiesRequest = async (): Promise<
+    ManagementAppGetRunnableStudiesResponse | undefined
+> => {
     const endpoint = process.env.MANAGEMENT_APP_BASE_URL + '/api/studies/runnable' // `http://localhost:4000/api/studies/runnable`
     const token = generateToken()
-    const response = await fetch(endpoint, {
-        method: 'GET',
-        headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-        },
-    })
+    let response = undefined
+
+    try {
+        response = await fetch(endpoint, {
+            method: 'GET',
+            headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+        })
+    } catch (error) {
+        if (error instanceof Error) {
+            console.log(`Error when attempting to query management app: ${error.message}\n${error.stack}`)
+        } else {
+            console.log(`Unknown error when attempting to query management app: ${error}`)
+        }
+
+        return undefined
+    }
 
     const data = await response.json()
     return data

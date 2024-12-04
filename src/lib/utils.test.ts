@@ -58,6 +58,19 @@ describe('managementAppGetRunnableStudiesRequest', () => {
 
         await expect(managementAppGetRunnableStudiesRequest()).rejects.toThrow('Managment App token failed to generate')
     })
+
+    it('should log and return gracefully if BMA is unavailable', async () => {
+        const mockSignToken = vi.fn().mockReturnValue('mocktokenvalue')
+        vi.spyOn(jwt, 'sign').mockImplementation(mockSignToken)
+        const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+        global.fetch = vi.fn(() => Promise.reject(new Error('Network error')))
+
+        const result = await managementAppGetRunnableStudiesRequest()
+
+        expect(result).toEqual(undefined)
+        expect(consoleLogSpy).toHaveBeenCalledOnce()
+    })
 })
 
 describe('toaGetRunsRequest', () => {
