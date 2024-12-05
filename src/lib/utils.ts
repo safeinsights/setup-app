@@ -3,6 +3,11 @@ import { ManagementAppGetRunnableStudiesResponse, TOAGetRunsResponse } from './t
 import { ResourceTagMapping } from '@aws-sdk/client-resource-groups-tagging-api'
 import { RUN_ID_TAG_KEY } from './aws'
 
+export const logError = (error: unknown, msg: string): void => {
+    const errorAsError = error as Error
+    console.log(`${msg}: ${errorAsError.message}\n${errorAsError.stack}`)
+}
+
 // Functions for interacting with the Management App
 const generateToken = (): string => {
     const privateKey: string | undefined = process.env.MANAGEMENT_APP_PRIVATE_KEY
@@ -34,12 +39,7 @@ export const managementAppGetRunnableStudiesRequest = async (): Promise<
             },
         })
     } catch (error) {
-        if (error instanceof Error) {
-            console.log(`Error when attempting to query management app: ${error.message}\n${error.stack}`)
-        } else {
-            console.log(`Unknown error when attempting to query management app: ${error}`)
-        }
-
+        logError(error, 'Error when attempting to query management app')
         return undefined
     }
 
