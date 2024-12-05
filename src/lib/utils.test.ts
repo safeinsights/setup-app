@@ -32,9 +32,7 @@ describe('managementAppGetRunnableStudiesRequest', () => {
                 },
             ],
         }
-        global.fetch = vi.fn().mockResolvedValue({
-            json: async () => await Promise.resolve(mockStudiesData),
-        })
+        global.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify(mockStudiesData)))
         vi.spyOn(jwt, 'sign').mockImplementation(mockSignToken)
 
         const result = await managementAppGetRunnableStudiesRequest()
@@ -57,6 +55,17 @@ describe('managementAppGetRunnableStudiesRequest', () => {
         vi.spyOn(jwt, 'sign').mockImplementation(mockSignToken)
 
         await expect(managementAppGetRunnableStudiesRequest()).rejects.toThrow('Managment App token failed to generate')
+    })
+
+    it('should throw an error if BMA response status is not success', async () => {
+        const mockSignToken = vi.fn().mockReturnValue('mocktokenvalue')
+        vi.spyOn(jwt, 'sign').mockImplementation(mockSignToken)
+
+        global.fetch = vi.fn().mockResolvedValue(new Response('Authentication error', { status: 401 }))
+
+        await expect(managementAppGetRunnableStudiesRequest()).rejects.toThrow(
+            'Received an unexpected 401 from management app: Authentication error',
+        )
     })
 })
 

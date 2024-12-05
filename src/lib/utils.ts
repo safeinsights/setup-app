@@ -29,6 +29,10 @@ export const managementAppGetRunnableStudiesRequest = async (): Promise<Manageme
         },
     })
 
+    if (!response.ok) {
+        throw new Error(`Received an unexpected ${response.status} from management app: ${await response.text()}`)
+    }
+
     const data = await response.json()
     return data
 }
