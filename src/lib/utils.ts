@@ -52,6 +52,11 @@ export const toaGetRunsRequest = async (): Promise<TOAGetRunsResponse> => {
             'Content-Type': 'application/json',
         },
     })
+
+    if (!response.ok) {
+        throw new Error(`Received an unexpected ${response.status} from trusted output app: ${await response.text()}`)
+    }
+
     const data = await response.json()
     return data
 }

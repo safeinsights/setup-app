@@ -74,9 +74,7 @@ describe('toaGetRunsRequest', () => {
         const mockTOAData = {
             runs: [{ runId: '1234' }],
         }
-        global.fetch = vi.fn().mockResolvedValue({
-            json: async () => await Promise.resolve(mockTOAData),
-        })
+        global.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify(mockTOAData)))
 
         const result = await toaGetRunsRequest()
 
@@ -94,6 +92,13 @@ describe('toaGetRunsRequest', () => {
     it('should error if token not found', async () => {
         process.env.TOA_BASIC_AUTH = ''
         await expect(toaGetRunsRequest()).rejects.toThrow('TOA token failed to generate')
+    })
+
+    it('should throw an error if response status is not success', async () => {
+        global.fetch = vi.fn().mockResolvedValue(new Response('Authentication error', { status: 401 }))
+        await expect(toaGetRunsRequest()).rejects.toThrow(
+            'Received an unexpected 401 from trusted output app: Authentication error',
+        )
     })
 })
 
