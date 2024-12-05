@@ -1,7 +1,6 @@
 import { runStudies } from './run-studies'
 
 function poll(): void {
-    // eslint-disable-next-line no-console
     console.log(`Polling management app at ${new Date()}`)
 
     runStudies(false)

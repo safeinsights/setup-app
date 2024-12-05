@@ -3,6 +3,11 @@ import { ManagementAppGetRunnableStudiesResponse, TOAGetRunsResponse } from './t
 import { ResourceTagMapping } from '@aws-sdk/client-resource-groups-tagging-api'
 import { RUN_ID_TAG_KEY } from './aws'
 
+export const logError = (error: unknown, msg: string): void => {
+    const errorAsError = error as Error
+    console.log(`${msg}: ${errorAsError.message}\n${errorAsError.stack}`)
+}
+
 // Functions for interacting with the Management App
 const generateToken = (): string => {
     const privateKey: string | undefined = process.env.MANAGEMENT_APP_PRIVATE_KEY
@@ -18,16 +23,25 @@ const generateToken = (): string => {
     return token
 }
 
-export const managementAppGetRunnableStudiesRequest = async (): Promise<ManagementAppGetRunnableStudiesResponse> => {
+export const managementAppGetRunnableStudiesRequest = async (): Promise<
+    ManagementAppGetRunnableStudiesResponse | undefined
+> => {
     const endpoint = process.env.MANAGEMENT_APP_BASE_URL + '/api/studies/runnable' // `http://localhost:4000/api/studies/runnable`
     const token = generateToken()
-    const response = await fetch(endpoint, {
-        method: 'GET',
-        headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-        },
-    })
+    let response = undefined
+
+    try {
+        response = await fetch(endpoint, {
+            method: 'GET',
+            headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+        })
+    } catch (error) {
+        logError(error, 'Error when attempting to query management app')
+        return undefined
+    }
 
     const data = await response.json()
     return data

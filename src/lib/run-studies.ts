@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import { ECSClient, RunTaskCommandOutput } from '@aws-sdk/client-ecs'
 import { ResourceGroupsTaggingAPIClient } from '@aws-sdk/client-resource-groups-tagging-api'
 import {
@@ -88,6 +87,11 @@ export async function runStudies(ignoreAWSRuns: boolean): Promise<void> {
     const bmaRunnablesResults = await managementAppGetRunnableStudiesRequest()
     const toaGetRunsResult = await toaGetRunsRequest()
     const existingAwsRuns: string[] = []
+
+    if (bmaRunnablesResults === undefined) {
+        // We could not get a valid response from the BMA, so just return early
+        return
+    }
 
     // Ignore AWS runs if --ignore-aws flag is passed
     if (!ignoreAWSRuns) {
