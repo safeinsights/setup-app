@@ -1,5 +1,10 @@
 import jwt from 'jsonwebtoken'
-import { ManagementAppGetRunnableStudiesResponse, TOAGetRunsResponse } from './types'
+import {
+    isManagementAppGetRunnableStudiesResponse,
+    isTOAGetRunsResponse,
+    ManagementAppGetRunnableStudiesResponse,
+    TOAGetRunsResponse,
+} from './types'
 import { ResourceTagMapping } from '@aws-sdk/client-resource-groups-tagging-api'
 import { RUN_ID_TAG_KEY } from './aws'
 
@@ -29,7 +34,15 @@ export const managementAppGetRunnableStudiesRequest = async (): Promise<Manageme
         },
     })
 
+    if (!response.ok) {
+        throw new Error(`Received an unexpected ${response.status} from management app: ${await response.text()}`)
+    }
+
     const data = await response.json()
+    if (!isManagementAppGetRunnableStudiesResponse(data)) {
+        throw new Error('Management app response does not match expected structure')
+    }
+
     return data
 }
 
@@ -48,7 +61,16 @@ export const toaGetRunsRequest = async (): Promise<TOAGetRunsResponse> => {
             'Content-Type': 'application/json',
         },
     })
+
+    if (!response.ok) {
+        throw new Error(`Received an unexpected ${response.status} from trusted output app: ${await response.text()}`)
+    }
+
     const data = await response.json()
+    if (!isTOAGetRunsResponse(data)) {
+        throw new Error('Trusted output app response does not match expected structure')
+    }
+
     return data
 }
 
