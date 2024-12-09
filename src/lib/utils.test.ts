@@ -22,12 +22,12 @@ describe('managementAppGetRunnableStudiesRequest', () => {
             runs: [
                 {
                     runId: 'runId1',
-                    studyId: 'studyId1',
+                    title: 'title1',
                     containerLocation: 'repo1:tag1',
                 },
                 {
                     runId: 'runId2',
-                    studyId: 'studyId2',
+                    title: 'title2',
                     containerLocation: 'repo1:tag2',
                 },
             ],
@@ -67,6 +67,25 @@ describe('managementAppGetRunnableStudiesRequest', () => {
             'Received an unexpected 401 from management app: Authentication error',
         )
     })
+
+    it('should throw an error if response structure is unexpected', async () => {
+        const mockSignToken = vi.fn().mockReturnValue('mocktokenvalue')
+        const mockStudiesData = {
+            // The following run is missing title
+            runs: [
+                {
+                    runId: 'runId1',
+                    containerLocation: 'repo1:tag1',
+                },
+            ],
+        }
+        global.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify(mockStudiesData)))
+        vi.spyOn(jwt, 'sign').mockImplementation(mockSignToken)
+
+        await expect(managementAppGetRunnableStudiesRequest()).rejects.toThrow(
+            'Management app response does not match expected structure',
+        )
+    })
 })
 
 describe('toaGetRunsRequest', () => {
@@ -98,6 +117,18 @@ describe('toaGetRunsRequest', () => {
         global.fetch = vi.fn().mockResolvedValue(new Response('Authentication error', { status: 401 }))
         await expect(toaGetRunsRequest()).rejects.toThrow(
             'Received an unexpected 401 from trusted output app: Authentication error',
+        )
+    })
+
+    it('should throw an error if response structure is unexpected', async () => {
+        const mockTOAData = {
+            // Run has unexpcted type for runId
+            runs: [{ runId: 11 }],
+        }
+        global.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify(mockTOAData)))
+
+        await expect(toaGetRunsRequest()).rejects.toThrow(
+            'Trusted output app response does not match expected structure',
         )
     })
 })
