@@ -122,7 +122,7 @@ describe('toaGetRunsRequest', () => {
 
     it('should throw an error if response structure is unexpected', async () => {
         const mockTOAData = {
-            // Run has unexpcted type for runId
+            // Run has unexpected type for runId
             runs: [{ runId: 11 }],
         }
         global.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify(mockTOAData)))
