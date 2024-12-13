@@ -1,4 +1,4 @@
-import { runStudies } from './run-studies'
+import { runStudies } from '../lib/run-studies'
 
 function poll(): void {
     // eslint-disable-next-line no-console

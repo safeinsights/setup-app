@@ -1,4 +1,4 @@
-import { runStudies } from "./run-studies"
+import { runStudies } from "../lib/run-studies"
 
 // Wrap calls in a function to avoid layers of promise resolves
 const main = async (): Promise<void> => {
