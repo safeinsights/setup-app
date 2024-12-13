@@ -11,10 +11,7 @@ import {
     getTaskDefinitionsWithRunId,
     deleteECSTaskDefinitions,
 } from './aws'
-import {
-    filterManagementAppRuns,
-    filterOrphanTaskDefinitions,
-} from './utils'
+import { filterManagementAppRuns, filterOrphanTaskDefinitions } from './utils'
 import { managementAppGetRunnableStudiesRequest, toaGetRunsRequest } from './api'
 import 'dotenv/config'
 

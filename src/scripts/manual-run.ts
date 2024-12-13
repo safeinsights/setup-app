@@ -1,4 +1,4 @@
-import { runStudies } from "../lib/run-studies"
+import { runStudies } from '../lib/run-studies'
 
 // Wrap calls in a function to avoid layers of promise resolves
 const main = async (): Promise<void> => {
@@ -12,7 +12,7 @@ const main = async (): Promise<void> => {
         ignoreAWSRuns = true
     }
 
-    await runStudies({ignoreAWSRuns: ignoreAWSRuns})
+    await runStudies({ ignoreAWSRuns: ignoreAWSRuns })
 }
 
 const printHelp = () => {

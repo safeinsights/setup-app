@@ -1,8 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import {
-    filterManagementAppRuns,
-    filterOrphanTaskDefinitions,
-} from '../lib/utils'
+import { filterManagementAppRuns, filterOrphanTaskDefinitions } from '../lib/utils'
 
 describe('filterManagementAppRuns', () => {
     it('filters out runs in the TOA', () => {

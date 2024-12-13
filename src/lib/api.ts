@@ -3,8 +3,8 @@ import {
     ManagementAppGetRunnableStudiesResponse,
     TOAGetRunsResponse,
     isManagementAppGetRunnableStudiesResponse,
-    isTOAGetRunsResponse
-} from "./types"
+    isTOAGetRunsResponse,
+} from './types'
 
 // Functions for interacting with the Management App
 const generateToken = (): string => {
