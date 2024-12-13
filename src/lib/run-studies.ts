@@ -12,11 +12,10 @@ import {
     deleteECSTaskDefinitions,
 } from './aws'
 import {
-    managementAppGetRunnableStudiesRequest,
-    toaGetRunsRequest,
-    filterManagmentAppRuns,
+    filterManagementAppRuns,
     filterOrphanTaskDefinitions,
 } from './utils'
+import { managementAppGetRunnableStudiesRequest, toaGetRunsRequest } from './api'
 import 'dotenv/config'
 
 async function launchStudy(
@@ -75,7 +74,7 @@ async function checkRunExists(client: ResourceGroupsTaggingAPIClient, runId: str
     return true
 }
 
-export async function runStudies(ignoreAWSRuns: boolean): Promise<void> {
+export async function runStudies(options: { ignoreAWSRuns: boolean }): Promise<void> {
     const ecsClient = new ECSClient()
     const taggingClient = new ResourceGroupsTaggingAPIClient()
 
@@ -89,8 +88,8 @@ export async function runStudies(ignoreAWSRuns: boolean): Promise<void> {
     const toaGetRunsResult = await toaGetRunsRequest()
     const existingAwsRuns: string[] = []
 
-    // Ignore AWS runs if --ignore-aws flag is passed
-    if (!ignoreAWSRuns) {
+    // Find runs already in AWS environment, unless --ignore-aws flag has been passed
+    if (!options.ignoreAWSRuns) {
         for (const run of bmaRunnablesResults.runs) {
             if (await checkRunExists(taggingClient, run.runId)) {
                 existingAwsRuns.push(run.runId)
@@ -98,7 +97,7 @@ export async function runStudies(ignoreAWSRuns: boolean): Promise<void> {
         }
     }
 
-    const filteredResult = filterManagmentAppRuns(bmaRunnablesResults, toaGetRunsResult, existingAwsRuns)
+    const filteredResult = filterManagementAppRuns(bmaRunnablesResults, toaGetRunsResult, existingAwsRuns)
 
     for (const run of filteredResult.runs) {
         console.log(`Launching study for run ID ${run.runId}`)
@@ -123,27 +122,3 @@ export async function runStudies(ignoreAWSRuns: boolean): Promise<void> {
     const orphanTaskDefinitions = filterOrphanTaskDefinitions(bmaRunnablesResults, taskDefsWithRunId)
     await deleteECSTaskDefinitions(ecsClient, orphanTaskDefinitions)
 }
-
-// Wrap calls in a function to avoid layers of promise resolves
-const main = async (): Promise<void> => {
-    let ignoreAWSRuns = false
-    if (process.argv.includes('--help')) {
-        printHelp()
-        process.exit(0)
-    }
-    if (process.argv.includes('--ignore-aws')) {
-        console.log('Ignoring AWS existing runs')
-        ignoreAWSRuns = true
-    }
-
-    await runStudies(ignoreAWSRuns)
-}
-
-const printHelp = () => {
-    console.log('Usage: npx tsx run-studies.ts')
-    console.log('Options:')
-    console.log('--help             Display this help message')
-    console.log('--ignore-aws       Ignore AWS existing runs and start a new run')
-}
-
-main()
