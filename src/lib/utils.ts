@@ -1,8 +1,10 @@
-import { ManagementAppGetRunnableStudiesResponse, TOAGetRunsResponse } from './types'
+import {
+    ManagementAppGetRunnableStudiesResponse,
+    TOAGetRunsResponse,
+} from './types'
 import { ResourceTagMapping } from '@aws-sdk/client-resource-groups-tagging-api'
 import { RUN_ID_TAG_KEY } from './aws'
 
-// Other
 export const filterManagementAppRuns = (
     managementAppResponse: ManagementAppGetRunnableStudiesResponse,
     toaResponse: TOAGetRunsResponse,

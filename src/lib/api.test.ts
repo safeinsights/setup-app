@@ -10,7 +10,6 @@ beforeEach(() => {
     process.env.TOA_BASIC_AUTH = 'testusername:testpassword'
 })
 
-
 describe('managementAppGetRunnableStudiesRequest', () => {
     it('should generate a token and make a GET request', async () => {
         const mockSignToken = vi.fn().mockReturnValue('mocktokenvalue')
@@ -18,19 +17,17 @@ describe('managementAppGetRunnableStudiesRequest', () => {
             runs: [
                 {
                     runId: 'runId1',
-                    studyId: 'studyId1',
+                    title: 'title1',
                     containerLocation: 'repo1:tag1',
                 },
                 {
                     runId: 'runId2',
-                    studyId: 'studyId2',
+                    title: 'title2',
                     containerLocation: 'repo1:tag2',
                 },
             ],
         }
-        global.fetch = vi.fn().mockResolvedValue({
-            json: async () => await Promise.resolve(mockStudiesData),
-        })
+        global.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify(mockStudiesData)))
         vi.spyOn(jwt, 'sign').mockImplementation(mockSignToken)
 
         const result = await managementAppGetRunnableStudiesRequest()
@@ -54,6 +51,36 @@ describe('managementAppGetRunnableStudiesRequest', () => {
 
         await expect(managementAppGetRunnableStudiesRequest()).rejects.toThrow('Managment App token failed to generate')
     })
+
+    it('should throw an error if BMA response status is not success', async () => {
+        const mockSignToken = vi.fn().mockReturnValue('mocktokenvalue')
+        vi.spyOn(jwt, 'sign').mockImplementation(mockSignToken)
+
+        global.fetch = vi.fn().mockResolvedValue(new Response('Authentication error', { status: 401 }))
+
+        await expect(managementAppGetRunnableStudiesRequest()).rejects.toThrow(
+            'Received an unexpected 401 from management app: Authentication error',
+        )
+    })
+
+    it('should throw an error if response structure is unexpected', async () => {
+        const mockSignToken = vi.fn().mockReturnValue('mocktokenvalue')
+        const mockStudiesData = {
+            // The following run is missing title
+            runs: [
+                {
+                    runId: 'runId1',
+                    containerLocation: 'repo1:tag1',
+                },
+            ],
+        }
+        global.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify(mockStudiesData)))
+        vi.spyOn(jwt, 'sign').mockImplementation(mockSignToken)
+
+        await expect(managementAppGetRunnableStudiesRequest()).rejects.toThrow(
+            'Management app response does not match expected structure',
+        )
+    })
 })
 
 describe('toaGetRunsRequest', () => {
@@ -61,9 +88,7 @@ describe('toaGetRunsRequest', () => {
         const mockTOAData = {
             runs: [{ runId: '1234' }],
         }
-        global.fetch = vi.fn().mockResolvedValue({
-            json: async () => await Promise.resolve(mockTOAData),
-        })
+        global.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify(mockTOAData)))
 
         const result = await toaGetRunsRequest()
 
@@ -81,6 +106,24 @@ describe('toaGetRunsRequest', () => {
     it('should error if token not found', async () => {
         process.env.TOA_BASIC_AUTH = ''
         await expect(toaGetRunsRequest()).rejects.toThrow('TOA token failed to generate')
+    })
 
+    it('should throw an error if response status is not success', async () => {
+        global.fetch = vi.fn().mockResolvedValue(new Response('Authentication error', { status: 401 }))
+        await expect(toaGetRunsRequest()).rejects.toThrow(
+            'Received an unexpected 401 from trusted output app: Authentication error',
+        )
+    })
+
+    it('should throw an error if response structure is unexpected', async () => {
+        const mockTOAData = {
+            // Run has unexpected type for runId
+            runs: [{ runId: 11 }],
+        }
+        global.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify(mockTOAData)))
+
+        await expect(toaGetRunsRequest()).rejects.toThrow(
+            'Trusted output app response does not match expected structure',
+        )
     })
 })
