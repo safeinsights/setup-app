@@ -11,7 +11,12 @@ import {
     getTaskDefinitionsWithRunId,
     deleteECSTaskDefinitions,
 } from './aws'
-import { filterManagementAppRuns, filterOrphanTaskDefinitions } from './utils'
+import {
+    ensureValueWithExchange,
+    ensureValueWithError,
+    filterManagementAppRuns,
+    filterOrphanTaskDefinitions,
+} from './utils'
 import { managementAppGetRunnableStudiesRequest, toaGetRunsRequest } from './api'
 import 'dotenv/config'
 import { ManagementAppGetRunnableStudiesResponse } from './types'
@@ -32,10 +37,10 @@ async function launchStudy(
         { key: TITLE_TAG_KEY, value: studyTitle },
     ]
     const baseTaskDefinitionData = await getECSTaskDefinition(client, baseTaskDefinition)
-
-    if (baseTaskDefinitionData.taskDefinition === undefined) {
-        throw new Error(`Could not find task definition data for ${baseTaskDefinition}`)
-    }
+    baseTaskDefinitionData.taskDefinition = ensureValueWithError(
+        baseTaskDefinitionData.taskDefinition,
+        `Could not find task definition data for ${baseTaskDefinition}`,
+    )
 
     const newTaskDefinitionFamily = `${baseTaskDefinitionData.taskDefinition.family}-${runId}`
 
@@ -47,10 +52,14 @@ async function launchStudy(
         imageLocation,
         taskTags,
     )
-
-    if (registerTaskDefResponse.taskDefinition?.family === undefined) {
-        throw new Error('Generated task definition has undefined family')
-    }
+    registerTaskDefResponse.taskDefinition = ensureValueWithError(
+        registerTaskDefResponse.taskDefinition,
+        `Could not register task definition ${newTaskDefinitionFamily}`,
+    )
+    registerTaskDefResponse.taskDefinition.family = ensureValueWithError(
+        registerTaskDefResponse.taskDefinition.family,
+        'Generated task definition has undefined family',
+    )
 
     return await runECSFargateTask(
         client,
@@ -78,7 +87,10 @@ async function cleanupTaskDefs(
     ecsClient: ECSClient,
 ) {
     // Garbage collect orphan task definitions
-    const taskDefsWithRunId = (await getTaskDefinitionsWithRunId(taggingClient)).ResourceTagMappingList || []
+    const taskDefsWithRunId = ensureValueWithExchange(
+        (await getTaskDefinitionsWithRunId(taggingClient)).ResourceTagMappingList,
+        [],
+    )
     const orphanTaskDefinitions = filterOrphanTaskDefinitions(bmaResults, taskDefsWithRunId)
     await deleteECSTaskDefinitions(ecsClient, orphanTaskDefinitions)
 }
@@ -88,10 +100,10 @@ export async function runStudies(options: { ignoreAWSRuns: boolean }): Promise<v
     const taggingClient = new ResourceGroupsTaggingAPIClient()
 
     // Set in IaC
-    const cluster = process.env.ECS_CLUSTER || ''
-    const baseTaskDefinition = process.env.BASE_TASK_DEFINITION_FAMILY || ''
-    const subnets = process.env.VPC_SUBNETS || ''
-    const securityGroup = process.env.SECURITY_GROUP || ''
+    const cluster = ensureValueWithExchange(process.env.ECS_CLUSTER, '')
+    const baseTaskDefinition = ensureValueWithExchange(process.env.BASE_TASK_DEFINITION_FAMILY, '')
+    const subnets = ensureValueWithExchange(process.env.VPC_SUBNETS, '')
+    const securityGroup = ensureValueWithExchange(process.env.SECURITY_GROUP, '')
 
     const bmaRunnablesResults = await managementAppGetRunnableStudiesRequest()
     const toaGetRunsResult = await toaGetRunsRequest()

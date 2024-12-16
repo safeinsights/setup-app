@@ -35,3 +35,19 @@ export const filterOrphanTaskDefinitions = (
 
     return orphanTaskDefinitions
 }
+
+// returns given value with type certainty, or errors if value is null or undefined
+export const ensureValueWithError = <T>(value: T, message?: string): NonNullable<T> => {
+    if (value === null || value === undefined) {
+        throw new Error(message)
+    }
+    return value
+}
+
+// returns given value with type certainty, or silently exchanges value if null or undefined
+export const ensureValueWithExchange = <T>(value: T, exchange: NonNullable<T>): NonNullable<T> => {
+    if (value === null || value === undefined) {
+        return exchange
+    }
+    return value
+}

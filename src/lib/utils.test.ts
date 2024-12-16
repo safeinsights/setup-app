@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { filterManagementAppRuns, filterOrphanTaskDefinitions } from '../lib/utils'
+import {
+    filterManagementAppRuns,
+    filterOrphanTaskDefinitions,
+    ensureValueWithError,
+    ensureValueWithExchange,
+} from '../lib/utils'
 
 describe('filterManagementAppRuns', () => {
     it('filters out runs in the TOA', () => {
@@ -89,5 +94,33 @@ describe('filterOrphanTaskDefinitions', () => {
         ]
 
         expect(filterOrphanTaskDefinitions(mockManagementAppResponse, mockTaskDefResources)).toStrictEqual(['arn2'])
+    })
+})
+
+describe('ensureValueWithError', () => {
+    it('makes sure values are defined', () => {
+        expect(ensureValueWithError(10)).toBe(10)
+    })
+
+    it('responds with the given error message if values are undefined', () => {
+        expect(() => ensureValueWithError(null, "Can't be null or undefined")).toThrowError(
+            "Can't be null or undefined",
+        )
+        expect(() => ensureValueWithError(undefined)).toThrowError()
+    })
+})
+
+describe('ensureValueWithExchange', () => {
+    it('makes sure values are defined', () => {
+        const myValue: number | undefined = 10
+        expect(ensureValueWithExchange(myValue, 0)).toBe(10)
+    })
+
+    it('exchanges the value if undefined', () => {
+        const myObject: { myStringArray: string[] | undefined; myNumber: number } = {
+            myStringArray: undefined,
+            myNumber: 10,
+        }
+        expect(ensureValueWithExchange(myObject.myStringArray, ['my string'])).toEqual(['my string'])
     })
 })
