@@ -2,17 +2,20 @@ import { ManagementAppGetRunnableStudiesResponse, TOAGetRunsResponse } from './t
 import { ResourceTagMapping } from '@aws-sdk/client-resource-groups-tagging-api'
 import { RUN_ID_TAG_KEY } from './aws'
 
+const getRunIdFromResourceTagMapping = (resource: ResourceTagMapping): string | undefined => {
+    return resource.Tags?.find((tag) => tag.Key === RUN_ID_TAG_KEY)?.Value
+}
+
 export const filterManagementAppRuns = (
     managementAppResponse: ManagementAppGetRunnableStudiesResponse,
     toaResponse: TOAGetRunsResponse,
     existingAwsRuns: string[],
 ): ManagementAppGetRunnableStudiesResponse => {
-    // TODO: also filter out in-progress runs
-    const runIdArray: string[] = toaResponse.runs.map((run) => run.runId) // flatten runsInTOA
+    const toaRunIdArray: string[] = toaResponse.runs.map((run) => run.runId) // flatten toaResponse
 
     return {
         runs: managementAppResponse.runs.filter((run) => {
-            return !runIdArray.includes(run.runId) && !existingAwsRuns.includes(run.runId)
+            return !toaRunIdArray.includes(run.runId) && !existingAwsRuns.includes(run.runId)
         }),
     }
 }
@@ -27,7 +30,7 @@ export const filterOrphanTaskDefinitions = (
     // If there are task definitions with run IDs that were not returned by
     // the BMA, they must be for orphan tasks that were already run.
     taskDefinitionResources.forEach((item) => {
-        const runId = item.Tags?.find((tag) => tag.Key === RUN_ID_TAG_KEY)?.Value
+        const runId = getRunIdFromResourceTagMapping(item)
         if (runId !== undefined && !managementAppRunIds.includes(runId) && item.ResourceARN !== undefined) {
             orphanTaskDefinitions.push(item.ResourceARN)
         }

@@ -1,22 +1,8 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { runStudies } from './run-studies'
-// import { managementAppGetRunnableStudiesRequest } from './utils'
 import * as api from './api'
 import * as aws from './aws'
-import {
-    GetResourcesCommand,
-    GetResourcesCommandInput,
-    GetResourcesCommandOutput,
-    ResourceGroupsTaggingAPIClient,
-} from '@aws-sdk/client-resource-groups-tagging-api'
-import { AwsStub, mockClient } from 'aws-sdk-client-mock'
-import {
-    DeleteTaskDefinitionsCommand,
-    DescribeTaskDefinitionCommand,
-    ECSClient,
-    RegisterTaskDefinitionCommand,
-    RunTaskCommand,
-} from '@aws-sdk/client-ecs'
+import { GetResourcesCommandOutput } from '@aws-sdk/client-resource-groups-tagging-api'
 import { RUN_ID_TAG_KEY } from './aws'
 import { ManagementAppGetRunnableStudiesResponse, TOAGetRunsResponse } from './types'
 
@@ -44,7 +30,6 @@ describe('runStudies()', () => {
         const runId2 = 'to-be-run-2'
         const runId_toGarbageCollect = 'run-finished'
 
-        // process.env.BASE_TASK_DEFINITION_FAMILY = "BASE_TASK_DEF_FAMILY"
         process.env.ECS_CLUSTER = 'MOCK_ECS_CLUSTER'
         process.env.BASE_TASK_DEFINITION_FAMILY = 'MOCK_BASE_TASK_DEF_FAMILY'
         process.env.VPC_SUBNETS = 'MOCK_VPC_SUBNETS,SUBNET'
@@ -95,7 +80,7 @@ describe('runStudies()', () => {
                     ResourceARN: runId_toGarbageCollect,
                     Tags: [{ Key: RUN_ID_TAG_KEY, Value: runId_toGarbageCollect }],
                 },
-            ], // Todo: runInAWS and run to be gc'd
+            ],
         })
 
         // Mock getECSTaskDefinition
