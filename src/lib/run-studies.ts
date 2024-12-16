@@ -14,6 +14,7 @@ import {
 import { filterManagementAppRuns, filterOrphanTaskDefinitions } from './utils'
 import { managementAppGetRunnableStudiesRequest, toaGetRunsRequest } from './api'
 import 'dotenv/config'
+import { ManagementAppGetRunnableStudiesResponse } from './types'
 
 async function launchStudy(
     client: ECSClient,
@@ -71,6 +72,17 @@ async function checkRunExists(client: ResourceGroupsTaggingAPIClient, runId: str
     return true
 }
 
+async function cleanupTaskDefs(
+    bmaResults: ManagementAppGetRunnableStudiesResponse,
+    taggingClient: ResourceGroupsTaggingAPIClient,
+    ecsClient: ECSClient,
+) {
+    // Garbage collect orphan task definitions
+    const taskDefsWithRunId = (await getTaskDefinitionsWithRunId(taggingClient)).ResourceTagMappingList || []
+    const orphanTaskDefinitions = filterOrphanTaskDefinitions(bmaResults, taskDefsWithRunId)
+    await deleteECSTaskDefinitions(ecsClient, orphanTaskDefinitions)
+}
+
 export async function runStudies(options: { ignoreAWSRuns: boolean }): Promise<void> {
     const ecsClient = new ECSClient()
     const taggingClient = new ResourceGroupsTaggingAPIClient()
@@ -114,8 +126,6 @@ export async function runStudies(options: { ignoreAWSRuns: boolean }): Promise<v
         )
     }
 
-    // Garbage collect orphan task definitions
-    const taskDefsWithRunId = (await getTaskDefinitionsWithRunId(taggingClient)).ResourceTagMappingList || []
-    const orphanTaskDefinitions = filterOrphanTaskDefinitions(bmaRunnablesResults, taskDefsWithRunId)
-    await deleteECSTaskDefinitions(ecsClient, orphanTaskDefinitions)
+    // Tidy AWS environment
+    cleanupTaskDefs(bmaRunnablesResults, taggingClient, ecsClient)
 }
