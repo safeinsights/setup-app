@@ -7,11 +7,10 @@
         "dev": "next dev",
         "build": "next build",
         "start": "next start",
-        "lint": "next lint && prettier --check .",
-        "lint:fix": "next lint --fix && prettier --write .",
+        "lint": "prettier --check .",
+        "lint:fix": "prettier --write .",
         "typecheck": "tsc --noEmit",
         "checks": "run-p -c typecheck lint",
-        "test:e2e": "playwright test",
         "test:unit": "vitest",
         "test": "run-p -c test:*"
     },

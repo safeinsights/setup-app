@@ -19,6 +19,7 @@ import {
     GetResourcesCommandOutput,
     ResourceGroupsTaggingAPIClient,
 } from '@aws-sdk/client-resource-groups-tagging-api'
+import { ensureValueWithExchange } from './utils'
 
 export const RUN_ID_TAG_KEY = 'runId'
 export const TITLE_TAG_KEY = 'title'
@@ -46,7 +47,7 @@ export async function registerECSTaskDefinition(
     // The following defines a new family versus versioning the base family
 
     const containerDefinition = baseTaskDefinition.containerDefinitions?.map((container) => {
-        const environment = container.environment || []
+        const environment = ensureValueWithExchange(container.environment, [])
 
         environment.push({
             name: 'TRUSTED_OUTPUT_ENDPOINT',
