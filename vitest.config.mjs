@@ -7,6 +7,7 @@ import { vanillaExtractPlugin } from '@vanilla-extract/vite-plugin'
 export default defineConfig({
     plugins: [react(), tsconfigPaths(), vanillaExtractPlugin()],
     test: {
+        setupFiles: ['./tests/vitest.setup.ts'],
         mockReset: true,
         environment: 'happy-dom',
         include: ['src/lib/*.(test).{js,jsx,ts,tsx}'],

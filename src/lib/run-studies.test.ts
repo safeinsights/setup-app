@@ -1,4 +1,4 @@
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { runStudies } from './run-studies'
 import * as api from './api'
 import * as aws from './aws'
@@ -29,11 +29,6 @@ describe('runStudies()', () => {
         const runId1 = 'to-be-run-1'
         const runId2 = 'to-be-run-2'
         const runId_toGarbageCollect = 'run-finished'
-
-        process.env.ECS_CLUSTER = 'MOCK_ECS_CLUSTER'
-        process.env.BASE_TASK_DEFINITION_FAMILY = 'MOCK_BASE_TASK_DEF_FAMILY'
-        process.env.VPC_SUBNETS = 'MOCK_VPC_SUBNETS,SUBNET'
-        process.env.SECURITY_GROUP = 'MOCK_SG'
 
         // mock response from management app
         const mockManagementAppResponse = mockManagementAppResponseGenerator([runId1, runId_inTOA, runId_inAWS, runId2])
