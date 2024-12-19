@@ -12,12 +12,14 @@ import {
     deleteECSTaskDefinitions,
 } from './aws'
 import {
-    managementAppGetRunnableStudiesRequest,
-    toaGetRunsRequest,
-    filterManagmentAppRuns,
+    ensureValueWithExchange,
+    ensureValueWithError,
+    filterManagementAppRuns,
     filterOrphanTaskDefinitions,
 } from './utils'
+import { managementAppGetRunnableStudiesRequest, toaGetRunsRequest } from './api'
 import 'dotenv/config'
+import { ManagementAppGetRunnableStudiesResponse } from './types'
 
 async function launchStudy(
     client: ECSClient,
@@ -35,10 +37,10 @@ async function launchStudy(
         { key: TITLE_TAG_KEY, value: studyTitle },
     ]
     const baseTaskDefinitionData = await getECSTaskDefinition(client, baseTaskDefinition)
-
-    if (baseTaskDefinitionData.taskDefinition === undefined) {
-        throw new Error(`Could not find task definition data for ${baseTaskDefinition}`)
-    }
+    baseTaskDefinitionData.taskDefinition = ensureValueWithError(
+        baseTaskDefinitionData.taskDefinition,
+        `Could not find task definition data for ${baseTaskDefinition}`,
+    )
 
     const newTaskDefinitionFamily = `${baseTaskDefinitionData.taskDefinition.family}-${runId}`
 
@@ -50,10 +52,14 @@ async function launchStudy(
         imageLocation,
         taskTags,
     )
-
-    if (registerTaskDefResponse.taskDefinition?.family === undefined) {
-        throw new Error('Generated task definition has undefined family')
-    }
+    registerTaskDefResponse.taskDefinition = ensureValueWithError(
+        registerTaskDefResponse.taskDefinition,
+        `Could not register task definition ${newTaskDefinitionFamily}`,
+    )
+    registerTaskDefResponse.taskDefinition.family = ensureValueWithError(
+        registerTaskDefResponse.taskDefinition.family,
+        'Generated task definition has undefined family',
+    )
 
     return await runECSFargateTask(
         client,
@@ -75,22 +81,36 @@ async function checkRunExists(client: ResourceGroupsTaggingAPIClient, runId: str
     return true
 }
 
-export async function runStudies(ignoreAWSRuns: boolean): Promise<void> {
+async function cleanupTaskDefs(
+    bmaResults: ManagementAppGetRunnableStudiesResponse,
+    taggingClient: ResourceGroupsTaggingAPIClient,
+    ecsClient: ECSClient,
+) {
+    // Garbage collect orphan task definitions
+    const taskDefsWithRunId = ensureValueWithExchange(
+        (await getTaskDefinitionsWithRunId(taggingClient)).ResourceTagMappingList,
+        [],
+    )
+    const orphanTaskDefinitions = filterOrphanTaskDefinitions(bmaResults, taskDefsWithRunId)
+    await deleteECSTaskDefinitions(ecsClient, orphanTaskDefinitions)
+}
+
+export async function runStudies(options: { ignoreAWSRuns: boolean }): Promise<void> {
     const ecsClient = new ECSClient()
     const taggingClient = new ResourceGroupsTaggingAPIClient()
 
     // Set in IaC
-    const cluster = process.env.ECS_CLUSTER || ''
-    const baseTaskDefinition = process.env.BASE_TASK_DEFINITION_FAMILY || ''
-    const subnets = process.env.VPC_SUBNETS || ''
-    const securityGroup = process.env.SECURITY_GROUP || ''
+    const cluster = ensureValueWithExchange(process.env.ECS_CLUSTER, '')
+    const baseTaskDefinition = ensureValueWithExchange(process.env.BASE_TASK_DEFINITION_FAMILY, '')
+    const subnets = ensureValueWithExchange(process.env.VPC_SUBNETS, '')
+    const securityGroup = ensureValueWithExchange(process.env.SECURITY_GROUP, '')
 
     const bmaRunnablesResults = await managementAppGetRunnableStudiesRequest()
     const toaGetRunsResult = await toaGetRunsRequest()
     const existingAwsRuns: string[] = []
 
-    // Ignore AWS runs if --ignore-aws flag is passed
-    if (!ignoreAWSRuns) {
+    // Find runs already in AWS environment, unless --ignore-aws flag has been passed
+    if (!options.ignoreAWSRuns) {
         for (const run of bmaRunnablesResults.runs) {
             if (await checkRunExists(taggingClient, run.runId)) {
                 existingAwsRuns.push(run.runId)
@@ -98,7 +118,7 @@ export async function runStudies(ignoreAWSRuns: boolean): Promise<void> {
         }
     }
 
-    const filteredResult = filterManagmentAppRuns(bmaRunnablesResults, toaGetRunsResult, existingAwsRuns)
+    const filteredResult = filterManagementAppRuns(bmaRunnablesResults, toaGetRunsResult, existingAwsRuns)
 
     for (const run of filteredResult.runs) {
         console.log(`Launching study for run ID ${run.runId}`)
@@ -118,32 +138,6 @@ export async function runStudies(ignoreAWSRuns: boolean): Promise<void> {
         )
     }
 
-    // Garbage collect orphan task definitions
-    const taskDefsWithRunId = (await getTaskDefinitionsWithRunId(taggingClient)).ResourceTagMappingList || []
-    const orphanTaskDefinitions = filterOrphanTaskDefinitions(bmaRunnablesResults, taskDefsWithRunId)
-    await deleteECSTaskDefinitions(ecsClient, orphanTaskDefinitions)
+    // Tidy AWS environment
+    cleanupTaskDefs(bmaRunnablesResults, taggingClient, ecsClient)
 }
-
-// Wrap calls in a function to avoid layers of promise resolves
-const main = async (): Promise<void> => {
-    let ignoreAWSRuns = false
-    if (process.argv.includes('--help')) {
-        printHelp()
-        process.exit(0)
-    }
-    if (process.argv.includes('--ignore-aws')) {
-        console.log('Ignoring AWS existing runs')
-        ignoreAWSRuns = true
-    }
-
-    await runStudies(ignoreAWSRuns)
-}
-
-const printHelp = () => {
-    console.log('Usage: npx tsx run-studies.ts')
-    console.log('Options:')
-    console.log('--help             Display this help message')
-    console.log('--ignore-aws       Ignore AWS existing runs and start a new run')
-}
-
-main()
