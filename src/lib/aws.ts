@@ -28,11 +28,16 @@ export async function getECSTaskDefinition(
     client: ECSClient,
     taskDefinition: string,
 ): Promise<DescribeTaskDefinitionCommandOutput> {
+    console.log(`AWS: Getting task definition ${taskDefinition} from ECS ...`)
     const command = new DescribeTaskDefinitionCommand({
         taskDefinition: taskDefinition,
     })
 
-    return await client.send(command)
+    const result = await client.send(command)
+
+    console.log('AWS: DescribeTaskDefinitionCommand finished')
+
+    return result
 }
 
 export async function registerECSTaskDefinition(
@@ -61,6 +66,8 @@ export async function registerECSTaskDefinition(
         }
     })
 
+    console.log('AWS: Registering task definition ...')
+
     const command = new RegisterTaskDefinitionCommand({
         family: familyName,
         containerDefinitions: containerDefinition,
@@ -72,7 +79,9 @@ export async function registerECSTaskDefinition(
         requiresCompatibilities: baseTaskDefinition.requiresCompatibilities,
         tags: tags,
     })
-    return await client.send(command)
+    const result = await client.send(command)
+    console.log('AWS: RegisterTaskDefinitionCommand finished')
+    return result
 }
 
 export async function deleteECSTaskDefinitions(client: ECSClient, taskDefinitions: string[]): Promise<void> {
@@ -85,7 +94,9 @@ export async function deleteECSTaskDefinitions(client: ECSClient, taskDefinition
             const deregisterCommand = new DeregisterTaskDefinitionCommand({
                 taskDefinition: task,
             })
+            console.log('AWS: Deregistering task definition ...')
             await client.send(deregisterCommand)
+            console.log('AWS: DegregisterTaskDefinitionCommand finished')
         }
 
         // If the task definition is not DELETE_IN_PROGRESS, we request a deletion
@@ -93,7 +104,9 @@ export async function deleteECSTaskDefinitions(client: ECSClient, taskDefinition
             const deleteCommand = new DeleteTaskDefinitionsCommand({
                 taskDefinitions: [task],
             })
+            console.log('AWS: Deleting task definitions ...')
             await client.send(deleteCommand)
+            console.log('AWS: DeleteTaskDefinitionsCommand finished')
         }
     }
 }
@@ -119,7 +132,10 @@ export async function runECSFargateTask(
         tags: tags,
     }
     const command = new RunTaskCommand(runTaskInput)
-    return await client.send(command)
+    console.log('AWS: Prompting an ECS task to run ...')
+    const result = await client.send(command)
+    console.log('AWS: RunTaskCommand finished')
+    return result
 }
 
 export async function getTaskResourcesByRunId(
@@ -136,12 +152,16 @@ export async function getTaskResourcesByRunId(
         ResourceTypeFilters: ['ecs:task', 'ecs:task-definition'],
     })
 
-    return await client.send(command)
+    console.log(`AWS: Getting a run with run id ${runId} ...`)
+    const result = await client.send(command)
+    console.log('AWS: GetResourcesCommand finished')
+    return result
 }
 
-export async function getTaskDefinitionsWithRunId(
+export async function getAllTaskDefinitionsWithRunId(
     client: ResourceGroupsTaggingAPIClient,
 ): Promise<GetResourcesCommandOutput> {
+    // TODO: pagination of results may mean this only returns the first page
     const command = new GetResourcesCommand({
         TagFilters: [
             {
@@ -151,5 +171,8 @@ export async function getTaskDefinitionsWithRunId(
         ResourceTypeFilters: ['ecs:task-definition'],
     })
 
-    return await client.send(command)
+    console.log('AWS: Getting all task definitions with runId ...')
+    const result = await client.send(command)
+    console.log('AWS: GetResourcesCommand finished')
+    return result
 }
