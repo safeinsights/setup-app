@@ -24,6 +24,7 @@ const generateToken = (): string => {
 export const managementAppGetRunnableStudiesRequest = async (): Promise<ManagementAppGetRunnableStudiesResponse> => {
     const endpoint = process.env.MANAGEMENT_APP_BASE_URL + '/api/studies/runnable' // `http://localhost:4000/api/studies/runnable`
     const token = generateToken()
+    console.log('BMA: Fetching runnable studies ...')
     const response = await fetch(endpoint, {
         method: 'GET',
         headers: {
@@ -40,6 +41,7 @@ export const managementAppGetRunnableStudiesRequest = async (): Promise<Manageme
     if (!isManagementAppGetRunnableStudiesResponse(data)) {
         throw new Error('Management app response does not match expected structure')
     }
+    console.log('BMA: Data received!')
 
     return data
 }
@@ -52,6 +54,7 @@ export const toaGetRunsRequest = async (): Promise<TOAGetRunsResponse> => {
         throw new Error('TOA token failed to generate')
     }
 
+    console.log('TOA: Fetching runs ...')
     const response = await fetch(endpoint, {
         method: 'GET',
         headers: {
@@ -68,6 +71,7 @@ export const toaGetRunsRequest = async (): Promise<TOAGetRunsResponse> => {
     if (!isTOAGetRunsResponse(data)) {
         throw new Error('Trusted output app response does not match expected structure')
     }
+    console.log('TOA: Data received!')
 
     return data
 }

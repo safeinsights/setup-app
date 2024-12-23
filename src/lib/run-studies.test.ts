@@ -63,8 +63,8 @@ describe('runStudies()', () => {
             },
         )
 
-        // Mock getTaskDefinitionsWithRunId
-        vi.mocked(aws.getTaskDefinitionsWithRunId).mockResolvedValue({
+        // Mock getAllTaskDefinitionsWithRunId
+        vi.mocked(aws.getAllTaskDefinitionsWithRunId).mockResolvedValue({
             $metadata: {},
             ResourceTagMappingList: [
                 {
