@@ -1,5 +1,8 @@
 {
-    "extends": "next/core-web-vitals",
+    "env": {
+        "es6": true
+    },
+    "extends": "eslint:recommended",
     "plugins": ["unused-imports"],
     "rules": {
         "no-console": ["error", { "allow": ["warn", "error", "log"] }],
