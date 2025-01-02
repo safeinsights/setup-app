@@ -24,7 +24,7 @@ import { ManagementAppGetRunnableStudiesResponse } from './types'
 async function launchStudy(
     client: ECSClient,
     cluster: string,
-    baseTaskDefinition: string,
+    baseTaskDefinitionFamily: string,
     subnets: string[],
     securityGroup: string,
     toaEndpointWithRunId: string,
@@ -36,10 +36,10 @@ async function launchStudy(
         { key: RUN_ID_TAG_KEY, value: runId },
         { key: TITLE_TAG_KEY, value: studyTitle },
     ]
-    const baseTaskDefinitionData = await getECSTaskDefinition(client, baseTaskDefinition)
+    const baseTaskDefinitionData = await getECSTaskDefinition(client, baseTaskDefinitionFamily)
     baseTaskDefinitionData.taskDefinition = ensureValueWithError(
         baseTaskDefinitionData.taskDefinition,
-        `Could not find task definition data for ${baseTaskDefinition}`,
+        `Could not find task definition data for ${baseTaskDefinitionFamily}`,
     )
 
     const newTaskDefinitionFamily = `${baseTaskDefinitionData.taskDefinition.family}-${runId}`
