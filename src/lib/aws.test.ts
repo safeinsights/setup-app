@@ -12,7 +12,7 @@ import {
 } from '@aws-sdk/client-ecs'
 import {
     getECSTaskDefinition,
-    getTaskDefinitionsWithRunId,
+    getAllTaskDefinitionsWithRunId,
     getTaskResourcesByRunId,
     registerECSTaskDefinition,
     runECSFargateTask,
@@ -157,7 +157,7 @@ describe('getTaskResourcesByRunId', () => {
     })
 })
 
-describe('getTaskDefinitionsWithRunId', () => {
+describe('getAllTaskDefinitionsWithRunId', () => {
     it('should send GetResourcesCommand and return response', async () => {
         const expectedCommandInput = {
             TagFilters: [
@@ -169,7 +169,7 @@ describe('getTaskDefinitionsWithRunId', () => {
         }
         taggingMockClient.on(GetResourcesCommand, expectedCommandInput).resolves({})
 
-        const res = await getTaskDefinitionsWithRunId(new ResourceGroupsTaggingAPIClient())
+        const res = await getAllTaskDefinitionsWithRunId(new ResourceGroupsTaggingAPIClient())
         expect(res).toStrictEqual({})
     })
 })

@@ -8,7 +8,7 @@ import {
     getTaskResourcesByRunId,
     RUN_ID_TAG_KEY,
     TITLE_TAG_KEY,
-    getTaskDefinitionsWithRunId,
+    getAllTaskDefinitionsWithRunId,
     deleteECSTaskDefinitions,
 } from './aws'
 import {
@@ -24,7 +24,7 @@ import { ManagementAppGetRunnableStudiesResponse } from './types'
 async function launchStudy(
     client: ECSClient,
     cluster: string,
-    baseTaskDefinition: string,
+    baseTaskDefinitionFamily: string,
     subnets: string[],
     securityGroup: string,
     toaEndpointWithRunId: string,
@@ -36,10 +36,10 @@ async function launchStudy(
         { key: RUN_ID_TAG_KEY, value: runId },
         { key: TITLE_TAG_KEY, value: studyTitle },
     ]
-    const baseTaskDefinitionData = await getECSTaskDefinition(client, baseTaskDefinition)
+    const baseTaskDefinitionData = await getECSTaskDefinition(client, baseTaskDefinitionFamily)
     baseTaskDefinitionData.taskDefinition = ensureValueWithError(
         baseTaskDefinitionData.taskDefinition,
-        `Could not find task definition data for ${baseTaskDefinition}`,
+        `Could not find task definition data for ${baseTaskDefinitionFamily}`,
     )
 
     const newTaskDefinitionFamily = `${baseTaskDefinitionData.taskDefinition.family}-${runId}`
@@ -88,7 +88,7 @@ async function cleanupTaskDefs(
 ) {
     // Garbage collect orphan task definitions
     const taskDefsWithRunId = ensureValueWithExchange(
-        (await getTaskDefinitionsWithRunId(taggingClient)).ResourceTagMappingList,
+        (await getAllTaskDefinitionsWithRunId(taggingClient)).ResourceTagMappingList,
         [],
     )
     const orphanTaskDefinitions = filterOrphanTaskDefinitions(bmaResults, taskDefsWithRunId)
@@ -106,7 +106,13 @@ export async function runStudies(options: { ignoreAWSRuns: boolean }): Promise<v
     const securityGroup = ensureValueWithExchange(process.env.SECURITY_GROUP, '')
 
     const bmaRunnablesResults = await managementAppGetRunnableStudiesRequest()
+    console.log(
+        `Found ${bmaRunnablesResults.runs.length} runs in management app. Run ids: ${bmaRunnablesResults.runs.map((run) => run.runId)}`,
+    )
     const toaGetRunsResult = await toaGetRunsRequest()
+    console.log(
+        `Found ${toaGetRunsResult.runs.length} runs with results in TOA. Run ids: ${toaGetRunsResult.runs.map((run) => run.runId)}`,
+    )
     const existingAwsRuns: string[] = []
 
     // Find runs already in AWS environment, unless --ignore-aws flag has been passed
@@ -114,11 +120,18 @@ export async function runStudies(options: { ignoreAWSRuns: boolean }): Promise<v
         for (const run of bmaRunnablesResults.runs) {
             if (await checkRunExists(taggingClient, run.runId)) {
                 existingAwsRuns.push(run.runId)
+                console.log(run.runId, 'present in AWS')
             }
         }
+    } else {
+        console.log('Skipped filtering out runs in AWS.')
     }
 
     const filteredResult = filterManagementAppRuns(bmaRunnablesResults, toaGetRunsResult, existingAwsRuns)
+
+    console.log(
+        `Found ${filteredResult.runs.length} studies that can be run. Run ids: ${filteredResult.runs.map((run) => run.runId)}`,
+    )
 
     for (const run of filteredResult.runs) {
         console.log(`Launching study for run ID ${run.runId}`)
