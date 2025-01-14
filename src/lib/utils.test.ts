@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-    filterManagementAppRuns,
-    filterOrphanTaskDefinitions,
-    ensureValueWithError,
-    ensureValueWithExchange,
-} from '../lib/utils'
+import { filterManagementAppRuns, filterOrphanTaskDefinitions, ensureValueWithError } from '../lib/utils'
 
 describe('filterManagementAppRuns', () => {
     it('filters out runs in the TOA', () => {
@@ -103,24 +98,8 @@ describe('ensureValueWithError', () => {
     })
 
     it('responds with the given error message if values are undefined', () => {
-        expect(() => ensureValueWithError(null, "Can't be null or undefined")).toThrowError(
-            "Can't be null or undefined",
-        )
-        expect(() => ensureValueWithError(undefined)).toThrowError()
-    })
-})
-
-describe('ensureValueWithExchange', () => {
-    it('makes sure values are defined', () => {
-        const myValue: number | undefined = 10
-        expect(ensureValueWithExchange(myValue, 0)).toBe(10)
-    })
-
-    it('exchanges the value if undefined', () => {
-        const myObject: { myStringArray: string[] | undefined; myNumber: number } = {
-            myStringArray: undefined,
-            myNumber: 10,
-        }
-        expect(ensureValueWithExchange(myObject.myStringArray, ['my string'])).toEqual(['my string'])
+        expect(() => ensureValueWithError(null, 'Custom message')).toThrowError('Custom message')
+        expect(() => ensureValueWithError(undefined)).toThrowError('undefined value')
+        expect(() => ensureValueWithError(null)).toThrowError('null value')
     })
 })

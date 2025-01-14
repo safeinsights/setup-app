@@ -46,18 +46,20 @@ describe('runStudies()', () => {
 
         // Mock response when querying for a resource with the given run ids
         vi.mocked(aws.getTaskResourcesByRunId).mockImplementation(
-            async (_, runId: string): Promise<GetResourcesCommandOutput> => {
+            async (_, runId: string): Promise<Required<GetResourcesCommandOutput>> => {
                 if (runId === runId_inAWS) {
                     // indicate the run is present
                     return {
                         $metadata: {},
                         ResourceTagMappingList: [{}],
+                        PaginationToken: '',
                     }
                 } else {
                     // indicate there is no resource with the given run ID
                     return {
                         $metadata: {},
                         ResourceTagMappingList: [],
+                        PaginationToken: '',
                     }
                 }
             },
@@ -76,6 +78,7 @@ describe('runStudies()', () => {
                     Tags: [{ Key: RUN_ID_TAG_KEY, Value: runId_toGarbageCollect }],
                 },
             ],
+            PaginationToken: '',
         })
 
         // Mock getECSTaskDefinition
