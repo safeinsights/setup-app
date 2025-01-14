@@ -11,12 +11,7 @@ import {
     getAllTaskDefinitionsWithRunId,
     deleteECSTaskDefinitions,
 } from './aws'
-import {
-    ensureValueWithExchange,
-    ensureValueWithError,
-    filterManagementAppRuns,
-    filterOrphanTaskDefinitions,
-} from './utils'
+import { ensureValueWithError, filterManagementAppRuns, filterOrphanTaskDefinitions } from './utils'
 import { managementAppGetRunnableStudiesRequest, toaGetRunsRequest } from './api'
 import 'dotenv/config'
 import { ManagementAppGetRunnableStudiesResponse } from './types'
@@ -74,7 +69,7 @@ async function launchStudy(
 async function checkRunExists(client: ResourceGroupsTaggingAPIClient, runId: string): Promise<boolean> {
     const taggedResources = await getTaskResourcesByRunId(client, runId)
 
-    if (taggedResources.ResourceTagMappingList?.length === 0) {
+    if (taggedResources.ResourceTagMappingList.length === 0) {
         return false
     }
 
@@ -87,10 +82,7 @@ async function cleanupTaskDefs(
     ecsClient: ECSClient,
 ) {
     // Garbage collect orphan task definitions
-    const taskDefsWithRunId = ensureValueWithExchange(
-        (await getAllTaskDefinitionsWithRunId(taggingClient)).ResourceTagMappingList,
-        [],
-    )
+    const taskDefsWithRunId = (await getAllTaskDefinitionsWithRunId(taggingClient)).ResourceTagMappingList
     const orphanTaskDefinitions = filterOrphanTaskDefinitions(bmaResults, taskDefsWithRunId)
     await deleteECSTaskDefinitions(ecsClient, orphanTaskDefinitions)
 }
@@ -100,10 +92,13 @@ export async function runStudies(options: { ignoreAWSRuns: boolean }): Promise<v
     const taggingClient = new ResourceGroupsTaggingAPIClient()
 
     // Set in IaC
-    const cluster = ensureValueWithExchange(process.env.ECS_CLUSTER, '')
-    const baseTaskDefinition = ensureValueWithExchange(process.env.BASE_TASK_DEFINITION_FAMILY, '')
-    const subnets = ensureValueWithExchange(process.env.VPC_SUBNETS, '')
-    const securityGroup = ensureValueWithExchange(process.env.SECURITY_GROUP, '')
+    const cluster = ensureValueWithError(process.env.ECS_CLUSTER, 'Env var ECS_CLUSTER not found')
+    const baseTaskDefinition = ensureValueWithError(
+        process.env.BASE_TASK_DEFINITION_FAMILY,
+        'Env var BASE_TASK_DEFINITION_FAMILY not found',
+    )
+    const subnets = ensureValueWithError(process.env.VPC_SUBNETS, 'Env var VPC_SUBNETS not found')
+    const securityGroup = ensureValueWithError(process.env.SECURITY_GROUP, 'Env var SECURITY_GROUP not found')
 
     const bmaRunnablesResults = await managementAppGetRunnableStudiesRequest()
     console.log(

@@ -150,10 +150,16 @@ describe('getTaskResourcesByRunId', () => {
             ],
             ResourceTypeFilters: ['ecs:task', 'ecs:task-definition'],
         }
-        taggingMockClient.on(GetResourcesCommand, expectedCommandInput).resolves({})
+
+        const mockResult = {
+            $metadata: {},
+            PaginationToken: '',
+            ResourceTagMappingList: [],
+        }
+        taggingMockClient.on(GetResourcesCommand, expectedCommandInput).resolves(mockResult)
 
         const res = await getTaskResourcesByRunId(new ResourceGroupsTaggingAPIClient(), 'testrun1234')
-        expect(res).toStrictEqual({})
+        expect(res).toStrictEqual(mockResult)
     })
 })
 
@@ -167,9 +173,14 @@ describe('getAllTaskDefinitionsWithRunId', () => {
             ],
             ResourceTypeFilters: ['ecs:task-definition'],
         }
-        taggingMockClient.on(GetResourcesCommand, expectedCommandInput).resolves({})
+        const mockResult = {
+            $metadata: {},
+            PaginationToken: '',
+            ResourceTagMappingList: [],
+        }
+        taggingMockClient.on(GetResourcesCommand, expectedCommandInput).resolves(mockResult)
 
         const res = await getAllTaskDefinitionsWithRunId(new ResourceGroupsTaggingAPIClient())
-        expect(res).toStrictEqual({})
+        expect(res).toStrictEqual(mockResult)
     })
 })

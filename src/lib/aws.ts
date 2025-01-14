@@ -19,7 +19,7 @@ import {
     GetResourcesCommandOutput,
     ResourceGroupsTaggingAPIClient,
 } from '@aws-sdk/client-resource-groups-tagging-api'
-import { ensureValueWithExchange } from './utils'
+import { ensureValueWithError } from './utils'
 
 export const RUN_ID_TAG_KEY = 'runId'
 export const TITLE_TAG_KEY = 'title'
@@ -34,9 +34,7 @@ export async function getECSTaskDefinition(
     })
 
     const result = await client.send(command)
-
-    console.log('AWS:   END: DescribeTaskDefinitionCommand finished')
-
+    console.log(`AWS:   END: DescribeTaskDefinitionCommand finished with ${result.taskDefinition?.family}`)
     return result
 }
 
@@ -52,13 +50,12 @@ export async function registerECSTaskDefinition(
     // The following defines a new family versus versioning the base family
 
     const containerDefinition = baseTaskDefinition.containerDefinitions?.map((container) => {
-        const environment = ensureValueWithExchange(container.environment, [])
+        const environment = ensureValueWithError(container.environment, `No environment found on ${container}`)
 
         environment.push({
             name: 'TRUSTED_OUTPUT_ENDPOINT',
             value: toaEndpointWithRunId,
         })
-
         return {
             ...container,
             environment,
@@ -95,7 +92,7 @@ export async function deleteECSTaskDefinitions(client: ECSClient, taskDefinition
             const deregisterCommand = new DeregisterTaskDefinitionCommand({
                 taskDefinition: task,
             })
-            console.log('AWS: START: Deregistering task definition ...')
+            console.log(`AWS: START: Deregistering task definition ${task}...`)
             await client.send(deregisterCommand)
             console.log('AWS:   END: DegregisterTaskDefinitionCommand finished')
         }
@@ -105,7 +102,7 @@ export async function deleteECSTaskDefinitions(client: ECSClient, taskDefinition
             const deleteCommand = new DeleteTaskDefinitionsCommand({
                 taskDefinitions: [task],
             })
-            console.log('AWS: START: Deleting task definitions ...')
+            console.log(`AWS: START: Deleting task definition ${task} ...`)
             await client.send(deleteCommand)
             console.log('AWS:   END: DeleteTaskDefinitionsCommand finished')
         }
@@ -135,14 +132,18 @@ export async function runECSFargateTask(
     const command = new RunTaskCommand(runTaskInput)
     console.log('AWS: START: Prompting an ECS task to run ...')
     const result = await client.send(command)
-    console.log('AWS:   END: RunTaskCommand finished')
+    /* v8 ignore next 3 */
+    console.log(
+        `AWS:   END: RunTaskCommand finished for tasks`,
+        result.tasks?.map((task) => task),
+    )
     return result
 }
 
 export async function getTaskResourcesByRunId(
     client: ResourceGroupsTaggingAPIClient,
     runId: string,
-): Promise<GetResourcesCommandOutput> {
+): Promise<Required<GetResourcesCommandOutput>> {
     const command = new GetResourcesCommand({
         TagFilters: [
             {
@@ -155,13 +156,15 @@ export async function getTaskResourcesByRunId(
 
     console.log(`AWS: START: Getting a run with run id ${runId} ...`)
     const result = await client.send(command)
-    console.log('AWS:   END: GetResourcesCommand finished')
-    return result
+    result.ResourceTagMappingList = ensureValueWithError(result.ResourceTagMappingList)
+    result.PaginationToken = ensureValueWithError(result.PaginationToken)
+    console.log(`AWS:   END: GetResourcesCommand finished w/ list`, result.ResourceTagMappingList)
+    return result as any
 }
 
 export async function getAllTaskDefinitionsWithRunId(
     client: ResourceGroupsTaggingAPIClient,
-): Promise<GetResourcesCommandOutput> {
+): Promise<Required<GetResourcesCommandOutput>> {
     // TODO: pagination of results may mean this only returns the first page
     const command = new GetResourcesCommand({
         TagFilters: [
@@ -174,6 +177,8 @@ export async function getAllTaskDefinitionsWithRunId(
 
     console.log('AWS: START: Getting all task definitions with runId ...')
     const result = await client.send(command)
-    console.log('AWS:   END: GetResourcesCommand finished')
-    return result
+    result.ResourceTagMappingList = ensureValueWithError(result.ResourceTagMappingList)
+    result.PaginationToken = ensureValueWithError(result.PaginationToken)
+    console.log(`AWS:   END: GetResourcesCommand finished w/ list`, result.ResourceTagMappingList)
+    return result as any
 }
