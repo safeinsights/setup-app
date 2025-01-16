@@ -47,7 +47,7 @@ describe('runStudies()', () => {
         vi.mocked(aws.getAllTasksWithRunId).mockResolvedValue({
             $metadata: {},
             PaginationToken: '',
-            ResourceTagMappingList: []
+            ResourceTagMappingList: [],
         })
 
         // Mock getAllTaskDefinitionsWithRunId

@@ -47,10 +47,8 @@ describe('filterManagementAppRuns', () => {
         }
         const mockAWSResource: Required<GetResourcesCommandOutput> = {
             PaginationToken: '',
-            ResourceTagMappingList: [
-                { Tags: [ { Key: RUN_ID_TAG_KEY, Value: 'existing-run' } ] }
-            ],
-            $metadata: {}
+            ResourceTagMappingList: [{ Tags: [{ Key: RUN_ID_TAG_KEY, Value: 'existing-run' }] }],
+            $metadata: {},
         }
         expect(filterManagementAppRuns(mockManagementAppResponse, { runs: [] }, mockAWSResource)).toStrictEqual({
             runs: [

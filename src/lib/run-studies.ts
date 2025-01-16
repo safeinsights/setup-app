@@ -109,10 +109,7 @@ export async function runStudies(options: { ignoreAWSRuns: boolean }): Promise<v
 
     if (options.ignoreAWSRuns) {
         // Don't query AWS, filter without it
-        filteredResult = filterManagementAppRuns(
-            bmaRunnablesResults,
-            toaGetRunsResult
-        )
+        filteredResult = filterManagementAppRuns(bmaRunnablesResults, toaGetRunsResult)
     } else {
         // Take AWS into account when filtering
         const existingAwsTasks = await getAllTasksWithRunId(taggingClient)
