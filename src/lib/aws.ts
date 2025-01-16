@@ -135,7 +135,7 @@ export async function runECSFargateTask(
     /* v8 ignore next 3 */
     console.log(
         `AWS:   END: RunTaskCommand finished for tasks`,
-        result.tasks?.map((task) => task),
+        result.tasks?.map((task) => task.taskArn),
     )
     return result
 }
