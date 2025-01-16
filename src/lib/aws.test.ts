@@ -18,6 +18,7 @@ import {
     runECSFargateTask,
     RUN_ID_TAG_KEY,
     deleteECSTaskDefinitions,
+    getAllTasksWithRunId,
 } from './aws'
 import { GetResourcesCommand, ResourceGroupsTaggingAPIClient } from '@aws-sdk/client-resource-groups-tagging-api'
 
@@ -181,6 +182,28 @@ describe('getAllTaskDefinitionsWithRunId', () => {
         taggingMockClient.on(GetResourcesCommand, expectedCommandInput).resolves(mockResult)
 
         const res = await getAllTaskDefinitionsWithRunId(new ResourceGroupsTaggingAPIClient())
+        expect(res).toStrictEqual(mockResult)
+    })
+})
+
+describe('getAllTasksWithRunId', () => {
+    it('should send GetResourcesCommand and return response', async () => {
+        const expectedCommandInput = {
+            TagFilters: [
+                {
+                    Key: RUN_ID_TAG_KEY,
+                },
+            ],
+            ResourceTypeFilters: ['ecs:task'],
+        }
+        const mockResult = {
+            $metadata: {},
+            PaginationToken: '',
+            ResourceTagMappingList: [],
+        }
+        taggingMockClient.on(GetResourcesCommand, expectedCommandInput).resolves(mockResult)
+
+        const res = await getAllTasksWithRunId(new ResourceGroupsTaggingAPIClient())
         expect(res).toStrictEqual(mockResult)
     })
 })
