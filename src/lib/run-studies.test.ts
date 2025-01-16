@@ -44,26 +44,11 @@ describe('runStudies()', () => {
         const mockTOAApiCall = vi.mocked(api.toaGetRunsRequest)
         mockTOAApiCall.mockResolvedValue(mockTOAResponse)
 
-        // Mock response when querying for a resource with the given run ids
-        vi.mocked(aws.getTaskResourcesByRunId).mockImplementation(
-            async (_, runId: string): Promise<Required<GetResourcesCommandOutput>> => {
-                if (runId === runId_inAWS) {
-                    // indicate the run is present
-                    return {
-                        $metadata: {},
-                        ResourceTagMappingList: [{}],
-                        PaginationToken: '',
-                    }
-                } else {
-                    // indicate there is no resource with the given run ID
-                    return {
-                        $metadata: {},
-                        ResourceTagMappingList: [],
-                        PaginationToken: '',
-                    }
-                }
-            },
-        )
+        vi.mocked(aws.getAllTasksWithRunId).mockResolvedValue({
+            $metadata: {},
+            PaginationToken: '',
+            ResourceTagMappingList: []
+        })
 
         // Mock getAllTaskDefinitionsWithRunId
         vi.mocked(aws.getAllTaskDefinitionsWithRunId).mockResolvedValue({

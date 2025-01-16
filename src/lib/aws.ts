@@ -179,6 +179,25 @@ export async function getAllTaskDefinitionsWithRunId(
     const result = await client.send(command)
     result.ResourceTagMappingList = ensureValueWithError(result.ResourceTagMappingList)
     result.PaginationToken = ensureValueWithError(result.PaginationToken)
-    console.log(`AWS:   END: GetResourcesCommand finished w/ list`, result.ResourceTagMappingList)
+    console.log(`AWS:   END: GetResourcesCommand finished w/ list`, result.ResourceTagMappingList, "pagination", result.PaginationToken, '.')
+    return result as any
+}
+
+export async function getAllTasksWithRunId(client: ResourceGroupsTaggingAPIClient): Promise<Required<GetResourcesCommandOutput>> {
+    // TODO: pagination of results may mean this only returns the first page
+    const command = new GetResourcesCommand({
+        TagFilters: [
+            {
+                Key: RUN_ID_TAG_KEY,
+            },
+        ],
+        ResourceTypeFilters: ['ecs:task'],
+    })
+
+    console.log('AWS: START: Getting all tasks with runId ...')
+    const result: any = await client.send(command)
+    result.ResourceTagMappingList = ensureValueWithError(result.ResourceTagMappingList),
+    result.PaginationToken = ensureValueWithError(result.PaginationToken)
+    console.log(`AWS:   END: GetResourcesCommand finished w/ list`, result.ResourceTagMappingList, result.PaginationToken)
     return result as any
 }

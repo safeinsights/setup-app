@@ -1,20 +1,20 @@
 /* eslint-disable no-console */
 import { ECSClient, RunTaskCommandOutput } from '@aws-sdk/client-ecs'
-import { ResourceGroupsTaggingAPIClient } from '@aws-sdk/client-resource-groups-tagging-api'
+import { ResourceGroupsTaggingAPIClient, ResourceTagMapping } from '@aws-sdk/client-resource-groups-tagging-api'
 import {
     getECSTaskDefinition,
     registerECSTaskDefinition,
     runECSFargateTask,
-    getTaskResourcesByRunId,
     RUN_ID_TAG_KEY,
     TITLE_TAG_KEY,
     getAllTaskDefinitionsWithRunId,
     deleteECSTaskDefinitions,
+    getAllTasksWithRunId,
 } from './aws'
 import { ensureValueWithError, filterManagementAppRuns, filterOrphanTaskDefinitions } from './utils'
 import { managementAppGetRunnableStudiesRequest, toaGetRunsRequest } from './api'
 import 'dotenv/config'
-import { ManagementAppGetRunnableStudiesResponse } from './types'
+import { ManagementAppGetRunnableStudiesResponse, TOAGetRunsResponse } from './types'
 
 async function launchStudy(
     client: ECSClient,
@@ -66,24 +66,14 @@ async function launchStudy(
     )
 }
 
-async function checkRunExists(client: ResourceGroupsTaggingAPIClient, runId: string): Promise<boolean> {
-    const taggedResources = await getTaskResourcesByRunId(client, runId)
-
-    if (taggedResources.ResourceTagMappingList.length === 0) {
-        return false
-    }
-
-    return true
-}
-
 async function cleanupTaskDefs(
     bmaResults: ManagementAppGetRunnableStudiesResponse,
-    taggingClient: ResourceGroupsTaggingAPIClient,
+    taskDefsWithRunId: ResourceTagMapping[],
     ecsClient: ECSClient,
 ) {
     // Garbage collect orphan task definitions
-    const taskDefsWithRunId = (await getAllTaskDefinitionsWithRunId(taggingClient)).ResourceTagMappingList
     const orphanTaskDefinitions = filterOrphanTaskDefinitions(bmaResults, taskDefsWithRunId)
+    console.log(`Found ${orphanTaskDefinitions.length} orphan task definitions to delete`)
     await deleteECSTaskDefinitions(ecsClient, orphanTaskDefinitions)
 }
 
@@ -108,21 +98,33 @@ export async function runStudies(options: { ignoreAWSRuns: boolean }): Promise<v
     console.log(
         `Found ${toaGetRunsResult.runs.length} runs with results in TOA. Run ids: ${toaGetRunsResult.runs.map((run) => run.runId)}`,
     )
-    const existingAwsRuns: string[] = []
 
-    // Find runs already in AWS environment, unless --ignore-aws flag has been passed
-    if (!options.ignoreAWSRuns) {
-        for (const run of bmaRunnablesResults.runs) {
-            if (await checkRunExists(taggingClient, run.runId)) {
-                existingAwsRuns.push(run.runId)
-                console.log(run.runId, 'present in AWS')
-            }
-        }
+    // Possibly used in filtering; used in garbage collection
+    const existingAwsTaskDefs = await getAllTaskDefinitionsWithRunId(taggingClient)
+    console.log(
+        `Found ${existingAwsTaskDefs.ResourceTagMappingList.length} task definitions with runId in the AWS environment`,
+    )
+
+    let filteredResult: ManagementAppGetRunnableStudiesResponse
+
+    if (options.ignoreAWSRuns) {
+        // Don't query AWS, filter without it
+        filteredResult = filterManagementAppRuns(
+            bmaRunnablesResults,
+            toaGetRunsResult
+        )
     } else {
-        console.log('Skipped filtering out runs in AWS.')
-    }
+        // Take AWS into account when filtering
+        const existingAwsTasks = await getAllTasksWithRunId(taggingClient)
+        console.log(`Found ${existingAwsTasks.ResourceTagMappingList.length} tasks with runId in the AWS environment`)
 
-    const filteredResult = filterManagementAppRuns(bmaRunnablesResults, toaGetRunsResult, existingAwsRuns)
+        filteredResult = filterManagementAppRuns(
+            bmaRunnablesResults,
+            toaGetRunsResult,
+            existingAwsTasks,
+            existingAwsTaskDefs,
+        )
+    }
 
     console.log(
         `Found ${filteredResult.runs.length} studies that can be run. Run ids: ${filteredResult.runs.map((run) => run.runId)}`,
@@ -147,5 +149,5 @@ export async function runStudies(options: { ignoreAWSRuns: boolean }): Promise<v
     }
 
     // Tidy AWS environment
-    cleanupTaskDefs(bmaRunnablesResults, taggingClient, ecsClient)
+    cleanupTaskDefs(bmaRunnablesResults, existingAwsTaskDefs.ResourceTagMappingList, ecsClient)
 }
