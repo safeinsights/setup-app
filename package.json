@@ -12,7 +12,13 @@
         "typecheck": "tsc --noEmit",
         "checks": "run-p -c typecheck lint",
         "test:unit": "vitest",
-        "test": "run-p -c test:*"
+        "test": "run-p -c test:*",
+        "docker:build": "docker build --platform=linux/amd64 -t setup-app .",
+        "ecr:login": "aws ecr get-login-password --profile $AWS_PROFILE --region $AWS_REGION | docker login --username AWS --password-stdin $(aws sts get-caller-identity --query Account --output text --profile $AWS_PROFILE).dkr.ecr.$AWS_REGION.amazonaws.com",
+        "ecr:create-if-needed": "aws ecr describe-repositories --repository-names setup-app --profile $AWS_PROFILE --region $AWS_REGION || aws ecr create-repository --repository-name setup-app --profile $AWS_PROFILE --region $AWS_REGION",
+        "docker:tag": "docker tag setup-app:latest $(aws sts get-caller-identity --query Account --output text --profile $AWS_PROFILE).dkr.ecr.$AWS_REGION.amazonaws.com/setup-app:latest",
+        "docker:push": "docker push $(aws sts get-caller-identity --query Account --output text --profile $AWS_PROFILE).dkr.ecr.$AWS_REGION.amazonaws.com/setup-app:latest",
+        "deploy:ecr": "npm run docker:build && npm run ecr:login && npm run ecr:create-if-needed && npm run docker:tag && npm run docker:push"
     },
     "author": "Nathan Stitt",
     "license": "AGPL-3.0-or-later",
