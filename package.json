@@ -12,7 +12,8 @@
         "typecheck": "tsc --noEmit",
         "checks": "run-p -c typecheck lint",
         "test:unit": "vitest",
-        "test": "run-p -c test:*"
+        "test": "run-p -c test:*",
+        "deploy:ecr": "./deploy/push-ecr-image.sh"
     },
     "author": "Nathan Stitt",
     "license": "AGPL-3.0-or-later",
