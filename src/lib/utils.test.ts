@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { filterManagementAppRuns, filterOrphanTaskDefinitions, ensureValueWithError } from '../lib/utils'
-import { GetResourcesCommandOutput } from '@aws-sdk/client-resource-groups-tagging-api'
+import { ResourceTagMapping } from '@aws-sdk/client-resource-groups-tagging-api'
 import { RUN_ID_TAG_KEY } from './aws'
 
 describe('filterManagementAppRuns', () => {
@@ -45,12 +45,8 @@ describe('filterManagementAppRuns', () => {
                 },
             ],
         }
-        const mockAWSResource: Required<GetResourcesCommandOutput> = {
-            PaginationToken: '',
-            ResourceTagMappingList: [{ Tags: [{ Key: RUN_ID_TAG_KEY, Value: 'existing-run' }] }],
-            $metadata: {},
-        }
-        expect(filterManagementAppRuns(mockManagementAppResponse, { runs: [] }, mockAWSResource)).toStrictEqual({
+        const mockRunsFromAws: ResourceTagMapping[] = [{ Tags: [{ Key: RUN_ID_TAG_KEY, Value: 'existing-run' }] }]
+        expect(filterManagementAppRuns(mockManagementAppResponse, { runs: [] }, mockRunsFromAws)).toStrictEqual({
             runs: [
                 {
                     runId: 'not-in-AWS',

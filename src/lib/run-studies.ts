@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+ 
 import { ECSClient, RunTaskCommandOutput } from '@aws-sdk/client-ecs'
 import { ResourceGroupsTaggingAPIClient, ResourceTagMapping } from '@aws-sdk/client-resource-groups-tagging-api'
 import {
@@ -14,7 +14,7 @@ import {
 import { ensureValueWithError, filterManagementAppRuns, filterOrphanTaskDefinitions } from './utils'
 import { managementAppGetRunnableStudiesRequest, toaGetRunsRequest } from './api'
 import 'dotenv/config'
-import { ManagementAppGetRunnableStudiesResponse, TOAGetRunsResponse } from './types'
+import { ManagementAppGetRunnableStudiesResponse } from './types'
 
 async function launchStudy(
     client: ECSClient,
@@ -91,19 +91,44 @@ export async function runStudies(options: { ignoreAWSRuns: boolean }): Promise<v
     const securityGroup = ensureValueWithError(process.env.SECURITY_GROUP, 'Env var SECURITY_GROUP not found')
 
     const bmaRunnablesResults = await managementAppGetRunnableStudiesRequest()
+    // const bmaRunnablesResults: ManagementAppGetRunnableStudiesResponse = {
+    // runs: [
+    // {
+    //     runId: 'run1',
+    //     containerLocation: 'location1',
+    //     title: 'title1',
+    // },
+    // {
+    //     runId: 'run2',
+    //     containerLocation: 'location2',
+    //     title: 'title2',
+    // },
+    // {
+    //     runId: 'run3',
+    //     containerLocation: 'location3',
+    //     title: 'title3',
+    // },
+    // {
+    //     runId: 'run4',
+    //     containerLocation: 'location4',
+    //     title: 'title4',
+    // }
+    // ],
+    // }
     console.log(
         `Found ${bmaRunnablesResults.runs.length} runs in management app. Run ids: ${bmaRunnablesResults.runs.map((run) => run.runId)}`,
     )
     const toaGetRunsResult = await toaGetRunsRequest()
+    // const toaGetRunsResult: TOAGetRunsResponse = {
+    //     runs: [],
+    // }
     console.log(
         `Found ${toaGetRunsResult.runs.length} runs with results in TOA. Run ids: ${toaGetRunsResult.runs.map((run) => run.runId)}`,
     )
 
     // Possibly used in filtering; used in garbage collection
     const existingAwsTaskDefs = await getAllTaskDefinitionsWithRunId(taggingClient)
-    console.log(
-        `Found ${existingAwsTaskDefs.ResourceTagMappingList.length} task definitions with runId in the AWS environment`,
-    )
+    console.log(`Found ${existingAwsTaskDefs.length} task definitions with runId in the AWS environment`)
 
     let filteredResult: ManagementAppGetRunnableStudiesResponse
 
@@ -113,7 +138,7 @@ export async function runStudies(options: { ignoreAWSRuns: boolean }): Promise<v
     } else {
         // Take AWS into account when filtering
         const existingAwsTasks = await getAllTasksWithRunId(taggingClient)
-        console.log(`Found ${existingAwsTasks.ResourceTagMappingList.length} tasks with runId in the AWS environment`)
+        console.log(`Found ${existingAwsTasks.length} tasks with runId in the AWS environment`)
 
         filteredResult = filterManagementAppRuns(
             bmaRunnablesResults,
@@ -146,5 +171,5 @@ export async function runStudies(options: { ignoreAWSRuns: boolean }): Promise<v
     }
 
     // Tidy AWS environment
-    cleanupTaskDefs(bmaRunnablesResults, existingAwsTaskDefs.ResourceTagMappingList, ecsClient)
+    cleanupTaskDefs(bmaRunnablesResults, existingAwsTaskDefs, ecsClient)
 }

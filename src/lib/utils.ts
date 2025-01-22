@@ -1,5 +1,5 @@
 import { ManagementAppGetRunnableStudiesResponse, TOAGetRunsResponse } from './types'
-import { GetResourcesCommandOutput, ResourceTagMapping } from '@aws-sdk/client-resource-groups-tagging-api'
+import { ResourceTagMapping } from '@aws-sdk/client-resource-groups-tagging-api'
 import { RUN_ID_TAG_KEY } from './aws'
 
 const getRunIdFromResourceTagMapping = (resource: ResourceTagMapping): string | undefined => {
@@ -9,18 +9,19 @@ const getRunIdFromResourceTagMapping = (resource: ResourceTagMapping): string | 
 export const filterManagementAppRuns = (
     managementAppResponse: ManagementAppGetRunnableStudiesResponse,
     toaResponse: TOAGetRunsResponse,
-    existingAwsTasks?: Required<GetResourcesCommandOutput>,
-    existingAwsTaskDefs?: Required<GetResourcesCommandOutput>,
+    existingAwsTasks?: ResourceTagMapping[],
+    existingAwsTaskDefs?: ResourceTagMapping[],
 ): ManagementAppGetRunnableStudiesResponse => {
     const toaRunIdArray: string[] = toaResponse.runs.map((run) => run.runId) // flatten toaResponse
     const taskRunIdArray: string[] =
-        existingAwsTasks?.ResourceTagMappingList.map((resource) =>
-            ensureValueWithError(getRunIdFromResourceTagMapping(resource)),
-        ) || []
+        existingAwsTasks?.map((resource) => ensureValueWithError(getRunIdFromResourceTagMapping(resource))) || []
     const taskDefRunIdArray: string[] =
-        existingAwsTaskDefs?.ResourceTagMappingList.map((resource) =>
-            ensureValueWithError(getRunIdFromResourceTagMapping(resource)),
-        ) || []
+        existingAwsTaskDefs?.map((resource) => ensureValueWithError(getRunIdFromResourceTagMapping(resource))) || []
+
+    console.log(managementAppResponse.runs)
+    console.log(toaRunIdArray)
+    console.log(taskRunIdArray)
+    console.log(taskDefRunIdArray)
 
     return {
         runs: managementAppResponse.runs.filter((run) => {

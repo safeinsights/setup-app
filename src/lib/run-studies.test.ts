@@ -2,7 +2,6 @@ import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { runStudies } from './run-studies'
 import * as api from './api'
 import * as aws from './aws'
-import { GetResourcesCommandOutput } from '@aws-sdk/client-resource-groups-tagging-api'
 import { RUN_ID_TAG_KEY } from './aws'
 import { ManagementAppGetRunnableStudiesResponse, TOAGetRunsResponse } from './types'
 
@@ -10,7 +9,7 @@ vi.mock('./api')
 vi.mock('./aws')
 
 const mockManagementAppResponseGenerator = (runIds: string[]): ManagementAppGetRunnableStudiesResponse => {
-    let runs = []
+    const runs = []
     for (const runId of runIds) {
         runs.push({
             runId: runId,
@@ -44,29 +43,19 @@ describe('runStudies()', () => {
         const mockTOAApiCall = vi.mocked(api.toaGetRunsRequest)
         mockTOAApiCall.mockResolvedValue(mockTOAResponse)
 
-        vi.mocked(aws.getAllTasksWithRunId).mockResolvedValue({
-            $metadata: {},
-            PaginationToken: '',
-            ResourceTagMappingList: [],
-        })
+        // Mock AWS API
+        vi.mocked(aws.getAllTasksWithRunId).mockResolvedValue([])
+        vi.mocked(aws.getAllTaskDefinitionsWithRunId).mockResolvedValue([
+            {
+                ResourceARN: runId_inAWS,
+                Tags: [{ Key: RUN_ID_TAG_KEY, Value: runId_inAWS }],
+            },
+            {
+                ResourceARN: runId_toGarbageCollect,
+                Tags: [{ Key: RUN_ID_TAG_KEY, Value: runId_toGarbageCollect }],
+            },
+        ])
 
-        // Mock getAllTaskDefinitionsWithRunId
-        vi.mocked(aws.getAllTaskDefinitionsWithRunId).mockResolvedValue({
-            $metadata: {},
-            ResourceTagMappingList: [
-                {
-                    ResourceARN: runId_inAWS,
-                    Tags: [{ Key: RUN_ID_TAG_KEY, Value: runId_inAWS }],
-                },
-                {
-                    ResourceARN: runId_toGarbageCollect,
-                    Tags: [{ Key: RUN_ID_TAG_KEY, Value: runId_toGarbageCollect }],
-                },
-            ],
-            PaginationToken: '',
-        })
-
-        // Mock getECSTaskDefinition
         vi.mocked(aws.getECSTaskDefinition).mockImplementation(async (_, taskDefinition: string) => {
             return {
                 $metadata: {},
@@ -76,7 +65,6 @@ describe('runStudies()', () => {
             }
         })
 
-        // Mock registerECSTaskDefinition
         vi.mocked(aws.registerECSTaskDefinition).mockImplementation(
             async (_client, _baseTaskDefinition, familyName: string, _toaEndpointWithRunId, _imageLocation, _tags) => {
                 return {
