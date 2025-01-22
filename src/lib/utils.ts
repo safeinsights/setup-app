@@ -18,11 +18,6 @@ export const filterManagementAppRuns = (
     const taskDefRunIdArray: string[] =
         existingAwsTaskDefs?.map((resource) => ensureValueWithError(getRunIdFromResourceTagMapping(resource))) || []
 
-    console.log(managementAppResponse.runs)
-    console.log(toaRunIdArray)
-    console.log(taskRunIdArray)
-    console.log(taskDefRunIdArray)
-
     return {
         runs: managementAppResponse.runs.filter((run) => {
             return (
