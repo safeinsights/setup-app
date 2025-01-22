@@ -1,4 +1,3 @@
- 
 import { ECSClient, RunTaskCommandOutput } from '@aws-sdk/client-ecs'
 import { ResourceGroupsTaggingAPIClient, ResourceTagMapping } from '@aws-sdk/client-resource-groups-tagging-api'
 import {
@@ -91,37 +90,10 @@ export async function runStudies(options: { ignoreAWSRuns: boolean }): Promise<v
     const securityGroup = ensureValueWithError(process.env.SECURITY_GROUP, 'Env var SECURITY_GROUP not found')
 
     const bmaRunnablesResults = await managementAppGetRunnableStudiesRequest()
-    // const bmaRunnablesResults: ManagementAppGetRunnableStudiesResponse = {
-    // runs: [
-    // {
-    //     runId: 'run1',
-    //     containerLocation: 'location1',
-    //     title: 'title1',
-    // },
-    // {
-    //     runId: 'run2',
-    //     containerLocation: 'location2',
-    //     title: 'title2',
-    // },
-    // {
-    //     runId: 'run3',
-    //     containerLocation: 'location3',
-    //     title: 'title3',
-    // },
-    // {
-    //     runId: 'run4',
-    //     containerLocation: 'location4',
-    //     title: 'title4',
-    // }
-    // ],
-    // }
     console.log(
         `Found ${bmaRunnablesResults.runs.length} runs in management app. Run ids: ${bmaRunnablesResults.runs.map((run) => run.runId)}`,
     )
     const toaGetRunsResult = await toaGetRunsRequest()
-    // const toaGetRunsResult: TOAGetRunsResponse = {
-    //     runs: [],
-    // }
     console.log(
         `Found ${toaGetRunsResult.runs.length} runs with results in TOA. Run ids: ${toaGetRunsResult.runs.map((run) => run.runId)}`,
     )
