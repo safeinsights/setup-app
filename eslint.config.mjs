@@ -22,6 +22,5 @@ export default tseslint.config(eslint.configs.recommended, tseslint.configs.reco
 
         semi: ['error', 'never'],
         'unused-imports/no-unused-imports': 'error',
-        '@typescript-eslint/no-explicit-any': 'off',
     },
 })
