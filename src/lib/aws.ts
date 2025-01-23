@@ -15,7 +15,8 @@ import {
     TaskDefinitionStatus,
 } from '@aws-sdk/client-ecs'
 import {
-    GetResourcesCommand,
+    GetResourcesCommandInput,
+    paginateGetResources,
     ResourceGroupsTaggingAPIClient,
     ResourceTagMapping,
     TagFilter,
@@ -147,32 +148,20 @@ async function getResourceCommandWrapper(
     client: ResourceGroupsTaggingAPIClient,
     logMessage: string,
 ): Promise<ResourceTagMapping[]> {
-    let paginationToken = ''
-    let accumulatedResources: ResourceTagMapping[] | undefined = undefined
-    while (true) {
-        const command = new GetResourcesCommand({
-            TagFilters: tagFilters,
-            ResourceTypeFilters: resourceTypeFilters,
-            PaginationToken: paginationToken,
-            ResourcesPerPage: 2,
-        })
+    const accumulatedResources: ResourceTagMapping[] = []
 
-        console.log(`AWS: START: ${logMessage}`)
-        const result = await client.send(command)
-        // Throw if values are unexpectedly undefined
-        result.ResourceTagMappingList = ensureValueWithError(result.ResourceTagMappingList)
-        result.PaginationToken = ensureValueWithError(result.PaginationToken)
-        console.log(`AWS:   END: GetResourcesCommand finished w/ list`, result.ResourceTagMappingList)
-        // move onto the next page if there is one
-        paginationToken = result.PaginationToken
-        accumulatedResources = [...(accumulatedResources || []), ...result.ResourceTagMappingList]
-        if (paginationToken === '') {
-            break
-        } else {
-            console.log('AWS:        There are more pages of results, getting next page ...')
-        }
+    const input: GetResourcesCommandInput = {
+        TagFilters: tagFilters,
+        ResourceTypeFilters: resourceTypeFilters,
     }
-    console.log('AWS:        Found all resources matching input')
+
+    console.log(`AWS: START: ${logMessage}`)
+    for await (const page of paginateGetResources({ client }, input)) {
+        page.ResourceTagMappingList = ensureValueWithError(page.ResourceTagMappingList)
+        accumulatedResources.push(...page.ResourceTagMappingList)
+    }
+    console.log(`AWS:   END: GetResourcesCommand finished with list`, accumulatedResources)
+
     return accumulatedResources
 }
 
