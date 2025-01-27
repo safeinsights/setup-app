@@ -7,7 +7,7 @@ import {
 } from './types'
 
 // Functions for interacting with the Management App
-const generateToken = (): string => {
+const generateManagementAppToken = (): string => {
     const privateKey: string | undefined = process.env.MANAGEMENT_APP_PRIVATE_KEY
     const memberId = process.env.MANAGEMENT_APP_MEMBER_ID
 
@@ -23,7 +23,7 @@ const generateToken = (): string => {
 
 export const managementAppGetRunnableStudiesRequest = async (): Promise<ManagementAppGetRunnableStudiesResponse> => {
     const endpoint = process.env.MANAGEMENT_APP_BASE_URL + '/api/studies/runnable' // `http://localhost:4000/api/studies/runnable`
-    const token = generateToken()
+    const token = generateManagementAppToken()
     console.log('BMA: Fetching runnable studies ...')
     const response = await fetch(endpoint, {
         method: 'GET',
@@ -47,12 +47,17 @@ export const managementAppGetRunnableStudiesRequest = async (): Promise<Manageme
 }
 
 // Functions for interacting with the Trusted Output App
-export const toaGetRunsRequest = async (): Promise<TOAGetRunsResponse> => {
-    const endpoint = process.env.TOA_BASE_URL + '/api/runs' // `http://localhost:3002/api/runs`
+const generateTOAToken = (): string => {
     const token = Buffer.from(process.env.TOA_BASIC_AUTH || '').toString('base64')
     if (token.length === 0) {
         throw new Error('TOA token failed to generate')
     }
+    return token
+}
+
+export const toaGetRunsRequest = async (): Promise<TOAGetRunsResponse> => {
+    const endpoint = process.env.TOA_BASE_URL + '/api/runs' // `http://localhost:3002/api/runs`
+    const token = generateTOAToken()
 
     console.log('TOA: Fetching runs ...')
     const response = await fetch(endpoint, {
@@ -74,4 +79,30 @@ export const toaGetRunsRequest = async (): Promise<TOAGetRunsResponse> => {
     console.log('TOA: Data received!')
 
     return data
+}
+
+export const toaUpdateRunStatus = async (
+    runId: string,
+    data: { status: 'PROVISIONING' } | { status: 'ERRORED'; message?: string },
+): Promise<{ success: boolean }> => {
+    const endpoint = `${process.env.TOA_BASE_URL}/api/run/${runId}`
+    const token = generateTOAToken()
+
+    console.log(`TOA: Updating run ${runId} status with ${JSON.stringify(data)} ...`)
+    const response = await fetch(endpoint, {
+        method: 'PUT',
+        headers: {
+            Authorization: `Basic ${token}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+        console.log(`TOA: Status update for run ${runId} FAILED!: ${await response.text()}`)
+        return { success: false }
+    }
+
+    console.log(`TOA: Status update for run ${runId} succeeded!`)
+    return { success: true }
 }
