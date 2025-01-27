@@ -15,9 +15,11 @@ import {
     TaskDefinitionStatus,
 } from '@aws-sdk/client-ecs'
 import {
-    GetResourcesCommand,
-    GetResourcesCommandOutput,
+    GetResourcesCommandInput,
+    paginateGetResources,
     ResourceGroupsTaggingAPIClient,
+    ResourceTagMapping,
+    TagFilter,
 } from '@aws-sdk/client-resource-groups-tagging-api'
 import { ensureValueWithError } from './utils'
 
@@ -140,45 +142,65 @@ export async function runECSFargateTask(
     return result
 }
 
+async function getResourceCommandWrapper(
+    tagFilters: TagFilter[],
+    resourceTypeFilters: string[],
+    client: ResourceGroupsTaggingAPIClient,
+    logMessage: string,
+): Promise<ResourceTagMapping[]> {
+    const accumulatedResources: ResourceTagMapping[] = []
+
+    const input: GetResourcesCommandInput = {
+        TagFilters: tagFilters,
+        ResourceTypeFilters: resourceTypeFilters,
+    }
+
+    console.log(`AWS: START: ${logMessage}`)
+    for await (const page of paginateGetResources({ client }, input)) {
+        page.ResourceTagMappingList = ensureValueWithError(page.ResourceTagMappingList)
+        accumulatedResources.push(...page.ResourceTagMappingList)
+    }
+    console.log(`AWS:   END: GetResourcesCommand finished with list`, accumulatedResources)
+
+    return accumulatedResources
+}
+
 export async function getTaskResourcesByRunId(
     client: ResourceGroupsTaggingAPIClient,
     runId: string,
-): Promise<Required<GetResourcesCommandOutput>> {
-    const command = new GetResourcesCommand({
-        TagFilters: [
-            {
-                Key: RUN_ID_TAG_KEY,
-                Values: [runId],
-            },
-        ],
-        ResourceTypeFilters: ['ecs:task', 'ecs:task-definition'],
-    })
+): Promise<ResourceTagMapping[]> {
+    const tagFilters = [
+        {
+            Key: RUN_ID_TAG_KEY,
+            Values: [runId],
+        },
+    ]
+    const resourceTypeFilters = ['ecs:task', 'ecs:task-definition']
+    const logMessage = `Getting task resources with run id ${runId} ...`
 
-    console.log(`AWS: START: Getting a run with run id ${runId} ...`)
-    const result = await client.send(command)
-    result.ResourceTagMappingList = ensureValueWithError(result.ResourceTagMappingList)
-    result.PaginationToken = ensureValueWithError(result.PaginationToken)
-    console.log(`AWS:   END: GetResourcesCommand finished w/ list`, result.ResourceTagMappingList)
-    return result as any
+    return await getResourceCommandWrapper(tagFilters, resourceTypeFilters, client, logMessage)
 }
 
 export async function getAllTaskDefinitionsWithRunId(
     client: ResourceGroupsTaggingAPIClient,
-): Promise<Required<GetResourcesCommandOutput>> {
-    // TODO: pagination of results may mean this only returns the first page
-    const command = new GetResourcesCommand({
-        TagFilters: [
-            {
-                Key: RUN_ID_TAG_KEY,
-            },
-        ],
-        ResourceTypeFilters: ['ecs:task-definition'],
-    })
+): Promise<ResourceTagMapping[]> {
+    const tagFilters = [
+        {
+            Key: RUN_ID_TAG_KEY,
+        },
+    ]
+    const resourceTypeFilters = ['ecs:task-definition']
+    const logMessage = 'Getting all task definitions with runId ...'
+    return await getResourceCommandWrapper(tagFilters, resourceTypeFilters, client, logMessage)
+}
 
-    console.log('AWS: START: Getting all task definitions with runId ...')
-    const result = await client.send(command)
-    result.ResourceTagMappingList = ensureValueWithError(result.ResourceTagMappingList)
-    result.PaginationToken = ensureValueWithError(result.PaginationToken)
-    console.log(`AWS:   END: GetResourcesCommand finished w/ list`, result.ResourceTagMappingList)
-    return result as any
+export async function getAllTasksWithRunId(client: ResourceGroupsTaggingAPIClient): Promise<ResourceTagMapping[]> {
+    const tagFilters = [
+        {
+            Key: RUN_ID_TAG_KEY,
+        },
+    ]
+    const resourceTypeFilters = ['ecs:task']
+    const logMessage = 'Getting all tasks with runId ...'
+    return await getResourceCommandWrapper(tagFilters, resourceTypeFilters, client, logMessage)
 }

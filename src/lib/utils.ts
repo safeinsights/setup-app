@@ -9,13 +9,22 @@ const getRunIdFromResourceTagMapping = (resource: ResourceTagMapping): string | 
 export const filterManagementAppRuns = (
     managementAppResponse: ManagementAppGetRunnableStudiesResponse,
     toaResponse: TOAGetRunsResponse,
-    existingAwsRuns: string[],
+    existingAwsTasks?: ResourceTagMapping[],
+    existingAwsTaskDefs?: ResourceTagMapping[],
 ): ManagementAppGetRunnableStudiesResponse => {
     const toaRunIdArray: string[] = toaResponse.runs.map((run) => run.runId) // flatten toaResponse
+    const taskRunIdArray: string[] =
+        existingAwsTasks?.map((resource) => ensureValueWithError(getRunIdFromResourceTagMapping(resource))) || []
+    const taskDefRunIdArray: string[] =
+        existingAwsTaskDefs?.map((resource) => ensureValueWithError(getRunIdFromResourceTagMapping(resource))) || []
 
     return {
         runs: managementAppResponse.runs.filter((run) => {
-            return !toaRunIdArray.includes(run.runId) && !existingAwsRuns.includes(run.runId)
+            return (
+                !toaRunIdArray.includes(run.runId) &&
+                !taskRunIdArray.includes(run.runId) &&
+                !taskDefRunIdArray.includes(run.runId)
+            )
         }),
     }
 }

@@ -18,6 +18,7 @@ import {
     runECSFargateTask,
     RUN_ID_TAG_KEY,
     deleteECSTaskDefinitions,
+    getAllTasksWithRunId,
 } from './aws'
 import { GetResourcesCommand, ResourceGroupsTaggingAPIClient } from '@aws-sdk/client-resource-groups-tagging-api'
 
@@ -159,7 +160,7 @@ describe('getTaskResourcesByRunId', () => {
         taggingMockClient.on(GetResourcesCommand, expectedCommandInput).resolves(mockResult)
 
         const res = await getTaskResourcesByRunId(new ResourceGroupsTaggingAPIClient(), 'testrun1234')
-        expect(res).toStrictEqual(mockResult)
+        expect(res).toStrictEqual([])
     })
 })
 
@@ -181,6 +182,78 @@ describe('getAllTaskDefinitionsWithRunId', () => {
         taggingMockClient.on(GetResourcesCommand, expectedCommandInput).resolves(mockResult)
 
         const res = await getAllTaskDefinitionsWithRunId(new ResourceGroupsTaggingAPIClient())
-        expect(res).toStrictEqual(mockResult)
+        expect(res).toStrictEqual([])
+    })
+    it('works for multi page results', async () => {
+        const expectedPage1Input = {
+            TagFilters: [
+                {
+                    Key: RUN_ID_TAG_KEY,
+                },
+            ],
+            ResourceTypeFilters: ['ecs:task-definition'],
+        }
+        taggingMockClient.on(GetResourcesCommand, expectedPage1Input).resolves({
+            $metadata: {},
+            PaginationToken: '1',
+            ResourceTagMappingList: [
+                {
+                    ResourceARN: 'arn:1',
+                    Tags: [{ Key: RUN_ID_TAG_KEY, Value: 'runId1' }],
+                },
+            ],
+        })
+        const expectedPage2Input = {
+            TagFilters: [
+                {
+                    Key: RUN_ID_TAG_KEY,
+                },
+            ],
+            ResourceTypeFilters: ['ecs:task-definition'],
+            PaginationToken: '1',
+        }
+        taggingMockClient.on(GetResourcesCommand, expectedPage2Input).resolves({
+            $metadata: {},
+            PaginationToken: '',
+            ResourceTagMappingList: [
+                {
+                    ResourceARN: 'arn:2',
+                    Tags: [{ Key: RUN_ID_TAG_KEY, Value: 'runId2' }],
+                },
+            ],
+        })
+        const res = await getAllTaskDefinitionsWithRunId(new ResourceGroupsTaggingAPIClient())
+        expect(res).toStrictEqual([
+            {
+                ResourceARN: 'arn:1',
+                Tags: [{ Key: RUN_ID_TAG_KEY, Value: 'runId1' }],
+            },
+            {
+                ResourceARN: 'arn:2',
+                Tags: [{ Key: RUN_ID_TAG_KEY, Value: 'runId2' }],
+            },
+        ])
+    })
+})
+
+describe('getAllTasksWithRunId', () => {
+    it('should send GetResourcesCommand and return response', async () => {
+        const expectedCommandInput = {
+            TagFilters: [
+                {
+                    Key: RUN_ID_TAG_KEY,
+                },
+            ],
+            ResourceTypeFilters: ['ecs:task'],
+        }
+        const mockResult = {
+            $metadata: {},
+            PaginationToken: '',
+            ResourceTagMappingList: [],
+        }
+        taggingMockClient.on(GetResourcesCommand, expectedCommandInput).resolves(mockResult)
+
+        const res = await getAllTasksWithRunId(new ResourceGroupsTaggingAPIClient())
+        expect(res).toStrictEqual([])
     })
 })
