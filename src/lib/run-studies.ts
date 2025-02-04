@@ -11,7 +11,7 @@ import {
     getAllTasksWithRunId,
 } from './aws'
 import { ensureValueWithError, filterManagementAppRuns, filterOrphanTaskDefinitions } from './utils'
-import { managementAppGetRunnableStudiesRequest, toaGetRunsRequest } from './api'
+import { managementAppGetRunnableStudiesRequest, toaGetRunsRequest, toaUpdateRunStatus } from './api'
 import 'dotenv/config'
 import { ManagementAppGetRunnableStudiesResponse } from './types'
 
@@ -140,6 +140,8 @@ export async function runStudies(options: { ignoreAWSRuns: boolean }): Promise<v
             run.containerLocation,
             run.title,
         )
+
+        await toaUpdateRunStatus(run.runId, { status: 'PROVISIONING' })
     }
 
     // Tidy AWS environment
