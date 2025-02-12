@@ -77,7 +77,8 @@ describe('runStudies()', () => {
         )
     })
 
-    it('makes calls to update the AWS environment: launch studies & garbage collect', async () => {
+    it('makes calls to update the AWS environment (launch studies & garbage collect) as well as TOA', async () => {
+        const mockToaUpdateRunStatus = vi.mocked(api.toaUpdateRunStatus)
         await runStudies({ ignoreAWSRuns: false })
 
         // Make sure calls to delete task definitions were made
@@ -89,6 +90,13 @@ describe('runStudies()', () => {
         expect(runECSFargateTaskCalls.length).toBe(2)
         expect(runECSFargateTaskCalls[0]).toContain('MOCK_BASE_TASK_DEF_FAMILY-to-be-run-1-registered')
         expect(runECSFargateTaskCalls[1]).toContain('MOCK_BASE_TASK_DEF_FAMILY-to-be-run-2-registered')
+        expect(mockToaUpdateRunStatus).toHaveBeenCalledTimes(2)
+        expect(mockToaUpdateRunStatus).toHaveBeenNthCalledWith(1, 'to-be-run-1', {
+            status: 'JOB-PROVISIONING',
+        })
+        expect(mockToaUpdateRunStatus).toHaveBeenNthCalledWith(2, 'to-be-run-2', {
+            status: 'JOB-PROVISIONING',
+        })
     })
 
     it('ignores AWS runs if ignoreAWS set to true', async () => {
