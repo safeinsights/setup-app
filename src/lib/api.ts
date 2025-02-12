@@ -83,7 +83,7 @@ export const toaGetRunsRequest = async (): Promise<TOAGetRunsResponse> => {
 
 export const toaUpdateRunStatus = async (
     runId: string,
-    data: { status: 'PROVISIONING' } | { status: 'ERRORED'; message?: string },
+    data: { status: 'JOB-PROVISIONING' } | { status: 'JOB-ERRORED'; message?: string },
 ): Promise<{ success: boolean }> => {
     const endpoint = `${process.env.TOA_BASE_URL}/api/run/${runId}`
     const token = generateTOAToken()

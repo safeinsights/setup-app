@@ -141,7 +141,7 @@ export async function runStudies(options: { ignoreAWSRuns: boolean }): Promise<v
             run.title,
         )
 
-        await toaUpdateRunStatus(run.runId, { status: 'PROVISIONING' })
+        await toaUpdateRunStatus(run.runId, { status: 'JOB-PROVISIONING' })
     }
 
     // Tidy AWS environment

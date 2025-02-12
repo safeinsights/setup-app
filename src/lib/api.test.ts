@@ -124,7 +124,7 @@ describe('toaUpdateRunStatus', () => {
     it('should make a PUT request', async () => {
         global.fetch = vi.fn().mockResolvedValue(new Response())
 
-        const result = await toaUpdateRunStatus('runId1234', { status: 'ERRORED', message: 'Error message' })
+        const result = await toaUpdateRunStatus('runId1234', { status: 'JOB-ERRORED', message: 'Error message' })
 
         const mockToken = Buffer.from('testusername:testpassword').toString('base64')
         expect(global.fetch).toHaveBeenCalledWith('http://toa:67890/api/run/runId1234', {
@@ -133,7 +133,7 @@ describe('toaUpdateRunStatus', () => {
                 Authorization: `Basic ${mockToken}`,
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ status: 'ERRORED', message: 'Error message' }),
+            body: JSON.stringify({ status: 'JOB-ERRORED', message: 'Error message' }),
         })
 
         expect(result).toEqual({ success: true })
@@ -141,14 +141,14 @@ describe('toaUpdateRunStatus', () => {
 
     it('should error if token not found', async () => {
         process.env.TOA_BASIC_AUTH = ''
-        await expect(toaUpdateRunStatus('runId1234', { status: 'ERRORED' })).rejects.toThrow(
+        await expect(toaUpdateRunStatus('runId1234', { status: 'JOB-ERRORED' })).rejects.toThrow(
             'TOA token failed to generate',
         )
     })
 
     it('should return appropriate value if response status is not success', async () => {
         global.fetch = vi.fn().mockResolvedValue(new Response('Authentication error', { status: 401 }))
-        const result = await toaUpdateRunStatus('runId1234', { status: 'ERRORED' })
+        const result = await toaUpdateRunStatus('runId1234', { status: 'JOB-ERRORED' })
         expect(result).toEqual({ success: false })
     })
 })

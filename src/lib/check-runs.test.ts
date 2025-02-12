@@ -48,7 +48,7 @@ describe('checkForErroredRuns()', () => {
         expect(mockDescribeECSTasks).toHaveBeenCalledWith(expect.any(ECSClient), 'MOCK_ECS_CLUSTER', ['arn1', 'arn2'])
         expect(mockToaUpdateRunStatus).toHaveBeenCalledOnce()
         expect(mockToaUpdateRunStatus).toHaveBeenLastCalledWith('runId1', {
-            status: 'ERRORED',
+            status: 'JOB-ERRORED',
             message: 'Task failed to start',
         })
     })
@@ -85,7 +85,7 @@ describe('checkForErroredRuns()', () => {
         expect(mockDescribeECSTasks).toHaveBeenCalledWith(expect.any(ECSClient), 'MOCK_ECS_CLUSTER', ['arn1', 'arn2'])
         expect(mockToaUpdateRunStatus).toHaveBeenCalledOnce()
         expect(mockToaUpdateRunStatus).toHaveBeenLastCalledWith('runId1', {
-            status: 'ERRORED',
+            status: 'JOB-ERRORED',
             message: 'Task container stopped with non-zero exit code',
         })
     })

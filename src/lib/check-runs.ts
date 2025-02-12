@@ -40,7 +40,7 @@ export async function checkForErroredRuns(): Promise<void> {
             // NOTE: While run.stopReason provides useful information for devs / operators,
             // for now we're not passing that through since the AWS generated message may
             // be confusing to users
-            await toaUpdateRunStatus(runId, { status: 'ERRORED', message: 'Task failed to start' })
+            await toaUpdateRunStatus(runId, { status: 'JOB-ERRORED', message: 'Task failed to start' })
         }
 
         if (run.stopCode === TaskStopCode.ESSENTIAL_CONTAINER_EXITED) {
@@ -50,7 +50,7 @@ export async function checkForErroredRuns(): Promise<void> {
                 const maybeExitCode = container.exitCode
                 if (maybeExitCode !== undefined && maybeExitCode !== 0) {
                     await toaUpdateRunStatus(runId, {
-                        status: 'ERRORED',
+                        status: 'JOB-ERRORED',
                         message: 'Task container stopped with non-zero exit code',
                     })
                 }
