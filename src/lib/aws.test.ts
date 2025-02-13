@@ -9,6 +9,8 @@ import {
     DeleteTaskDefinitionsCommand,
     DeregisterTaskDefinitionCommand,
     TaskDefinitionStatus,
+    DescribeTasksCommand,
+    DescribeTasksCommandInput,
 } from '@aws-sdk/client-ecs'
 import {
     getECSTaskDefinition,
@@ -19,6 +21,7 @@ import {
     RUN_ID_TAG_KEY,
     deleteECSTaskDefinitions,
     getAllTasksWithRunId,
+    describeECSTasks,
 } from './aws'
 import { GetResourcesCommand, ResourceGroupsTaggingAPIClient } from '@aws-sdk/client-resource-groups-tagging-api'
 
@@ -136,6 +139,20 @@ describe('runECSFargateTask', () => {
             ['sg1'],
             testTags,
         )
+        expect(res).toStrictEqual({})
+    })
+})
+
+describe('describeECSTasks', () => {
+    it('should send DescribeTasksCommand and return response', async () => {
+        const expectedCommandInput: DescribeTasksCommandInput = {
+            cluster: 'testcluster',
+            tasks: ['task1', 'task2'],
+            include: ['TAGS'],
+        }
+        ecsMockClient.on(DescribeTasksCommand, expectedCommandInput).resolves({})
+
+        const res = await describeECSTasks(new ECSClient(), 'testcluster', ['task1', 'task2'])
         expect(res).toStrictEqual({})
     })
 })

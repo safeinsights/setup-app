@@ -13,6 +13,8 @@ import {
     DeleteTaskDefinitionsCommand,
     DeregisterTaskDefinitionCommand,
     TaskDefinitionStatus,
+    DescribeTasksCommand,
+    DescribeTasksCommandOutput,
 } from '@aws-sdk/client-ecs'
 import {
     GetResourcesCommandInput,
@@ -139,6 +141,20 @@ export async function runECSFargateTask(
         `AWS:   END: RunTaskCommand finished for tasks`,
         result.tasks?.map((task) => task.taskArn),
     )
+    return result
+}
+
+export async function describeECSTasks(
+    client: ECSClient,
+    cluster: string,
+    tasks: string[],
+): Promise<DescribeTasksCommandOutput> {
+    const command = new DescribeTasksCommand({ cluster, tasks, include: ['TAGS'] })
+
+    console.log('AWS: START: Calling ECS DescribeTasks ...')
+    const result = await client.send(command)
+    console.log('AWS:   END: DescribeTasks finished')
+
     return result
 }
 

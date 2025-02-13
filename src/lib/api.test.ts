@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { managementAppGetRunnableStudiesRequest, toaGetRunsRequest } from './api'
+import { managementAppGetRunnableStudiesRequest, toaGetRunsRequest, toaUpdateRunStatus } from './api'
 import jwt from 'jsonwebtoken'
 
 describe('managementAppGetRunnableStudiesRequest', () => {
@@ -117,5 +117,38 @@ describe('toaGetRunsRequest', () => {
         await expect(toaGetRunsRequest()).rejects.toThrow(
             'Trusted output app response does not match expected structure',
         )
+    })
+})
+
+describe('toaUpdateRunStatus', () => {
+    it('should make a PUT request', async () => {
+        global.fetch = vi.fn().mockResolvedValue(new Response())
+
+        const result = await toaUpdateRunStatus('runId1234', { status: 'JOB-ERRORED', message: 'Error message' })
+
+        const mockToken = Buffer.from('testusername:testpassword').toString('base64')
+        expect(global.fetch).toHaveBeenCalledWith('http://toa:67890/api/run/runId1234', {
+            method: 'PUT',
+            headers: {
+                Authorization: `Basic ${mockToken}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ status: 'JOB-ERRORED', message: 'Error message' }),
+        })
+
+        expect(result).toEqual({ success: true })
+    })
+
+    it('should error if token not found', async () => {
+        process.env.TOA_BASIC_AUTH = ''
+        await expect(toaUpdateRunStatus('runId1234', { status: 'JOB-ERRORED' })).rejects.toThrow(
+            'TOA token failed to generate',
+        )
+    })
+
+    it('should return appropriate value if response status is not success', async () => {
+        global.fetch = vi.fn().mockResolvedValue(new Response('Authentication error', { status: 401 }))
+        const result = await toaUpdateRunStatus('runId1234', { status: 'JOB-ERRORED' })
+        expect(result).toEqual({ success: false })
     })
 })
