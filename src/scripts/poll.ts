@@ -1,4 +1,4 @@
-import { checkForErroredJobs } from '../lib/check-runs'
+import { checkForErroredJobs } from '../lib/check-jobs'
 import { runStudies } from '../lib/run-studies'
 
 function pollStudies(): void {

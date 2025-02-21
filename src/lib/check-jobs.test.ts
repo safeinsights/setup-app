@@ -1,5 +1,5 @@
 import { vi, describe, it, expect } from 'vitest'
-import { checkForErroredJobs } from './check-runs'
+import { checkForErroredJobs } from './check-jobs'
 import * as api from './api'
 import * as aws from './aws'
 import { ECSClient, TaskStopCode } from '@aws-sdk/client-ecs'
