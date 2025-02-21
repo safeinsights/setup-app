@@ -127,7 +127,7 @@ export async function runStudies(options: { ignoreAWSRuns: boolean }): Promise<v
     for (const run of filteredResult.runs) {
         console.log(`Launching study for run ID ${run.runId}`)
 
-        const toaEndpointWithRunId = `${process.env.TOA_BASE_URL}/api/run/${run.runId}`
+        const toaEndpointWithRunId = `${process.env.TOA_BASE_URL}/api/job/${run.runId}`
 
         await launchStudy(
             ecsClient,

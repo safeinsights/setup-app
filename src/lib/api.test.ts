@@ -27,7 +27,7 @@ describe('managementAppGetRunnableStudiesRequest', () => {
         expect(mockSignToken).toHaveBeenCalledOnce()
         expect(mockSignToken).toHaveBeenCalledWith({ iss: 'openstax' }, 'mockprivatekeyvalue', { algorithm: 'RS256' })
         expect(global.fetch).toHaveBeenCalledOnce()
-        expect(global.fetch).toHaveBeenCalledWith('http://bma:12345/api/studies/runnable', {
+        expect(global.fetch).toHaveBeenCalledWith('http://bma:12345/api/studies/ready', {
             method: 'GET',
             headers: {
                 Authorization: 'Bearer mocktokenvalue',
@@ -85,7 +85,7 @@ describe('toaGetRunsRequest', () => {
         const result = await toaGetRunsRequest()
 
         const mockToken = Buffer.from('testusername:testpassword').toString('base64')
-        expect(global.fetch).toHaveBeenCalledWith('http://toa:67890/api/runs', {
+        expect(global.fetch).toHaveBeenCalledWith('http://toa:67890/api/jobs', {
             method: 'GET',
             headers: {
                 Authorization: `Basic ${mockToken}`,
@@ -127,7 +127,7 @@ describe('toaUpdateRunStatus', () => {
         const result = await toaUpdateRunStatus('runId1234', { status: 'JOB-ERRORED', message: 'Error message' })
 
         const mockToken = Buffer.from('testusername:testpassword').toString('base64')
-        expect(global.fetch).toHaveBeenCalledWith('http://toa:67890/api/run/runId1234', {
+        expect(global.fetch).toHaveBeenCalledWith('http://toa:67890/api/job/runId1234', {
             method: 'PUT',
             headers: {
                 Authorization: `Basic ${mockToken}`,

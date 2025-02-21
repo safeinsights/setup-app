@@ -22,7 +22,7 @@ const generateManagementAppToken = (): string => {
 }
 
 export const managementAppGetRunnableStudiesRequest = async (): Promise<ManagementAppGetRunnableStudiesResponse> => {
-    const endpoint = process.env.MANAGEMENT_APP_BASE_URL + '/api/studies/runnable' // `http://localhost:4000/api/studies/runnable`
+    const endpoint = process.env.MANAGEMENT_APP_BASE_URL + '/api/studies/ready'
     const token = generateManagementAppToken()
     console.log('BMA: Fetching runnable studies ...')
     const response = await fetch(endpoint, {
@@ -56,7 +56,7 @@ const generateTOAToken = (): string => {
 }
 
 export const toaGetRunsRequest = async (): Promise<TOAGetRunsResponse> => {
-    const endpoint = process.env.TOA_BASE_URL + '/api/runs' // `http://localhost:3002/api/runs`
+    const endpoint = process.env.TOA_BASE_URL + '/api/jobs'
     const token = generateTOAToken()
 
     console.log('TOA: Fetching runs ...')
@@ -85,7 +85,7 @@ export const toaUpdateRunStatus = async (
     runId: string,
     data: { status: 'JOB-PROVISIONING' } | { status: 'JOB-ERRORED'; message?: string },
 ): Promise<{ success: boolean }> => {
-    const endpoint = `${process.env.TOA_BASE_URL}/api/run/${runId}`
+    const endpoint = `${process.env.TOA_BASE_URL}/api/job/${runId}`
     const token = generateTOAToken()
 
     console.log(`TOA: Updating run ${runId} status with ${JSON.stringify(data)} ...`)
