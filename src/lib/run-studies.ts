@@ -4,16 +4,16 @@ import {
     getECSTaskDefinition,
     registerECSTaskDefinition,
     runECSFargateTask,
-    RUN_ID_TAG_KEY,
+    JOB_ID_TAG_KEY,
     TITLE_TAG_KEY,
-    getAllTaskDefinitionsWithRunId,
+    getAllTaskDefinitionsWithJobId,
     deleteECSTaskDefinitions,
-    getAllTasksWithRunId,
+    getAllTasksWithJobId,
 } from './aws'
-import { ensureValueWithError, filterManagementAppRuns, filterOrphanTaskDefinitions } from './utils'
-import { managementAppGetRunnableStudiesRequest, toaGetRunsRequest, toaUpdateRunStatus } from './api'
+import { ensureValueWithError, filterManagementAppJobs, filterOrphanTaskDefinitions } from './utils'
+import { managementAppGetReadyStudiesRequest, toaGetJobsRequest, toaUpdateJobStatus } from './api'
 import 'dotenv/config'
-import { ManagementAppGetRunnableStudiesResponse } from './types'
+import { ManagementAppGetReadyStudiesResponse } from './types'
 
 async function launchStudy(
     client: ECSClient,
@@ -21,13 +21,13 @@ async function launchStudy(
     baseTaskDefinitionFamily: string,
     subnets: string[],
     securityGroup: string,
-    toaEndpointWithRunId: string,
-    runId: string,
+    toaEndpointWithJobId: string,
+    jobId: string,
     imageLocation: string,
     studyTitle: string,
 ): Promise<RunTaskCommandOutput> {
     const taskTags = [
-        { key: RUN_ID_TAG_KEY, value: runId },
+        { key: JOB_ID_TAG_KEY, value: jobId },
         { key: TITLE_TAG_KEY, value: studyTitle },
     ]
     const baseTaskDefinitionData = await getECSTaskDefinition(client, baseTaskDefinitionFamily)
@@ -36,13 +36,13 @@ async function launchStudy(
         `Could not find task definition data for ${baseTaskDefinitionFamily}`,
     )
 
-    const newTaskDefinitionFamily = `${baseTaskDefinitionData.taskDefinition.family}-${runId}`
+    const newTaskDefinitionFamily = `${baseTaskDefinitionData.taskDefinition.family}-${jobId}`
 
     const registerTaskDefResponse = await registerECSTaskDefinition(
         client,
         baseTaskDefinitionData.taskDefinition,
         newTaskDefinitionFamily,
-        toaEndpointWithRunId,
+        toaEndpointWithJobId,
         imageLocation,
         taskTags,
     )
@@ -66,17 +66,17 @@ async function launchStudy(
 }
 
 async function cleanupTaskDefs(
-    bmaResults: ManagementAppGetRunnableStudiesResponse,
-    taskDefsWithRunId: ResourceTagMapping[],
+    bmaResults: ManagementAppGetReadyStudiesResponse,
+    taskDefsWithJobId: ResourceTagMapping[],
     ecsClient: ECSClient,
 ) {
     // Garbage collect orphan task definitions
-    const orphanTaskDefinitions = filterOrphanTaskDefinitions(bmaResults, taskDefsWithRunId)
+    const orphanTaskDefinitions = filterOrphanTaskDefinitions(bmaResults, taskDefsWithJobId)
     console.log(`Found ${orphanTaskDefinitions.length} orphan task definitions to delete`)
     await deleteECSTaskDefinitions(ecsClient, orphanTaskDefinitions)
 }
 
-export async function runStudies(options: { ignoreAWSRuns: boolean }): Promise<void> {
+export async function runStudies(options: { ignoreAWSJobs: boolean }): Promise<void> {
     const ecsClient = new ECSClient()
     const taggingClient = new ResourceGroupsTaggingAPIClient()
 
@@ -89,45 +89,45 @@ export async function runStudies(options: { ignoreAWSRuns: boolean }): Promise<v
     const subnets = ensureValueWithError(process.env.VPC_SUBNETS, 'Env var VPC_SUBNETS not found')
     const securityGroup = ensureValueWithError(process.env.SECURITY_GROUP, 'Env var SECURITY_GROUP not found')
 
-    const bmaRunnablesResults = await managementAppGetRunnableStudiesRequest()
+    const bmaReadysResults = await managementAppGetReadyStudiesRequest()
     console.log(
-        `Found ${bmaRunnablesResults.runs.length} runs in management app. Run ids: ${bmaRunnablesResults.runs.map((run) => run.runId)}`,
+        `Found ${bmaReadysResults.jobs.length} jobs in management app. Job ids: ${bmaReadysResults.jobs.map((job) => job.jobId)}`,
     )
-    const toaGetRunsResult = await toaGetRunsRequest()
+    const toaGetJobsResult = await toaGetJobsRequest()
     console.log(
-        `Found ${toaGetRunsResult.runs.length} runs with results in TOA. Run ids: ${toaGetRunsResult.runs.map((run) => run.runId)}`,
+        `Found ${toaGetJobsResult.jobs.length} jobs with results in TOA. Job ids: ${toaGetJobsResult.jobs.map((job) => job.jobId)}`,
     )
 
     // Possibly used in filtering; used in garbage collection
-    const existingAwsTaskDefs = await getAllTaskDefinitionsWithRunId(taggingClient)
-    console.log(`Found ${existingAwsTaskDefs.length} task definitions with runId in the AWS environment`)
+    const existingAwsTaskDefs = await getAllTaskDefinitionsWithJobId(taggingClient)
+    console.log(`Found ${existingAwsTaskDefs.length} task definitions with jobId in the AWS environment`)
 
-    let filteredResult: ManagementAppGetRunnableStudiesResponse
+    let filteredResult: ManagementAppGetReadyStudiesResponse
 
-    if (options.ignoreAWSRuns) {
+    if (options.ignoreAWSJobs) {
         // Don't query AWS, filter without it
-        filteredResult = filterManagementAppRuns(bmaRunnablesResults, toaGetRunsResult)
+        filteredResult = filterManagementAppJobs(bmaReadysResults, toaGetJobsResult)
     } else {
         // Take AWS into account when filtering
-        const existingAwsTasks = await getAllTasksWithRunId(taggingClient)
-        console.log(`Found ${existingAwsTasks.length} tasks with runId in the AWS environment`)
+        const existingAwsTasks = await getAllTasksWithJobId(taggingClient)
+        console.log(`Found ${existingAwsTasks.length} tasks with jobId in the AWS environment`)
 
-        filteredResult = filterManagementAppRuns(
-            bmaRunnablesResults,
-            toaGetRunsResult,
+        filteredResult = filterManagementAppJobs(
+            bmaReadysResults,
+            toaGetJobsResult,
             existingAwsTasks,
             existingAwsTaskDefs,
         )
     }
 
     console.log(
-        `Found ${filteredResult.runs.length} studies that can be run. Run ids: ${filteredResult.runs.map((run) => run.runId)}`,
+        `Found ${filteredResult.jobs.length} studies that can be job. Job ids: ${filteredResult.jobs.map((job) => job.jobId)}`,
     )
 
-    for (const run of filteredResult.runs) {
-        console.log(`Launching study for run ID ${run.runId}`)
+    for (const job of filteredResult.jobs) {
+        console.log(`Launching study for job ID ${job.jobId}`)
 
-        const toaEndpointWithRunId = `${process.env.TOA_BASE_URL}/api/job/${run.runId}`
+        const toaEndpointWithJobId = `${process.env.TOA_BASE_URL}/api/job/${job.jobId}`
 
         await launchStudy(
             ecsClient,
@@ -135,15 +135,15 @@ export async function runStudies(options: { ignoreAWSRuns: boolean }): Promise<v
             baseTaskDefinition,
             subnets.split(','),
             securityGroup,
-            toaEndpointWithRunId,
-            run.runId,
-            run.containerLocation,
-            run.title,
+            toaEndpointWithJobId,
+            job.jobId,
+            job.containerLocation,
+            job.title,
         )
 
-        await toaUpdateRunStatus(run.runId, { status: 'JOB-PROVISIONING' })
+        await toaUpdateJobStatus(job.jobId, { status: 'JOB-PROVISIONING' })
     }
 
     // Tidy AWS environment
-    cleanupTaskDefs(bmaRunnablesResults, existingAwsTaskDefs, ecsClient)
+    cleanupTaskDefs(bmaReadysResults, existingAwsTaskDefs, ecsClient)
 }

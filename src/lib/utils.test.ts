@@ -1,55 +1,55 @@
 import { describe, it, expect } from 'vitest'
-import { filterManagementAppRuns, filterOrphanTaskDefinitions, ensureValueWithError } from '../lib/utils'
+import { filterManagementAppJobs, filterOrphanTaskDefinitions, ensureValueWithError } from '../lib/utils'
 import { ResourceTagMapping } from '@aws-sdk/client-resource-groups-tagging-api'
-import { RUN_ID_TAG_KEY } from './aws'
+import { JOB_ID_TAG_KEY } from './aws'
 
-describe('filterManagementAppRuns', () => {
-    it('filters out runs in the TOA', () => {
+describe('filterManagementAppJobs', () => {
+    it('filters out jobs in the TOA', () => {
         const mockManagementAppResponse = {
-            runs: [
+            jobs: [
                 {
-                    runId: 'not-in-TOA',
+                    jobId: 'not-in-TOA',
                     containerLocation: '',
                     title: '',
                 },
                 {
-                    runId: 'finished-run',
+                    jobId: 'finished-job',
                     containerLocation: '',
                     title: '',
                 },
             ],
         }
-        const mockTOAResponse = { runs: [{ runId: 'finished-run' }] }
-        expect(filterManagementAppRuns(mockManagementAppResponse, mockTOAResponse)).toStrictEqual({
-            runs: [
+        const mockTOAResponse = { jobs: [{ jobId: 'finished-job' }] }
+        expect(filterManagementAppJobs(mockManagementAppResponse, mockTOAResponse)).toStrictEqual({
+            jobs: [
                 {
-                    runId: 'not-in-TOA',
+                    jobId: 'not-in-TOA',
                     containerLocation: '',
                     title: '',
                 },
             ],
         })
     })
-    it('filters out runs from AWS', () => {
+    it('filters out jobs from AWS', () => {
         const mockManagementAppResponse = {
-            runs: [
+            jobs: [
                 {
-                    runId: 'not-in-AWS',
+                    jobId: 'not-in-AWS',
                     containerLocation: '',
                     title: '',
                 },
                 {
-                    runId: 'existing-run',
+                    jobId: 'existing-job',
                     containerLocation: '',
                     title: '',
                 },
             ],
         }
-        const mockRunsFromAws: ResourceTagMapping[] = [{ Tags: [{ Key: RUN_ID_TAG_KEY, Value: 'existing-run' }] }]
-        expect(filterManagementAppRuns(mockManagementAppResponse, { runs: [] }, mockRunsFromAws)).toStrictEqual({
-            runs: [
+        const mockJobsFromAws: ResourceTagMapping[] = [{ Tags: [{ Key: JOB_ID_TAG_KEY, Value: 'existing-job' }] }]
+        expect(filterManagementAppJobs(mockManagementAppResponse, { jobs: [] }, mockJobsFromAws)).toStrictEqual({
+            jobs: [
                 {
-                    runId: 'not-in-AWS',
+                    jobId: 'not-in-AWS',
                     containerLocation: '',
                     title: '',
                 },
@@ -61,14 +61,14 @@ describe('filterManagementAppRuns', () => {
 describe('filterOrphanTaskDefinitions', () => {
     it('filters expected task definitions', () => {
         const mockManagementAppResponse = {
-            runs: [
+            jobs: [
                 {
-                    runId: 'not-yet-run',
+                    jobId: 'not-yet-job',
                     containerLocation: '',
                     title: '',
                 },
                 {
-                    runId: 'previously-run-but-still-pending',
+                    jobId: 'previously-run-but-still-pending',
                     containerLocation: '',
                     title: '',
                 },
@@ -77,17 +77,17 @@ describe('filterOrphanTaskDefinitions', () => {
 
         const mockTaskDefResources = [
             {
-                runId: 'not-yet-run',
+                jobId: 'not-yet-run',
                 containerLocation: '',
                 title: '',
             },
             {
                 ResourceARN: 'arn1',
-                Tags: [{ Key: 'runId', Value: 'previously-run-but-still-pending' }],
+                Tags: [{ Key: 'jobId', Value: 'previously-run-but-still-pending' }],
             },
             {
                 ResourceARN: 'arn2',
-                Tags: [{ Key: 'runId', Value: 'orphaned-run' }],
+                Tags: [{ Key: 'jobId', Value: 'orphaned-job' }],
             },
         ]
 
