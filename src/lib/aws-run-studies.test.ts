@@ -1,9 +1,9 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
-import { runStudies } from './run-studies'
 import * as api from './api'
 import * as aws from './aws'
 import { RUN_ID_TAG_KEY } from './aws'
 import { ManagementAppGetRunnableStudiesResponse, TOAGetRunsResponse } from './types'
+import { runAWSStudies } from './aws-run-studies'
 
 vi.mock('./api')
 vi.mock('./aws')
@@ -78,7 +78,7 @@ describe('runStudies()', () => {
     })
 
     it('makes calls to update the AWS environment: launch studies & garbage collect', async () => {
-        await runStudies({ ignoreAWSRuns: false })
+        await runAWSStudies({ ignoreAWSRuns: false })
 
         // Make sure calls to delete task definitions were made
         const deleteECSTaskDefinitionsCalls = vi.mocked(aws.deleteECSTaskDefinitions).mock.calls
@@ -92,7 +92,7 @@ describe('runStudies()', () => {
     })
 
     it('ignores AWS runs if ignoreAWS set to true', async () => {
-        await runStudies({ ignoreAWSRuns: true })
+        await runAWSStudies({ ignoreAWSRuns: true })
 
         // Expect # of calls to be different
         const runECSFargateTaskCalls = vi.mocked(aws.runECSFargateTask).mock.calls

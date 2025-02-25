@@ -16,6 +16,31 @@ export type TOAGetRunsResponse = {
     runs: TOARun[]
 }
 
+export type KubernetesRun = {
+    metadata: {
+        name: string
+        namespace: string
+        labels: {
+            [key: string]: string | number
+        }
+    }
+    spec: {
+        selector: {
+            matchLabels: {
+                [key: string]: string | number
+            }
+        }
+    }
+    status: {
+        active: number
+        startTime: string
+    }
+}
+
+export type KubernetesRunsResponse = {
+    runs: KubernetesRun[]
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function isManagementAppRun(data: any): data is ManagementAppRun {
     return (

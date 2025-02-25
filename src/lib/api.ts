@@ -24,7 +24,7 @@ const generateToken = (): string => {
 export const managementAppGetRunnableStudiesRequest = async (): Promise<ManagementAppGetRunnableStudiesResponse> => {
     const endpoint = process.env.MANAGEMENT_APP_BASE_URL + '/api/studies/runnable' // `http://localhost:4000/api/studies/runnable`
     const token = generateToken()
-    console.log('BMA: Fetching runnable studies ...')
+    console.log(`BMA: Fetching runnable studies from ${endpoint} ...`)
     const response = await fetch(endpoint, {
         method: 'GET',
         headers: {
@@ -49,12 +49,12 @@ export const managementAppGetRunnableStudiesRequest = async (): Promise<Manageme
 // Functions for interacting with the Trusted Output App
 export const toaGetRunsRequest = async (): Promise<TOAGetRunsResponse> => {
     const endpoint = process.env.TOA_BASE_URL + '/api/runs' // `http://localhost:3002/api/runs`
-    const token = Buffer.from(process.env.TOA_BASIC_AUTH || '').toString('base64')
+    const token = Buffer.from(process.env.TOA_BASIC_AUTH ?? '').toString('base64')
     if (token.length === 0) {
         throw new Error('TOA token failed to generate')
     }
 
-    console.log('TOA: Fetching runs ...')
+    console.log(`TOA: Fetching runs from ${endpoint} ...`)
     const response = await fetch(endpoint, {
         method: 'GET',
         headers: {
