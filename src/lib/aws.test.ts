@@ -14,13 +14,13 @@ import {
 } from '@aws-sdk/client-ecs'
 import {
     getECSTaskDefinition,
-    getAllTaskDefinitionsWithRunId,
-    getTaskResourcesByRunId,
+    getAllTaskDefinitionsWithJobId,
+    getTaskResourcesByJobId,
     registerECSTaskDefinition,
     runECSFargateTask,
-    RUN_ID_TAG_KEY,
+    JOB_ID_TAG_KEY,
     deleteECSTaskDefinitions,
-    getAllTasksWithRunId,
+    getAllTasksWithJobId,
     describeECSTasks,
 } from './aws'
 import { GetResourcesCommand, ResourceGroupsTaggingAPIClient } from '@aws-sdk/client-resource-groups-tagging-api'
@@ -61,7 +61,7 @@ describe('registerECSTaskDefinition', () => {
                     image: 'testImageLocation',
                     environment: [
                         { name: 'foo', value: 'bar' },
-                        { name: 'TRUSTED_OUTPUT_ENDPOINT', value: 'http://toa:port/api/run/runid' },
+                        { name: 'TRUSTED_OUTPUT_ENDPOINT', value: 'http://toa:port/api/job/jobid' },
                     ],
                 },
             ],
@@ -79,7 +79,7 @@ describe('registerECSTaskDefinition', () => {
             new ECSClient(),
             testTaskDefinition,
             'testfamilyname',
-            'http://toa:port/api/run/runid',
+            'http://toa:port/api/job/jobid',
             'testImageLocation',
             testTags,
         )
@@ -157,13 +157,13 @@ describe('describeECSTasks', () => {
     })
 })
 
-describe('getTaskResourcesByRunId', () => {
+describe('getTaskResourcesByJobId', () => {
     it('should send GetResourcesCommand and return response', async () => {
         const expectedCommandInput = {
             TagFilters: [
                 {
-                    Key: RUN_ID_TAG_KEY,
-                    Values: ['testrun1234'],
+                    Key: JOB_ID_TAG_KEY,
+                    Values: ['testjob1234'],
                 },
             ],
             ResourceTypeFilters: ['ecs:task', 'ecs:task-definition'],
@@ -176,17 +176,17 @@ describe('getTaskResourcesByRunId', () => {
         }
         taggingMockClient.on(GetResourcesCommand, expectedCommandInput).resolves(mockResult)
 
-        const res = await getTaskResourcesByRunId(new ResourceGroupsTaggingAPIClient(), 'testrun1234')
+        const res = await getTaskResourcesByJobId(new ResourceGroupsTaggingAPIClient(), 'testjob1234')
         expect(res).toStrictEqual([])
     })
 })
 
-describe('getAllTaskDefinitionsWithRunId', () => {
+describe('getAllTaskDefinitionsWithJobId', () => {
     it('should send GetResourcesCommand and return response', async () => {
         const expectedCommandInput = {
             TagFilters: [
                 {
-                    Key: RUN_ID_TAG_KEY,
+                    Key: JOB_ID_TAG_KEY,
                 },
             ],
             ResourceTypeFilters: ['ecs:task-definition'],
@@ -198,14 +198,14 @@ describe('getAllTaskDefinitionsWithRunId', () => {
         }
         taggingMockClient.on(GetResourcesCommand, expectedCommandInput).resolves(mockResult)
 
-        const res = await getAllTaskDefinitionsWithRunId(new ResourceGroupsTaggingAPIClient())
+        const res = await getAllTaskDefinitionsWithJobId(new ResourceGroupsTaggingAPIClient())
         expect(res).toStrictEqual([])
     })
     it('works for multi page results', async () => {
         const expectedPage1Input = {
             TagFilters: [
                 {
-                    Key: RUN_ID_TAG_KEY,
+                    Key: JOB_ID_TAG_KEY,
                 },
             ],
             ResourceTypeFilters: ['ecs:task-definition'],
@@ -216,14 +216,14 @@ describe('getAllTaskDefinitionsWithRunId', () => {
             ResourceTagMappingList: [
                 {
                     ResourceARN: 'arn:1',
-                    Tags: [{ Key: RUN_ID_TAG_KEY, Value: 'runId1' }],
+                    Tags: [{ Key: JOB_ID_TAG_KEY, Value: 'jobId1' }],
                 },
             ],
         })
         const expectedPage2Input = {
             TagFilters: [
                 {
-                    Key: RUN_ID_TAG_KEY,
+                    Key: JOB_ID_TAG_KEY,
                 },
             ],
             ResourceTypeFilters: ['ecs:task-definition'],
@@ -235,30 +235,30 @@ describe('getAllTaskDefinitionsWithRunId', () => {
             ResourceTagMappingList: [
                 {
                     ResourceARN: 'arn:2',
-                    Tags: [{ Key: RUN_ID_TAG_KEY, Value: 'runId2' }],
+                    Tags: [{ Key: JOB_ID_TAG_KEY, Value: 'jobId2' }],
                 },
             ],
         })
-        const res = await getAllTaskDefinitionsWithRunId(new ResourceGroupsTaggingAPIClient())
+        const res = await getAllTaskDefinitionsWithJobId(new ResourceGroupsTaggingAPIClient())
         expect(res).toStrictEqual([
             {
                 ResourceARN: 'arn:1',
-                Tags: [{ Key: RUN_ID_TAG_KEY, Value: 'runId1' }],
+                Tags: [{ Key: JOB_ID_TAG_KEY, Value: 'jobId1' }],
             },
             {
                 ResourceARN: 'arn:2',
-                Tags: [{ Key: RUN_ID_TAG_KEY, Value: 'runId2' }],
+                Tags: [{ Key: JOB_ID_TAG_KEY, Value: 'jobId2' }],
             },
         ])
     })
 })
 
-describe('getAllTasksWithRunId', () => {
+describe('getAllTasksWithJobId', () => {
     it('should send GetResourcesCommand and return response', async () => {
         const expectedCommandInput = {
             TagFilters: [
                 {
-                    Key: RUN_ID_TAG_KEY,
+                    Key: JOB_ID_TAG_KEY,
                 },
             ],
             ResourceTypeFilters: ['ecs:task'],
@@ -270,7 +270,7 @@ describe('getAllTasksWithRunId', () => {
         }
         taggingMockClient.on(GetResourcesCommand, expectedCommandInput).resolves(mockResult)
 
-        const res = await getAllTasksWithRunId(new ResourceGroupsTaggingAPIClient())
+        const res = await getAllTasksWithJobId(new ResourceGroupsTaggingAPIClient())
         expect(res).toStrictEqual([])
     })
 })

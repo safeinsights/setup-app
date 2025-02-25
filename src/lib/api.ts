@@ -1,9 +1,9 @@
 import jwt from 'jsonwebtoken'
 import {
-    ManagementAppGetRunnableStudiesResponse,
-    TOAGetRunsResponse,
-    isManagementAppGetRunnableStudiesResponse,
-    isTOAGetRunsResponse,
+    ManagementAppGetReadyStudiesResponse,
+    TOAGetJobsResponse,
+    isManagementAppGetReadyStudiesResponse,
+    isTOAGetJobsResponse,
 } from './types'
 
 // Functions for interacting with the Management App
@@ -21,10 +21,10 @@ const generateManagementAppToken = (): string => {
     return token
 }
 
-export const managementAppGetRunnableStudiesRequest = async (): Promise<ManagementAppGetRunnableStudiesResponse> => {
-    const endpoint = process.env.MANAGEMENT_APP_BASE_URL + '/api/studies/runnable' // `http://localhost:4000/api/studies/runnable`
+export const managementAppGetReadyStudiesRequest = async (): Promise<ManagementAppGetReadyStudiesResponse> => {
+    const endpoint = process.env.MANAGEMENT_APP_BASE_URL + '/api/studies/ready'
     const token = generateManagementAppToken()
-    console.log('BMA: Fetching runnable studies ...')
+    console.log('BMA: Fetching ready studies ...')
     const response = await fetch(endpoint, {
         method: 'GET',
         headers: {
@@ -38,7 +38,7 @@ export const managementAppGetRunnableStudiesRequest = async (): Promise<Manageme
     }
 
     const data = await response.json()
-    if (!isManagementAppGetRunnableStudiesResponse(data)) {
+    if (!isManagementAppGetReadyStudiesResponse(data)) {
         throw new Error('Management app response does not match expected structure')
     }
     console.log('BMA: Data received!')
@@ -55,11 +55,11 @@ const generateTOAToken = (): string => {
     return token
 }
 
-export const toaGetRunsRequest = async (): Promise<TOAGetRunsResponse> => {
-    const endpoint = process.env.TOA_BASE_URL + '/api/runs' // `http://localhost:3002/api/runs`
+export const toaGetJobsRequest = async (): Promise<TOAGetJobsResponse> => {
+    const endpoint = process.env.TOA_BASE_URL + '/api/jobs'
     const token = generateTOAToken()
 
-    console.log('TOA: Fetching runs ...')
+    console.log('TOA: Fetching jobs ...')
     const response = await fetch(endpoint, {
         method: 'GET',
         headers: {
@@ -73,7 +73,7 @@ export const toaGetRunsRequest = async (): Promise<TOAGetRunsResponse> => {
     }
 
     const data = await response.json()
-    if (!isTOAGetRunsResponse(data)) {
+    if (!isTOAGetJobsResponse(data)) {
         throw new Error('Trusted output app response does not match expected structure')
     }
     console.log('TOA: Data received!')
@@ -81,14 +81,14 @@ export const toaGetRunsRequest = async (): Promise<TOAGetRunsResponse> => {
     return data
 }
 
-export const toaUpdateRunStatus = async (
-    runId: string,
+export const toaUpdateJobStatus = async (
+    jobId: string,
     data: { status: 'JOB-PROVISIONING' } | { status: 'JOB-ERRORED'; message?: string },
 ): Promise<{ success: boolean }> => {
-    const endpoint = `${process.env.TOA_BASE_URL}/api/run/${runId}`
+    const endpoint = `${process.env.TOA_BASE_URL}/api/job/${jobId}`
     const token = generateTOAToken()
 
-    console.log(`TOA: Updating run ${runId} status with ${JSON.stringify(data)} ...`)
+    console.log(`TOA: Updating job ${jobId} status with ${JSON.stringify(data)} ...`)
     const response = await fetch(endpoint, {
         method: 'PUT',
         headers: {
@@ -99,10 +99,10 @@ export const toaUpdateRunStatus = async (
     })
 
     if (!response.ok) {
-        console.log(`TOA: Status update for run ${runId} FAILED!: ${await response.text()}`)
+        console.log(`TOA: Status update for job ${jobId} FAILED!: ${await response.text()}`)
         return { success: false }
     }
 
-    console.log(`TOA: Status update for run ${runId} succeeded!`)
+    console.log(`TOA: Status update for job ${jobId} succeeded!`)
     return { success: true }
 }
