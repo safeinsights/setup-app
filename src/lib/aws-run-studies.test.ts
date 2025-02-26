@@ -1,8 +1,8 @@
-import { vi, describe, it, expect, beforeEach } from 'vitest'
-import { runStudies } from './run-studies'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as api from './api'
 import * as aws from './aws'
 import { JOB_ID_TAG_KEY } from './aws'
+import { runAWSStudies } from './aws-run-studies'
 import { ManagementAppGetReadyStudiesResponse, TOAGetJobsResponse } from './types'
 
 vi.mock('./api')
@@ -79,7 +79,7 @@ describe('runStudies()', () => {
 
     it('makes calls to update the AWS environment (launch studies & garbage collect) as well as TOA', async () => {
         const mockToaUpdateJobStatus = vi.mocked(api.toaUpdateJobStatus)
-        await runStudies({ ignoreAWSJobs: false })
+        await runAWSStudies({ ignoreAWSJobs: false })
 
         // Make sure calls to delete task definitions were made
         const deleteECSTaskDefinitionsCalls = vi.mocked(aws.deleteECSTaskDefinitions).mock.calls
