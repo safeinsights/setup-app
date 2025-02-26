@@ -1,19 +1,19 @@
-type ManagementAppRun = {
-    runId: string
+type ManagementAppJob = {
+    jobId: string
     title: string
     containerLocation: string
 }
 
-export type ManagementAppGetRunnableStudiesResponse = {
-    runs: ManagementAppRun[]
+export type ManagementAppGetReadyStudiesResponse = {
+    jobs: ManagementAppJob[]
 }
 
-type TOARun = {
-    runId: string
+type TOAJob = {
+    jobId: string
 }
 
-export type TOAGetRunsResponse = {
-    runs: TOARun[]
+export type TOAGetJobsResponse = {
+    jobs: TOAJob[]
 }
 
 export type KubernetesRun = {
@@ -42,27 +42,27 @@ export type KubernetesRunsResponse = {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function isManagementAppRun(data: any): data is ManagementAppRun {
+function isManagementAppJob(data: any): data is ManagementAppJob {
     return (
         typeof data === 'object' &&
         data !== null &&
-        typeof data.runId === 'string' &&
+        typeof data.jobId === 'string' &&
         typeof data.title === 'string' &&
         typeof data.containerLocation === 'string'
     )
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function isManagementAppGetRunnableStudiesResponse(data: any): data is ManagementAppGetRunnableStudiesResponse {
-    return typeof data === 'object' && data !== null && Array.isArray(data.runs) && data.runs.every(isManagementAppRun)
+export function isManagementAppGetReadyStudiesResponse(data: any): data is ManagementAppGetReadyStudiesResponse {
+    return typeof data === 'object' && data !== null && Array.isArray(data.jobs) && data.jobs.every(isManagementAppJob)
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function isTOARun(data: any): data is TOARun {
-    return typeof data === 'object' && data !== null && typeof data.runId === 'string'
+function isTOAJob(data: any): data is TOAJob {
+    return typeof data === 'object' && data !== null && typeof data.jobId === 'string'
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function isTOAGetRunsResponse(data: any): data is TOAGetRunsResponse {
-    return typeof data === 'object' && data !== null && Array.isArray(data.runs) && data.runs.every(isTOARun)
+export function isTOAGetJobsResponse(data: any): data is TOAGetJobsResponse {
+    return typeof data === 'object' && data !== null && Array.isArray(data.jobs) && data.jobs.every(isTOAJob)
 }

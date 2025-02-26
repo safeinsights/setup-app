@@ -1,58 +1,58 @@
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as api from './api'
 import * as aws from './aws'
-import { RUN_ID_TAG_KEY } from './aws'
-import { ManagementAppGetRunnableStudiesResponse, TOAGetRunsResponse } from './types'
+import { JOB_ID_TAG_KEY } from './aws'
 import { runAWSStudies } from './aws-run-studies'
+import { ManagementAppGetReadyStudiesResponse, TOAGetJobsResponse } from './types'
 
 vi.mock('./api')
 vi.mock('./aws')
 
-const mockManagementAppResponseGenerator = (runIds: string[]): ManagementAppGetRunnableStudiesResponse => {
-    const runs = []
-    for (const runId of runIds) {
-        runs.push({
-            runId: runId,
+const mockManagementAppResponseGenerator = (jobIds: string[]): ManagementAppGetReadyStudiesResponse => {
+    const jobs = []
+    for (const jobId of jobIds) {
+        jobs.push({
+            jobId: jobId,
             title: 'mockTitle',
             containerLocation: 'mockContainerLocation',
         })
     }
-    return { runs }
+    return { jobs }
 }
 
 // Tests
 describe('runStudies()', () => {
     beforeEach(() => {
-        const runId_inTOA = 'run-in-TOA'
-        const runId_inAWS = 'running-in-AWS-env'
-        const runId1 = 'to-be-run-1'
-        const runId2 = 'to-be-run-2'
-        const runId_toGarbageCollect = 'run-finished'
+        const jobId_inTOA = 'job-in-TOA'
+        const jobId_inAWS = 'running-in-AWS-env'
+        const jobId1 = 'to-be-run-1'
+        const jobId2 = 'to-be-run-2'
+        const jobId_toGarbageCollect = 'run-finished'
 
         // mock response from management app
-        const mockManagementAppResponse = mockManagementAppResponseGenerator([runId1, runId_inTOA, runId_inAWS, runId2])
+        const mockManagementAppResponse = mockManagementAppResponseGenerator([jobId1, jobId_inTOA, jobId_inAWS, jobId2])
         // from TOA
-        const mockTOAResponse: TOAGetRunsResponse = {
-            // resolve from toaGetRunsRequest
-            runs: [{ runId: runId_inTOA }],
+        const mockTOAResponse: TOAGetJobsResponse = {
+            // resolve from toaGetJobsRequest
+            jobs: [{ jobId: jobId_inTOA }],
         }
 
-        const mockManagementAppApiCall = vi.mocked(api.managementAppGetRunnableStudiesRequest)
+        const mockManagementAppApiCall = vi.mocked(api.managementAppGetReadyStudiesRequest)
         mockManagementAppApiCall.mockResolvedValue(mockManagementAppResponse)
 
-        const mockTOAApiCall = vi.mocked(api.toaGetRunsRequest)
+        const mockTOAApiCall = vi.mocked(api.toaGetJobsRequest)
         mockTOAApiCall.mockResolvedValue(mockTOAResponse)
 
         // Mock AWS API
-        vi.mocked(aws.getAllTasksWithRunId).mockResolvedValue([])
-        vi.mocked(aws.getAllTaskDefinitionsWithRunId).mockResolvedValue([
+        vi.mocked(aws.getAllTasksWithJobId).mockResolvedValue([])
+        vi.mocked(aws.getAllTaskDefinitionsWithJobId).mockResolvedValue([
             {
-                ResourceARN: runId_inAWS,
-                Tags: [{ Key: RUN_ID_TAG_KEY, Value: runId_inAWS }],
+                ResourceARN: jobId_inAWS,
+                Tags: [{ Key: JOB_ID_TAG_KEY, Value: jobId_inAWS }],
             },
             {
-                ResourceARN: runId_toGarbageCollect,
-                Tags: [{ Key: RUN_ID_TAG_KEY, Value: runId_toGarbageCollect }],
+                ResourceARN: jobId_toGarbageCollect,
+                Tags: [{ Key: JOB_ID_TAG_KEY, Value: jobId_toGarbageCollect }],
             },
         ])
 
@@ -66,7 +66,7 @@ describe('runStudies()', () => {
         })
 
         vi.mocked(aws.registerECSTaskDefinition).mockImplementation(
-            async (_client, _baseTaskDefinition, familyName: string, _toaEndpointWithRunId, _imageLocation, _tags) => {
+            async (_client, _baseTaskDefinition, familyName: string, _toaEndpointWithJobId, _imageLocation, _tags) => {
                 return {
                     $metadata: {},
                     taskDefinition: {
@@ -77,8 +77,9 @@ describe('runStudies()', () => {
         )
     })
 
-    it('makes calls to update the AWS environment: launch studies & garbage collect', async () => {
-        await runAWSStudies({ ignoreAWSRuns: false })
+    it('makes calls to update the AWS environment (launch studies & garbage collect) as well as TOA', async () => {
+        const mockToaUpdateJobStatus = vi.mocked(api.toaUpdateJobStatus)
+        await runAWSStudies({ ignoreAWSJobs: false })
 
         // Make sure calls to delete task definitions were made
         const deleteECSTaskDefinitionsCalls = vi.mocked(aws.deleteECSTaskDefinitions).mock.calls
@@ -89,10 +90,17 @@ describe('runStudies()', () => {
         expect(runECSFargateTaskCalls.length).toBe(2)
         expect(runECSFargateTaskCalls[0]).toContain('MOCK_BASE_TASK_DEF_FAMILY-to-be-run-1-registered')
         expect(runECSFargateTaskCalls[1]).toContain('MOCK_BASE_TASK_DEF_FAMILY-to-be-run-2-registered')
+        expect(mockToaUpdateJobStatus).toHaveBeenCalledTimes(2)
+        expect(mockToaUpdateJobStatus).toHaveBeenNthCalledWith(1, 'to-be-run-1', {
+            status: 'JOB-PROVISIONING',
+        })
+        expect(mockToaUpdateJobStatus).toHaveBeenNthCalledWith(2, 'to-be-run-2', {
+            status: 'JOB-PROVISIONING',
+        })
     })
 
-    it('ignores AWS runs if ignoreAWS set to true', async () => {
-        await runAWSStudies({ ignoreAWSRuns: true })
+    it('ignores AWS jobs if ignoreAWS set to true', async () => {
+        await runStudies({ ignoreAWSJobs: true })
 
         // Expect # of calls to be different
         const runECSFargateTaskCalls = vi.mocked(aws.runECSFargateTask).mock.calls

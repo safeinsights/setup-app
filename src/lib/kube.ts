@@ -4,7 +4,7 @@ import tls from 'tls'
 
 const SERVICEACCOUNT_PATH = process.env.K8S_SERVICEACCOUNT_PATH || '/var/run/secrets/kubernetes.io/serviceaccount'
 
-function apiCall(group: string, path: string, method: string, body?: any): Promise<any> {
+function apiCall(group: string, path: string, method: string, body?: unknown): Promise<unknown> {
     const namespace = getNamespace()
     const kubeAPIServer = process.env.K8S_APISERVER || `https://kubernetes.default.svc.cluster.local`
     const kubeAPIServerURL = `${kubeAPIServer}/apis/${group}/v1/namespaces/${namespace}/${path}`
@@ -44,8 +44,8 @@ function apiCall(group: string, path: string, method: string, body?: any): Promi
             response.on('end', () => {
                 try {
                     resolve(JSON.parse(data))
-                } catch (error: any) {
-                    reject(new Error(`Failed to parse JSON: ${error.message}`))
+                } catch (error: unknown) {
+                    reject(new Error(`Failed to parse JSON: ${JSON.stringify(error)}`))
                 }
             })
         })

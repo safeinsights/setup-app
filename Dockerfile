@@ -9,4 +9,4 @@ RUN npm install
 
 COPY . .
 
-CMD ["npx", "tsx", "src/lib/poll.ts"]
+CMD ["npx", "tsx", "src/scripts/poll.ts"]

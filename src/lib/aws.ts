@@ -13,6 +13,8 @@ import {
     DeleteTaskDefinitionsCommand,
     DeregisterTaskDefinitionCommand,
     TaskDefinitionStatus,
+    DescribeTasksCommand,
+    DescribeTasksCommandOutput,
 } from '@aws-sdk/client-ecs'
 import {
     GetResourcesCommandInput,
@@ -23,7 +25,7 @@ import {
 } from '@aws-sdk/client-resource-groups-tagging-api'
 import { ensureValueWithError } from './utils'
 
-export const RUN_ID_TAG_KEY = 'runId'
+export const JOB_ID_TAG_KEY = 'jobId'
 export const TITLE_TAG_KEY = 'title'
 
 export async function getECSTaskDefinition(
@@ -44,7 +46,7 @@ export async function registerECSTaskDefinition(
     client: ECSClient,
     baseTaskDefinition: TaskDefinition,
     familyName: string,
-    toaEndpointWithRunId: string,
+    toaEndpointWithJobId: string,
     imageLocation: string,
     tags: Tag[],
 ): Promise<RegisterTaskDefinitionCommandOutput> {
@@ -56,7 +58,7 @@ export async function registerECSTaskDefinition(
 
         environment.push({
             name: 'TRUSTED_OUTPUT_ENDPOINT',
-            value: toaEndpointWithRunId,
+            value: toaEndpointWithJobId,
         })
         return {
             ...container,
@@ -119,7 +121,7 @@ export async function runECSFargateTask(
     securityGroups: string[],
     tags: Tag[],
 ): Promise<RunTaskCommandOutput> {
-    const runTaskInput: RunTaskCommandInput = {
+    const jobTaskInput: RunTaskCommandInput = {
         taskDefinition: taskFamilyName,
         cluster: cluster,
         launchType: LaunchType.FARGATE,
@@ -131,7 +133,7 @@ export async function runECSFargateTask(
         },
         tags: tags,
     }
-    const command = new RunTaskCommand(runTaskInput)
+    const command = new RunTaskCommand(jobTaskInput)
     console.log('AWS: START: Prompting an ECS task to run ...')
     const result = await client.send(command)
     /* v8 ignore next 3 */
@@ -139,6 +141,20 @@ export async function runECSFargateTask(
         `AWS:   END: RunTaskCommand finished for tasks`,
         result.tasks?.map((task) => task.taskArn),
     )
+    return result
+}
+
+export async function describeECSTasks(
+    client: ECSClient,
+    cluster: string,
+    tasks: string[],
+): Promise<DescribeTasksCommandOutput> {
+    const command = new DescribeTasksCommand({ cluster, tasks, include: ['TAGS'] })
+
+    console.log('AWS: START: Calling ECS DescribeTasks ...')
+    const result = await client.send(command)
+    console.log('AWS:   END: DescribeTasks finished')
+
     return result
 }
 
@@ -165,42 +181,42 @@ async function getResourceCommandWrapper(
     return accumulatedResources
 }
 
-export async function getTaskResourcesByRunId(
+export async function getTaskResourcesByJobId(
     client: ResourceGroupsTaggingAPIClient,
-    runId: string,
+    jobId: string,
 ): Promise<ResourceTagMapping[]> {
     const tagFilters = [
         {
-            Key: RUN_ID_TAG_KEY,
-            Values: [runId],
+            Key: JOB_ID_TAG_KEY,
+            Values: [jobId],
         },
     ]
     const resourceTypeFilters = ['ecs:task', 'ecs:task-definition']
-    const logMessage = `Getting task resources with run id ${runId} ...`
+    const logMessage = `Getting task resources with job id ${jobId} ...`
 
     return await getResourceCommandWrapper(tagFilters, resourceTypeFilters, client, logMessage)
 }
 
-export async function getAllTaskDefinitionsWithRunId(
+export async function getAllTaskDefinitionsWithJobId(
     client: ResourceGroupsTaggingAPIClient,
 ): Promise<ResourceTagMapping[]> {
     const tagFilters = [
         {
-            Key: RUN_ID_TAG_KEY,
+            Key: JOB_ID_TAG_KEY,
         },
     ]
     const resourceTypeFilters = ['ecs:task-definition']
-    const logMessage = 'Getting all task definitions with runId ...'
+    const logMessage = 'Getting all task definitions with jobId ...'
     return await getResourceCommandWrapper(tagFilters, resourceTypeFilters, client, logMessage)
 }
 
-export async function getAllTasksWithRunId(client: ResourceGroupsTaggingAPIClient): Promise<ResourceTagMapping[]> {
+export async function getAllTasksWithJobId(client: ResourceGroupsTaggingAPIClient): Promise<ResourceTagMapping[]> {
     const tagFilters = [
         {
-            Key: RUN_ID_TAG_KEY,
+            Key: JOB_ID_TAG_KEY,
         },
     ]
     const resourceTypeFilters = ['ecs:task']
-    const logMessage = 'Getting all tasks with runId ...'
+    const logMessage = 'Getting all tasks with jobId ...'
     return await getResourceCommandWrapper(tagFilters, resourceTypeFilters, client, logMessage)
 }

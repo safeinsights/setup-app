@@ -1,46 +1,46 @@
-import { ManagementAppGetRunnableStudiesResponse, TOAGetRunsResponse } from './types'
+import { ManagementAppGetReadyStudiesResponse, TOAGetJobsResponse } from './types'
 import { ResourceTagMapping } from '@aws-sdk/client-resource-groups-tagging-api'
-import { RUN_ID_TAG_KEY } from './aws'
+import { JOB_ID_TAG_KEY } from './aws'
 
-const getRunIdFromResourceTagMapping = (resource: ResourceTagMapping): string | undefined => {
-    return resource.Tags?.find((tag) => tag.Key === RUN_ID_TAG_KEY)?.Value
+const getJobIdFromResourceTagMapping = (resource: ResourceTagMapping): string | undefined => {
+    return resource.Tags?.find((tag) => tag.Key === JOB_ID_TAG_KEY)?.Value
 }
 
-export const filterManagementAppRuns = (
-    managementAppResponse: ManagementAppGetRunnableStudiesResponse,
-    toaResponse: TOAGetRunsResponse,
+export const filterManagementAppJobs = (
+    managementAppResponse: ManagementAppGetReadyStudiesResponse,
+    toaResponse: TOAGetJobsResponse,
     existingAwsTasks?: ResourceTagMapping[],
     existingAwsTaskDefs?: ResourceTagMapping[],
-): ManagementAppGetRunnableStudiesResponse => {
-    const toaRunIdArray: string[] = toaResponse.runs.map((run) => run.runId) // flatten toaResponse
-    const taskRunIdArray: string[] =
-        existingAwsTasks?.map((resource) => ensureValueWithError(getRunIdFromResourceTagMapping(resource))) || []
-    const taskDefRunIdArray: string[] =
-        existingAwsTaskDefs?.map((resource) => ensureValueWithError(getRunIdFromResourceTagMapping(resource))) || []
+): ManagementAppGetReadyStudiesResponse => {
+    const toaJobIdArray: string[] = toaResponse.jobs.map((job) => job.jobId) // flatten toaResponse
+    const taskJobIdArray: string[] =
+        existingAwsTasks?.map((resource) => ensureValueWithError(getJobIdFromResourceTagMapping(resource))) || []
+    const taskDefJobIdArray: string[] =
+        existingAwsTaskDefs?.map((resource) => ensureValueWithError(getJobIdFromResourceTagMapping(resource))) || []
 
     return {
-        runs: managementAppResponse.runs.filter((run) => {
+        jobs: managementAppResponse.jobs.filter((job) => {
             return (
-                !toaRunIdArray.includes(run.runId) &&
-                !taskRunIdArray.includes(run.runId) &&
-                !taskDefRunIdArray.includes(run.runId)
+                !toaJobIdArray.includes(job.jobId) &&
+                !taskJobIdArray.includes(job.jobId) &&
+                !taskDefJobIdArray.includes(job.jobId)
             )
         }),
     }
 }
 
 export const filterOrphanTaskDefinitions = (
-    managementAppResponse: ManagementAppGetRunnableStudiesResponse,
+    managementAppResponse: ManagementAppGetReadyStudiesResponse,
     taskDefinitionResources: ResourceTagMapping[],
 ): string[] => {
-    const managementAppRunIds = managementAppResponse.runs.map((run) => run.runId)
+    const managementAppJobIds = managementAppResponse.jobs.map((job) => job.jobId)
     const orphanTaskDefinitions: string[] = []
 
-    // If there are task definitions with run IDs that were not returned by
+    // If there are task definitions with job IDs that were not returned by
     // the BMA, they must be for orphan tasks that were already run.
     taskDefinitionResources.forEach((item) => {
-        const runId = getRunIdFromResourceTagMapping(item)
-        if (runId !== undefined && !managementAppRunIds.includes(runId) && item.ResourceARN !== undefined) {
+        const jobId = getJobIdFromResourceTagMapping(item)
+        if (jobId !== undefined && !managementAppJobIds.includes(jobId) && item.ResourceARN !== undefined) {
             orphanTaskDefinitions.push(item.ResourceARN)
         }
     })

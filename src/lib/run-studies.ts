@@ -1,6 +1,6 @@
 import { runAWSStudies } from './aws-run-studies'
 import { runK8sStudies } from './kube-run-studies'
-export async function runStudies(options: { ignoreAWSRuns: boolean }): Promise<void> {
+export async function runStudies(options: { ignoreAWSJobs: boolean }): Promise<void> {
     const deploymentEnvironment = process.env.DEPLOYMENT_ENVIRONMENT || 'AWS'
     if (deploymentEnvironment === 'AWS') {
         await runAWSStudies(options)
