@@ -1,14 +1,14 @@
 import { apiCall, getNamespace } from './kube'
 
-import { managementAppGetRunnableStudiesRequest, toaGetRunsRequest } from './api'
-import { KubernetesRun, KubernetesRunsResponse, ManagementAppGetRunnableStudiesResponse } from './types'
+import { managementAppGetReadyStudiesRequest, toaGetJobsRequest } from './api'
+import { KubernetesJob, KubernetesJobsResponse, ManagementAppGetReadyStudiesResponse } from './types'
 
 function filterDeployments(
-    deployments: Array<KubernetesRun>,
-    runnableStudies: ManagementAppGetRunnableStudiesResponse,
-): KubernetesRun[] {
+    deployments: Array<KubernetesJob>,
+    runnableStudies: ManagementAppGetReadyStudiesResponse,
+): KubernetesJob[] {
     console.log('Filtering Kubernetes deployments...')
-    const runIds = runnableStudies.runs.map((run) => run.runId)
+    const runIds = runnableStudies.jobs.map((job) => job.jobId)
     console.log(`Run IDs: ${JSON.stringify(runIds, null, 4)}`)
     if (deployments != null && deployments.length > 0) {
         const researchContainerDeployments = deployments.filter(
@@ -22,15 +22,15 @@ function filterDeployments(
     return []
 }
 
-async function getJobs(runIds: ManagementAppGetRunnableStudiesResponse): Promise<KubernetesRunsResponse> {
+async function getJobs(runIds: ManagementAppGetReadyStudiesResponse): Promise<KubernetesJobsResponse> {
     try {
-        const deployments = await apiCall('batch', 'jobs', 'GET')
+        const deployments: any = await apiCall('batch', 'jobs', 'GET')
         console.log(JSON.stringify(deployments, null, 4))
-        return { runs: filterDeployments(deployments['items'], runIds) }
+        return { jobs: filterDeployments(deployments['items'], runIds) }
     } catch (error) {
         console.error('Error getting deployments', error)
     }
-    return { runs: [] }
+    return { jobs: [] }
 }
 function createKubernetesJob(imageLocation: string, runId: string, studyTitle: string) {
     const name = `research-container-${runId}`
@@ -90,7 +90,7 @@ async function deployStudyContainer(runId: string, studyTitle: string, imageLoca
     const job = createKubernetesJob(imageLocation, runId, studyTitle)
     console.log(`Deploying Job ==> ${JSON.stringify(job)}`)
     try {
-        const response = await apiCall('batch', 'jobs', 'POST', job)
+        const response: any = await apiCall('batch', 'jobs', 'POST', job)
         console.log(`${JSON.stringify(response)}`)
         console.log(`Successfully deployed ${studyTitle} with run id ${runId}`)
         if ('status' in response && response['status'] === 'Failure') {
@@ -102,29 +102,29 @@ async function deployStudyContainer(runId: string, studyTitle: string, imageLoca
 }
 
 async function runK8sStudies() {
-    const bmaRunnablesResults = await managementAppGetRunnableStudiesRequest()
+    const bmaRunnablesResults = await managementAppGetReadyStudiesRequest()
     console.log(
-        `Found ${bmaRunnablesResults.runs.length} runs in management app. Run ids: ${bmaRunnablesResults.runs.map((run) => run.runId)}`,
+        `Found ${bmaRunnablesResults.jobs.length} runs in management app. Run ids: ${bmaRunnablesResults.jobs.map((job) => job.jobId)}`,
     )
-    const toaGetRunsResult = await toaGetRunsRequest()
+    const toaGetRunsResult = await toaGetJobsRequest()
     console.log(
-        `Found ${toaGetRunsResult.runs.length} runs with results in TOA. Run ids: ${toaGetRunsResult.runs.map((run) => run.runId)}`,
+        `Found ${toaGetRunsResult.jobs.length} runs with results in TOA. Run ids: ${toaGetRunsResult.jobs.map((job) => job.jobId)}`,
     )
     const kubernetesDeployments = await getJobs(bmaRunnablesResults)
     console.log(
-        `Found ${kubernetesDeployments.runs.length} deployments already deployed. Run ids: ${kubernetesDeployments.runs.map((run) => run.spec.selector.matchLabels['instance'])}`,
+        `Found ${kubernetesDeployments.jobs.length} deployments already deployed. Run ids: ${kubernetesDeployments.jobs.map((job) => job.spec.selector.matchLabels['instance'])}`,
     )
-    bmaRunnablesResults.runs
+    bmaRunnablesResults.jobs
         .filter(
-            (run) =>
-                !kubernetesDeployments.runs.some(
-                    (deployment) => deployment.spec.selector.matchLabels.instance === run.runId,
+            (job) =>
+                !kubernetesDeployments.jobs.some(
+                    (deployment) => deployment.spec.selector.matchLabels.instance === job.jobId,
                 ),
         )
-        .forEach(async (run) => {
-            const studyTitle = run.title
-            const imageLocation = run.containerLocation
-            await deployStudyContainer(run.runId, studyTitle, imageLocation)
+        .forEach(async (job) => {
+            const studyTitle = job.title
+            const imageLocation = job.containerLocation
+            await deployStudyContainer(job.jobId, studyTitle, imageLocation)
         })
 }
 

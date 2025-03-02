@@ -16,7 +16,7 @@ export type TOAGetJobsResponse = {
     jobs: TOAJob[]
 }
 
-export type KubernetesRun = {
+export type KubernetesJob = {
     metadata: {
         name: string
         namespace: string
@@ -37,8 +37,8 @@ export type KubernetesRun = {
     }
 }
 
-export type KubernetesRunsResponse = {
-    runs: KubernetesRun[]
+export type KubernetesJobsResponse = {
+    jobs: KubernetesJob[]
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

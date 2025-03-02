@@ -100,7 +100,7 @@ describe('runStudies()', () => {
     })
 
     it('ignores AWS jobs if ignoreAWS set to true', async () => {
-        await runStudies({ ignoreAWSJobs: true })
+        await runAWSStudies({ ignoreAWSJobs: true })
 
         // Expect # of calls to be different
         const runECSFargateTaskCalls = vi.mocked(aws.runECSFargateTask).mock.calls
