@@ -1,10 +1,11 @@
 import fs from 'fs'
 import https from 'https'
 import tls from 'tls'
+import { KubernetesApiResponse } from './types'
 
 const SERVICEACCOUNT_PATH = process.env.K8S_SERVICEACCOUNT_PATH || '/var/run/secrets/kubernetes.io/serviceaccount'
 
-function apiCall(group: string, path: string, method: string, body?: unknown): Promise<unknown> {
+function apiCall(group: string, path: string, method: string, body?: unknown): Promise<KubernetesApiResponse> {
     const namespace = getNamespace()
     const kubeAPIServer = process.env.K8S_APISERVER || `https://kubernetes.default.svc.cluster.local`
     const kubeAPIServerURL = `${kubeAPIServer}/apis/${group}/v1/namespaces/${namespace}/${path}`

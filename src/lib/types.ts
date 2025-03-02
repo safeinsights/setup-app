@@ -41,6 +41,12 @@ export type KubernetesJobsResponse = {
     jobs: KubernetesJob[]
 }
 
+export type KubernetesApiResponse = {
+    status ?: string 
+    items ?: KubernetesJob[]
+}
+
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function isManagementAppJob(data: any): data is ManagementAppJob {
     return (

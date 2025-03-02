@@ -1,7 +1,7 @@
 import { apiCall, getNamespace } from './kube'
 
 import { managementAppGetReadyStudiesRequest, toaGetJobsRequest } from './api'
-import { KubernetesJob, KubernetesJobsResponse, ManagementAppGetReadyStudiesResponse } from './types'
+import { KubernetesApiResponse, KubernetesJob, KubernetesJobsResponse, ManagementAppGetReadyStudiesResponse } from './types'
 
 function filterDeployments(
     deployments: Array<KubernetesJob>,
@@ -24,7 +24,7 @@ function filterDeployments(
 
 async function getJobs(runIds: ManagementAppGetReadyStudiesResponse): Promise<KubernetesJobsResponse> {
     try {
-        const deployments: any = await apiCall('batch', 'jobs', 'GET')
+        const deployments : KubernetesApiResponse = await apiCall('batch', 'jobs', 'GET')
         console.log(JSON.stringify(deployments, null, 4))
         return { jobs: filterDeployments(deployments['items'], runIds) }
     } catch (error) {
@@ -90,7 +90,7 @@ async function deployStudyContainer(runId: string, studyTitle: string, imageLoca
     const job = createKubernetesJob(imageLocation, runId, studyTitle)
     console.log(`Deploying Job ==> ${JSON.stringify(job)}`)
     try {
-        const response: any = await apiCall('batch', 'jobs', 'POST', job)
+        const response: KubernetesApiResponse = await apiCall('batch', 'jobs', 'POST', job)
         console.log(`${JSON.stringify(response)}`)
         console.log(`Successfully deployed ${studyTitle} with run id ${runId}`)
         if ('status' in response && response['status'] === 'Failure') {
