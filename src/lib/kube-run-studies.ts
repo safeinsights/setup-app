@@ -1,7 +1,12 @@
 import { apiCall, getNamespace } from './kube'
 
 import { managementAppGetReadyStudiesRequest, toaGetJobsRequest } from './api'
-import { KubernetesApiResponse, KubernetesJob, KubernetesJobsResponse, ManagementAppGetReadyStudiesResponse } from './types'
+import {
+    KubernetesApiResponse,
+    KubernetesJob,
+    KubernetesJobsResponse,
+    ManagementAppGetReadyStudiesResponse,
+} from './types'
 
 function filterDeployments(
     deployments: Array<KubernetesJob>,
@@ -24,9 +29,11 @@ function filterDeployments(
 
 async function getJobs(runIds: ManagementAppGetReadyStudiesResponse): Promise<KubernetesJobsResponse> {
     try {
-        const deployments : KubernetesApiResponse = await apiCall('batch', 'jobs', 'GET')
+        const deployments: KubernetesApiResponse = await apiCall('batch', 'jobs', 'GET')
         console.log(JSON.stringify(deployments, null, 4))
-        return { jobs: filterDeployments(deployments['items'], runIds) }
+        if (deployments['items']) {
+            return { jobs: filterDeployments(deployments['items'], runIds) }
+        }
     } catch (error) {
         console.error('Error getting deployments', error)
     }
