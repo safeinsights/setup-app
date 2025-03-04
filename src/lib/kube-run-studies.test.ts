@@ -1,7 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { runK8sStudies, getJobs, deployStudyContainer } from './kube-run-studies'
-import * as fs from 'fs'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as api from './api'
+import { deployStudyContainer, getJobs, runK8sStudies } from './kube-run-studies'
 import { KubernetesJobsResponse } from './types'
 
 // Mocking external functions
