@@ -1,9 +1,9 @@
-import { describe, expect, it } from 'vitest'
 import fs from 'fs'
+import { describe, expect, it } from 'vitest'
 import { getNamespace, SERVICEACCOUNT_PATH } from './kube'
 
 describe('Read Service account items', () => {
-    const filePath = `${SERVICEACCOUNT_PATH}/namespace`
+    // const filePath = `${SERVICEACCOUNT_PATH}/namespace`
     it('should read namespace from file and return trimmed value', () => {
         expect(fs.existsSync(`${SERVICEACCOUNT_PATH}/namespace`)).toBe(true)
         const result = getNamespace()
