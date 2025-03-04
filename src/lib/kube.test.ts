@@ -1,10 +1,14 @@
 import fs from 'fs'
 import { describe, expect, it } from 'vitest'
-import { getKubeAPIServiceAccountToken, getNamespace, initHTTPSTrustStore, SERVICEACCOUNT_PATH } from './kube'
+import { getKubeAPIServiceAccountToken, getNamespace, initHTTPSTrustStore } from './kube'
+import { getServiceAccountDir } from '@/tests/unit.helpers'
 
+beforeEach(async () => {
+    process.env.K8S_SERVICEACCOUNT_PATH = getServiceAccountDir()
+})
 describe('getNamespace', () => {
-    console.log(`${JSON.stringify(process.env)}`)
-    const filePath = `${SERVICEACCOUNT_PATH}/namespace`
+    const filePath = `${process.env.K8S_SERVICEACCOUNT_PATH}/namespace`
+    console.log(`${filePath}`)
     it('should read namespace from file and return trimmed value', () => {
         expect(fs.existsSync(filePath)).toBe(true)
         const result = getNamespace()
@@ -19,7 +23,7 @@ describe('getNamespace', () => {
 })
 
 describe('getKubeAPIServiceAccountToken', () => {
-    const filePath = `${SERVICEACCOUNT_PATH}/token`
+    const filePath = `${process.env.K8S_SERVICEACCOUNT_PATH}/token`
     it('should read token from file and return trimmed value', () => {
         expect(fs.existsSync(filePath)).toBe(true)
         const result = getKubeAPIServiceAccountToken()
@@ -34,7 +38,7 @@ describe('getKubeAPIServiceAccountToken', () => {
 })
 
 describe('initHTTPSTrustStore', () => {
-    const filePath = `${SERVICEACCOUNT_PATH}/ca.crt`
+    const filePath = `${process.env.K8S_SERVICEACCOUNT_PATH}/ca.crt`
     it('should initialize the https trust store', () => {
         expect(fs.existsSync(filePath)).toBe(true)
         expect(() => initHTTPSTrustStore).not.toThrow()

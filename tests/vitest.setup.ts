@@ -1,12 +1,8 @@
 import { afterEach, beforeEach } from 'vitest'
-import { getServiceAccountDir } from './unit.helpers'
 
 const OLD_ENV = process.env
 
-let serviceAccountDir: string = ''
 beforeEach(async () => {
-    serviceAccountDir = await getServiceAccountDir()
-    console.log(`tmpDir: ${serviceAccountDir}`)
     process.env = {
         ...process.env,
         ECS_CLUSTER: 'MOCK_ECS_CLUSTER',
@@ -18,7 +14,6 @@ beforeEach(async () => {
         TOA_BASE_URL: 'https://toa:67890',
         TOA_BASIC_AUTH: 'testusername:testpassword',
         MANAGEMENT_APP_PRIVATE_KEY: 'mockprivatekeyvalue',
-        K8S_SERVICEACCOUNT_PATH: serviceAccountDir,
     }
 })
 
