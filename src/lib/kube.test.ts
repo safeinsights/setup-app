@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { getKubeAPIServiceAccountToken, getNamespace, initHTTPSTrustStore, SERVICEACCOUNT_PATH } from './kube'
 
 describe('getNamespace', () => {
+    console.log(`${JSON.stringify(process.env)}`)
     const filePath = `${SERVICEACCOUNT_PATH}/namespace`
     it('should read namespace from file and return trimmed value', () => {
         expect(fs.existsSync(filePath)).toBe(true)
@@ -11,7 +12,7 @@ describe('getNamespace', () => {
     })
 
     it('should throw an error if the namespace file does not exist', () => {
-        fs.rmSync(filePath)
+        delete process.env.K8S_SERVICEACCOUNT_PATH
         expect(fs.existsSync(filePath)).toBe(false)
         expect(() => getNamespace()).toThrow(`Namespace file not found at ${filePath}`)
     })
@@ -26,7 +27,7 @@ describe('getKubeAPIServiceAccountToken', () => {
     })
 
     it('should throw an error if the token file does not exist', () => {
-        fs.rmSync(filePath)
+        delete process.env.K8S_SERVICEACCOUNT_PATH
         expect(fs.existsSync(filePath)).toBe(false)
         expect(() => getKubeAPIServiceAccountToken()).toThrow(`Token file not found at ${filePath}`)
     })
@@ -40,7 +41,7 @@ describe('initHTTPSTrustStore', () => {
     })
 
     it('should throw an error if the certificate file does not exist', () => {
-        fs.rmSync(filePath)
+        delete process.env.K8S_SERVICEACCOUNT_PATH
         expect(fs.existsSync(filePath)).toBe(false)
         expect(() => initHTTPSTrustStore()).toThrow(`Certificate file not found at ${filePath}`)
     })
