@@ -1,6 +1,6 @@
 import { getServiceAccountDir } from '@/tests/unit.helpers'
 import * as fs from 'fs'
-import { beforeEach, describe, expect, it} from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_SERVICE_ACCOUNT_PATH, getKubeAPIServiceAccountToken, getNamespace, initHTTPSTrustStore } from './kube'
 
 describe('getNamespace', () => {
