@@ -3,8 +3,7 @@ import https from 'https'
 import tls from 'tls'
 import { KubernetesApiResponse } from './types'
 
-export const SERVICEACCOUNT_PATH =
-    process.env.K8S_SERVICEACCOUNT_PATH ?? '/var/run/secrets/kubernetes.io/serviceaccount'
+const DEFAULT_SERVICE_ACCOUNT_PATH = '/var/run/secrets/kubernetes.io/serviceaccount'
 
 function apiCall(group: string, path: string, method: string, body?: unknown): Promise<KubernetesApiResponse> {
     const namespace = getNamespace()
@@ -66,7 +65,7 @@ function apiCall(group: string, path: string, method: string, body?: unknown): P
 }
 
 function getNamespace(): string {
-    const namespaceFile = `${SERVICEACCOUNT_PATH}/namespace`
+    const namespaceFile = `${process.env.K8S_SERVICEACCOUNT_PATH ?? DEFAULT_SERVICE_ACCOUNT_PATH}/namespace`
     if (!fs.existsSync(namespaceFile)) {
         throw new Error(`Namespace file not found at ${namespaceFile}`)
     }
@@ -74,7 +73,7 @@ function getNamespace(): string {
 }
 
 function getKubeAPIServiceAccountToken(): string {
-    const tokenFile = `${SERVICEACCOUNT_PATH}/token`
+    const tokenFile = `${process.env.K8S_SERVICEACCOUNT_PATH ?? DEFAULT_SERVICE_ACCOUNT_PATH}/token`
     if (!fs.existsSync(tokenFile)) {
         throw new Error(`Token file not found at ${tokenFile}`)
     }
@@ -82,7 +81,7 @@ function getKubeAPIServiceAccountToken(): string {
 }
 
 function initHTTPSTrustStore(): void {
-    const certFile = `${SERVICEACCOUNT_PATH}/ca.crt`
+    const certFile = `${process.env.K8S_SERVICEACCOUNT_PATH ?? DEFAULT_SERVICE_ACCOUNT_PATH}/ca.crt`
     console.log(`SA: Initializing the K8s truststore using ${certFile}`)
     if (!fs.existsSync(certFile)) {
         throw new Error(`Certificate file not found at ${certFile}`)
