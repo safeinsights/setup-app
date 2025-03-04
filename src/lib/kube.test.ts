@@ -1,21 +1,21 @@
-import fs from 'fs'
-import { describe, expect, it } from 'vitest'
-import { getKubeAPIServiceAccountToken, getNamespace, initHTTPSTrustStore } from './kube'
 import { getServiceAccountDir } from '@/tests/unit.helpers'
+import * as fs from 'fs'
+import { beforeEach, describe, expect, it} from 'vitest'
+import { DEFAULT_SERVICE_ACCOUNT_PATH, getKubeAPIServiceAccountToken, getNamespace, initHTTPSTrustStore } from './kube'
 
-beforeEach(async () => {
-    process.env.K8S_SERVICEACCOUNT_PATH = getServiceAccountDir()
-})
 describe('getNamespace', () => {
-    const filePath = `${process.env.K8S_SERVICEACCOUNT_PATH}/namespace`
-    console.log(`${filePath}`)
+    beforeEach(async () => {
+        process.env.K8S_SERVICEACCOUNT_PATH = getServiceAccountDir()
+    })
     it('should read namespace from file and return trimmed value', () => {
+        const filePath = `${process.env.K8S_SERVICEACCOUNT_PATH}/namespace`
         expect(fs.existsSync(filePath)).toBe(true)
         const result = getNamespace()
         expect(result).toBe('mock-namespace')
     })
 
     it('should throw an error if the namespace file does not exist', () => {
+        const filePath = `${DEFAULT_SERVICE_ACCOUNT_PATH}/namespace`
         delete process.env.K8S_SERVICEACCOUNT_PATH
         expect(fs.existsSync(filePath)).toBe(false)
         expect(() => getNamespace()).toThrow(`Namespace file not found at ${filePath}`)

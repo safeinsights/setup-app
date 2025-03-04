@@ -3,7 +3,7 @@ import https from 'https'
 import tls from 'tls'
 import { KubernetesApiResponse } from './types'
 
-const DEFAULT_SERVICE_ACCOUNT_PATH = '/var/run/secrets/kubernetes.io/serviceaccount'
+export const DEFAULT_SERVICE_ACCOUNT_PATH = '/var/run/secrets/kubernetes.io/serviceaccount'
 
 function apiCall(group: string, path: string, method: string, body?: unknown): Promise<KubernetesApiResponse> {
     const namespace = getNamespace()
