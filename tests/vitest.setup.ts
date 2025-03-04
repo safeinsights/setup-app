@@ -1,4 +1,4 @@
-import { createTempDir } from './unit.helpers'
+import { createTempDir, createServiceAccountFiles } from './unit.helpers'
 import fs from 'fs'
 import { afterEach, beforeEach } from 'vitest'
 
@@ -7,6 +7,7 @@ const OLD_ENV = process.env
 let tmpDir: string = ''
 beforeEach(async () => {
     tmpDir = await createTempDir()
+    createServiceAccountFiles(tmpDir)
     process.env = {
         ...process.env,
         ECS_CLUSTER: 'MOCK_ECS_CLUSTER',
