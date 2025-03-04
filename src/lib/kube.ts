@@ -3,7 +3,8 @@ import https from 'https'
 import tls from 'tls'
 import { KubernetesApiResponse } from './types'
 
-const SERVICEACCOUNT_PATH = process.env.K8S_SERVICEACCOUNT_PATH || '/var/run/secrets/kubernetes.io/serviceaccount'
+export const SERVICEACCOUNT_PATH =
+    process.env.K8S_SERVICEACCOUNT_PATH ?? '/var/run/secrets/kubernetes.io/serviceaccount'
 
 function apiCall(group: string, path: string, method: string, body?: unknown): Promise<KubernetesApiResponse> {
     const namespace = getNamespace()
@@ -89,4 +90,4 @@ function initHTTPSTrustStore(): void {
     https.globalAgent.options.ca = [...tls.rootCertificates, fs.readFileSync(certFile, 'utf8')]
 }
 
-export { apiCall, getNamespace }
+export { apiCall, getNamespace, initHTTPSTrustStore, getKubeAPIServiceAccountToken }
