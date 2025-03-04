@@ -135,4 +135,4 @@ async function runK8sStudies() {
         })
 }
 
-export { runK8sStudies }
+export { runK8sStudies, getJobs, deployStudyContainer }
