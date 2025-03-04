@@ -19,12 +19,12 @@ beforeEach(async () => {
         TOA_BASE_URL: 'https://toa:67890',
         TOA_BASIC_AUTH: 'testusername:testpassword',
         MANAGEMENT_APP_PRIVATE_KEY: 'mockprivatekeyvalue',
-        SERVICEACCOUNT_PATH: tmpDir,
+        K8S_SERVICEACCOUNT_PATH: tmpDir,
     }
 })
 
 afterEach(async () => {
     process.env = OLD_ENV
     await fs.promises.rm(tmpDir, { recursive: true })
-    delete process.env.SERVICEACCOUNT_PATH
+    delete process.env.K8S_SERVICEACCOUNT_PATH
 })
