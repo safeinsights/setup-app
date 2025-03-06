@@ -34,7 +34,7 @@ async function getJobs(runIds: ManagementAppGetReadyStudiesResponse): Promise<Ku
         if (deployments['items']) {
             return { jobs: filterDeployments(deployments['items'], runIds) }
         }
-    } catch (error) {
+    } catch (error: unknown) {
         const err = error as Error & { cause: string }
         console.error(`Error getting deployments. Please check the logs for more details. Cause: ${err['cause']}`)
     }
@@ -104,9 +104,9 @@ async function deployStudyContainer(runId: string, studyTitle: string, imageLoca
         if (('status' in response && response['status'] === 'Failure') || !('status' in response)) {
             console.error(`Failed to deploy study container`)
         }
-    } catch (error) {
-        const errMsg = `API Call Error: Failed to deploy ${studyTitle} with run id ${runId}`
-        console.error(errMsg, error)
+    } catch (error: unknown) {
+        const errMsg = `API Call Error: Failed to deploy ${studyTitle} with run id ${runId}. Cause: ${JSON.stringify(error)}`
+        console.error(errMsg)
         throw new Error(errMsg)
     }
 }

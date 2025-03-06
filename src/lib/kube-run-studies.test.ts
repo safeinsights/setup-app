@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it, vi, afterEach } from 'vitest'
-import { filterDeployments, getJobs, createKubernetesJob, deployStudyContainer } from './kube-run-studies'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as kube from './kube'
+import { createKubernetesJob, deployStudyContainer, filterDeployments, getJobs } from './kube-run-studies'
 import { KubernetesJob, ManagementAppGetReadyStudiesResponse } from './types'
 
 // Mocking external functions
@@ -435,8 +435,7 @@ describe('deployStudyContainer', () => {
         expect(kube.apiCall).toHaveBeenCalledWith('batch', 'jobs', 'POST', mockJob)
 
         expect(console.error).toHaveBeenCalledWith(
-            `API Call Error: Failed to deploy ${studyTitle} with run id ${runId}`,
-            new Error(errorMessage),
+            `API Call Error: Failed to deploy ${studyTitle} with run id ${runId}. Cause: {}`,
         )
     })
 

@@ -18,7 +18,7 @@ describe('Get Service Account items', () => {
         const filePath = `${DEFAULT_SERVICE_ACCOUNT_PATH}/namespace`
         delete process.env.K8S_SERVICEACCOUNT_PATH
         expect(fs.existsSync(filePath)).toBe(false)
-        expect(() => getNamespace()).toThrow(`Namespace file not found at ${filePath}`)
+        expect(() => getNamespace()).toThrow(`Namespace file not found!`)
     })
 
     it('should read token from file and return trimmed value', () => {
@@ -32,7 +32,7 @@ describe('Get Service Account items', () => {
         const filePath = `${DEFAULT_SERVICE_ACCOUNT_PATH}/token`
         delete process.env.K8S_SERVICEACCOUNT_PATH
         expect(fs.existsSync(filePath)).toBe(false)
-        expect(() => getKubeAPIServiceAccountToken()).toThrow(`Token file not found at ${filePath}`)
+        expect(() => getKubeAPIServiceAccountToken()).toThrow(`Token file not found!`)
     })
 
     it('should initialize the https trust store', () => {
@@ -45,6 +45,6 @@ describe('Get Service Account items', () => {
         const filePath = `${DEFAULT_SERVICE_ACCOUNT_PATH}/ca.crt`
         delete process.env.K8S_SERVICEACCOUNT_PATH
         expect(fs.existsSync(filePath)).toBe(false)
-        expect(() => initHTTPSTrustStore()).toThrow(`Certificate file not found at ${filePath}`)
+        expect(() => initHTTPSTrustStore()).toThrow(`Certificate file not found!`)
     })
 })
