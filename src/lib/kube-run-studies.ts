@@ -34,8 +34,9 @@ async function getJobs(runIds: ManagementAppGetReadyStudiesResponse): Promise<Ku
         if (deployments['items']) {
             return { jobs: filterDeployments(deployments['items'], runIds) }
         }
-    } catch (error: Error) {
-        console.error(`Error getting deployments. Please check the logs for more details. Cause: ${error?.cause}`)
+    } catch (error) {
+        const err = error as Error & { cause: string }
+        console.error(`Error getting deployments. Please check the logs for more details. Cause: ${err['cause']}`)
     }
     return { jobs: [] }
 }
