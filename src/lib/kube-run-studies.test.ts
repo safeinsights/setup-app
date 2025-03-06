@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi , afterEach} from 'vitest'
+import { beforeEach, describe, expect, it, vi, afterEach } from 'vitest'
 import { filterDeployments, getJobs, createKubernetesJob, deployStudyContainer } from './kube-run-studies'
 import * as kube from './kube'
 import { KubernetesJob, ManagementAppGetReadyStudiesResponse } from './types'
@@ -7,7 +7,7 @@ import { KubernetesJob, ManagementAppGetReadyStudiesResponse } from './types'
 vi.mock('./api')
 vi.mock('./kube', () => ({
     apiCall: vi.fn(),
-    getNamespace: vi.fn()
+    getNamespace: vi.fn(),
 }))
 
 describe('filterDeployments', () => {
@@ -107,15 +107,18 @@ describe('filterDeployments', () => {
 
 describe('getJobs', () => {
     const mockRunIds = {
-        jobs: [{
-            jobId: "1",
-            title: "job1",
-            containerLocation: "aws/image"
-        },{
-            jobId: "2",
-            title: "job2",
-            containerLocation: "aws/image"
-        }],
+        jobs: [
+            {
+                jobId: '1',
+                title: 'job1',
+                containerLocation: 'aws/image',
+            },
+            {
+                jobId: '2',
+                title: 'job2',
+                containerLocation: 'aws/image',
+            },
+        ],
     }
 
     it('should return jobs if deployments are found', async () => {
@@ -152,8 +155,9 @@ describe('getJobs', () => {
                         active: 0,
                         startTime: '2023-10-01T00:00:00Z',
                     },
-                } as KubernetesJob],
-            status: "test"
+                } as KubernetesJob,
+            ],
+            status: 'test',
         }
 
         vi.mocked(kube.apiCall).mockResolvedValue(mockDeployments)
@@ -212,7 +216,7 @@ describe('getJobs', () => {
                         startTime: '2023-10-01T00:00:00Z',
                     },
                 } as KubernetesJob,
-            ]
+            ],
         }
 
         vi.mocked(kube.apiCall).mockResolvedValue(mockDeployments)
@@ -239,7 +243,8 @@ describe('getJobs', () => {
                         active: 1,
                         startTime: '2023-10-01T00:00:00Z',
                     },
-                } as KubernetesJob,]
+                } as KubernetesJob,
+            ],
         }
 
         vi.mocked(kube.apiCall).mockResolvedValue(mockDeployments)
@@ -275,7 +280,7 @@ describe('createKubernetesJob', () => {
         const runId = '12345'
         const studyTitle = 'My Study'
 
-        vi.mocked(kube.getNamespace).mockResolvedValue("namespace")
+        vi.mocked(kube.getNamespace).mockResolvedValue('namespace')
         const job = createKubernetesJob(imageLocation, runId, studyTitle)
 
         expect(job).toEqual({
@@ -336,8 +341,6 @@ describe('createKubernetesJob', () => {
     })
 })
 
-
-
 describe('deployStudyContainer', () => {
     const runId = 'test-run-id'
     const studyTitle = 'Test Study'
@@ -353,64 +356,63 @@ describe('deployStudyContainer', () => {
     })
 
     const mockJob = {
-        "apiVersion": "batch/v1",
-        "kind": "Job",
-         "metadata": {
-          "labels": {
-            "app": "research-container-test-run-id",
-            "component": "research-container",
-            "instance": "test-run-id",
-            "managed-by": "setup-app",
-            "part-of": "test study",
-          },
-          "name": "research-container-test-run-id",
-          "namespace": undefined,
-        },
-        "spec": {
-          "template": {
-            "metadata": {
-              "labels": {
-                "app": "research-container-test-run-id",
-                "component": "research-container",
-                "instance": "test-run-id",
-                "managed-by": "setup-app",
-                "part-of": "test study",
-                "role": "toa-access",
-              },
+        apiVersion: 'batch/v1',
+        kind: 'Job',
+        metadata: {
+            labels: {
+                app: 'research-container-test-run-id',
+                component: 'research-container',
+                instance: 'test-run-id',
+                'managed-by': 'setup-app',
+                'part-of': 'test study',
             },
-            "spec": {
-              "containers": [
-                {
-                  "image": "docker.io/test/image",
-                  "name": "research-container-test-run-id",
-                  "ports": [],
+            name: 'research-container-test-run-id',
+            namespace: undefined,
+        },
+        spec: {
+            template: {
+                metadata: {
+                    labels: {
+                        app: 'research-container-test-run-id',
+                        component: 'research-container',
+                        instance: 'test-run-id',
+                        'managed-by': 'setup-app',
+                        'part-of': 'test study',
+                        role: 'toa-access',
+                    },
                 },
-              ],
-              "env": [
-                {
-                  "name": "TRUSTED_OUTPUT_ENDPOINT",
-                  "value": "https://toa:67890/api/run/test-run-id",
-                 },
-              ],
-              "restartPolicy": "Never",
+                spec: {
+                    containers: [
+                        {
+                            image: 'docker.io/test/image',
+                            name: 'research-container-test-run-id',
+                            ports: [],
+                        },
+                    ],
+                    env: [
+                        {
+                            name: 'TRUSTED_OUTPUT_ENDPOINT',
+                            value: 'https://toa:67890/api/run/test-run-id',
+                        },
+                    ],
+                    restartPolicy: 'Never',
+                },
             },
-          },
         },
-       }
+    }
     it('should deploy the job successfully', async () => {
         const mockResponse = { status: 'Success' }
         vi.mocked(kube.apiCall).mockResolvedValue(mockResponse)
 
         await deployStudyContainer(runId, studyTitle, imageLocation)
 
-        expect(console.log).toHaveBeenCalledWith("Creating Kubernetes job: research-container-test-run-id")
+        expect(console.log).toHaveBeenCalledWith('Creating Kubernetes job: research-container-test-run-id')
         expect(kube.apiCall).toHaveBeenCalledWith('batch', 'jobs', 'POST', mockJob)
         expect(console.log).toHaveBeenCalledWith(`${JSON.stringify(mockResponse)}`)
         expect(console.log).toHaveBeenCalledWith(`Successfully deployed ${studyTitle} with run id ${runId}`)
     })
 
     it('should handle deployment failure gracefully', async () => {
-
         const mockResponse = { status: 'Failure' }
         vi.mocked(kube.apiCall).mockResolvedValue(mockResponse)
 
@@ -421,19 +423,22 @@ describe('deployStudyContainer', () => {
     })
 
     it('should throw an error if apiCall rejects', async () => {
-
         const errorMessage = 'API Call Error'
         vi.mocked(kube.apiCall).mockRejectedValue(new Error(errorMessage))
 
-        await expect(deployStudyContainer(runId, studyTitle, imageLocation)).rejects.toThrowError(`API Call Error: Failed to deploy ${studyTitle} with run id ${runId}`)
+        await expect(deployStudyContainer(runId, studyTitle, imageLocation)).rejects.toThrowError(
+            `API Call Error: Failed to deploy ${studyTitle} with run id ${runId}`,
+        )
 
         expect(kube.apiCall).toHaveBeenCalledWith('batch', 'jobs', 'POST', mockJob)
 
-        expect(console.error).toHaveBeenCalledWith(`API Call Error: Failed to deploy ${studyTitle} with run id ${runId}`, new Error(errorMessage))
+        expect(console.error).toHaveBeenCalledWith(
+            `API Call Error: Failed to deploy ${studyTitle} with run id ${runId}`,
+            new Error(errorMessage),
+        )
     })
 
     it('should handle empty response gracefully', async () => {
-
         const mockResponse = {}
         vi.mocked(kube.apiCall).mockResolvedValue(mockResponse)
 

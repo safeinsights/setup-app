@@ -100,7 +100,7 @@ async function deployStudyContainer(runId: string, studyTitle: string, imageLoca
         const response: KubernetesApiResponse = await apiCall('batch', 'jobs', 'POST', job)
         console.log(`${JSON.stringify(response)}`)
         console.log(`Successfully deployed ${studyTitle} with run id ${runId}`)
-        if (('status' in response && response['status'] === 'Failure' )|| !('status' in response) )  {
+        if (('status' in response && response['status'] === 'Failure') || !('status' in response)) {
             console.error(`Failed to deploy study container`)
         }
     } catch (error) {
