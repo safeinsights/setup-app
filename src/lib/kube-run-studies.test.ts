@@ -262,7 +262,9 @@ describe('getJobs', () => {
         console.error = vi.fn()
 
         await getJobs(mockRunIds)
-        expect(console.error).toHaveBeenCalledWith('Error getting deployments', mockError)
+        expect(console.error).toHaveBeenCalledWith(
+            'Error getting deployments. Please check the logs for more details. Cause: undefined',
+        )
     })
 })
 

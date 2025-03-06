@@ -82,7 +82,7 @@ function getKubeAPIServiceAccountToken(): string {
 
 function initHTTPSTrustStore(): void {
     const certFile = `${process.env.K8S_SERVICEACCOUNT_PATH ?? DEFAULT_SERVICE_ACCOUNT_PATH}/ca.crt`
-    console.log(`SA: Initializing the K8s truststore using ${certFile}`)
+    console.log(`SA: Initializing the K8s truststore`)
     if (!fs.existsSync(certFile)) {
         throw new Error(`Certificate file not found at ${certFile}`)
     }
