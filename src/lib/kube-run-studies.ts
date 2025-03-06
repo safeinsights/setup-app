@@ -13,14 +13,14 @@ function filterDeployments(
     runnableStudies: ManagementAppGetReadyStudiesResponse,
 ): KubernetesJob[] {
     console.log('Filtering Kubernetes deployments...')
-    const runIds = runnableStudies.jobs.map((job) => job.jobId)
-    console.log(`Run IDs: ${JSON.stringify(runIds, null, 4)}`)
+    const jobIds = runnableStudies.jobs.map((job) => job.jobId)
+    console.log(`Run IDs: ${JSON.stringify(jobIds, null, 4)}`)
     if (deployments != null && deployments.length > 0) {
         const researchContainerDeployments = deployments.filter(
             (deployment) =>
                 deployment.metadata.labels['managed-by'] === 'setup-app' &&
                 deployment.metadata.labels['component'] === 'research-container' &&
-                runIds.includes(String(deployment.metadata.labels['instance'])),
+                jobIds.includes(String(deployment.metadata.labels['instance'])),
         )
         return researchContainerDeployments
     }
@@ -42,7 +42,7 @@ async function getJobs(runIds: ManagementAppGetReadyStudiesResponse): Promise<Ku
 function createKubernetesJob(imageLocation: string, runId: string, studyTitle: string) {
     const name = `research-container-${runId}`
     studyTitle = studyTitle.toLowerCase()
-    console.log(`Creating Kubernetes job: ${name} `)
+    console.log(`Creating Kubernetes job: ${name}`)
     const toaEndpointWithRunId = `${process.env.TOA_BASE_URL}/api/run/${runId}`
     const deployment = {
         apiVersion: 'batch/v1',
@@ -100,11 +100,13 @@ async function deployStudyContainer(runId: string, studyTitle: string, imageLoca
         const response: KubernetesApiResponse = await apiCall('batch', 'jobs', 'POST', job)
         console.log(`${JSON.stringify(response)}`)
         console.log(`Successfully deployed ${studyTitle} with run id ${runId}`)
-        if ('status' in response && response['status'] === 'Failure') {
-            throw new Error(`Failed to deploy study container: ${response}`)
+        if (('status' in response && response['status'] === 'Failure' )|| !('status' in response) )  {
+            console.error(`Failed to deploy study container`)
         }
     } catch (error) {
-        console.error(`Failed to deploy ${studyTitle} with run id ${runId}`, error)
+        const errMsg = `API Call Error: Failed to deploy ${studyTitle} with run id ${runId}`
+        console.error(errMsg, error)
+        throw new Error(errMsg)
     }
 }
 
@@ -135,4 +137,4 @@ async function runK8sStudies() {
         })
 }
 
-export { runK8sStudies, getJobs, deployStudyContainer }
+export { runK8sStudies, getJobs, deployStudyContainer, filterDeployments, createKubernetesJob }
