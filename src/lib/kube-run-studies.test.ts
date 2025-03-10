@@ -1,10 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as kube from './kube'
-import { createKubernetesJob, deployStudyContainer, filterDeployments, getJobs } from './kube-run-studies'
+import * as api from './api'
+import {
+    createKubernetesJob,
+    deployStudyContainer,
+    filterDeployments,
+    getJobs,
+    runK8sStudies,
+} from './kube-run-studies'
 import { KubernetesJob, ManagementAppGetReadyStudiesResponse } from './types'
 
 // Mocking external functions
-vi.mock('./api')
+vi.mock('./api', () =>({
+    toaGetJobsRequest: vi.fn(),
+    managementAppGetReadyStudiesRequest: vi.fn()
+}))
 vi.mock('./kube', () => ({
     apiCall: vi.fn(),
     getNamespace: vi.fn(),
@@ -447,5 +457,108 @@ describe('deployStudyContainer', () => {
 
         expect(kube.apiCall).toHaveBeenCalledWith('batch', 'jobs', 'POST', mockJob)
         expect(console.error).toHaveBeenCalledWith(`Failed to deploy study container`)
+    })
+})
+
+describe('runK8sStudies', () => {
+    it('should log and deploy studies that are not already deployed', async () => {
+        vi.mocked(api.toaGetJobsRequest).mockResolvedValue({
+            jobs: [
+                {jobId: '1'},
+                {jobId: '2'}
+            ]
+        })
+        vi.mocked(api.managementAppGetReadyStudiesRequest).mockResolvedValue({jobs: [
+            {
+                jobId: '1',
+                title: 'job1',
+                containerLocation: 'aws/image',
+            },
+            {
+                jobId: '2',
+                title: 'job2',
+                containerLocation: 'aws/image',
+            },
+        ]})
+
+        vi.mocked(kube.apiCall).mockResolvedValue({
+            items: [
+                {
+                    metadata: {
+                        name: 'job1',
+                        namespace: 'default',
+                        labels: { 'managed-by': 'setup-app', component: 'research-container', instance: 1 },
+                    },
+                    spec: {
+                        selector: {
+                            matchLabels: { 'managed-by': 'setup-app', component: 'research-container' },
+                        },
+                    },
+                    status: {
+                        active: 1,
+                        startTime: '2023-10-01T00:00:00Z',
+                    },
+                } as KubernetesJob,
+            ],
+        })
+        const consoleLogSpy = vi.spyOn(console, 'log')
+
+        // Run the function
+        await runK8sStudies()
+
+        // Verify that console.log was called with expected messages
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringMatching(/Found 2 runs in management app/))
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringMatching(/Found 2 runs with results in TOA/))
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringMatching(/Found 1 deployments already deployed/))
+
+        // Restore console.log
+        consoleLogSpy.mockRestore()
+    })
+
+    it('should not deploy studies that are already deployed', async () => {
+        vi.mocked(api.toaGetJobsRequest).mockResolvedValue({
+            jobs: [
+                {jobId: '1'}
+            ]
+        })
+        vi.mocked(api.managementAppGetReadyStudiesRequest).mockResolvedValue({jobs: [
+            {
+                jobId: '1',
+                title: 'job1',
+                containerLocation: 'aws/image',
+            }
+        ]})
+        vi.mocked(kube.apiCall).mockResolvedValue({
+            items: [
+                {
+                    metadata: {
+                        name: 'job1',
+                        namespace: 'default',
+                        labels: { 'managed-by': 'setup-app', component: 'research-container', instance: 1 },
+                    },
+                    spec: {
+                        selector: {
+                            matchLabels: { 'managed-by': 'setup-app', component: 'research-container' },
+                        },
+                    },
+                    status: {
+                        active: 1,
+                        startTime: '2023-10-01T00:00:00Z',
+                    },
+                } as KubernetesJob,
+            ],
+        })
+        const consoleLogSpy = vi.spyOn(console, 'log')
+
+        // Run the function
+        await runK8sStudies()
+
+        // Verify that console.log was called with expected messages
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringMatching(/Found 1 runs in management app/))
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringMatching(/Found 1 runs with results in TOA/))
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringMatching(/Found 1 deployments already deployed/))
+
+        // Restore console.log
+        consoleLogSpy.mockRestore()
     })
 })

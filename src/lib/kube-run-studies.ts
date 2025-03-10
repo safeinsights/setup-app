@@ -14,7 +14,7 @@ function filterDeployments(
 ): KubernetesJob[] {
     console.log('Filtering Kubernetes deployments...')
     const jobIds = runnableStudies.jobs.map((job) => job.jobId)
-    console.log(`Run IDs: ${JSON.stringify(jobIds, null, 4)}`)
+    console.log(`fRun IDs: ${JSON.stringify(jobIds, null, 4)}`)
     if (deployments != null && deployments.length > 0) {
         const researchContainerDeployments = deployments.filter(
             (deployment) =>
