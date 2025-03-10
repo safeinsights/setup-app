@@ -11,9 +11,9 @@ import {
 import { KubernetesJob, ManagementAppGetReadyStudiesResponse } from './types'
 
 // Mocking external functions
-vi.mock('./api', () =>({
+vi.mock('./api', () => ({
     toaGetJobsRequest: vi.fn(),
-    managementAppGetReadyStudiesRequest: vi.fn()
+    managementAppGetReadyStudiesRequest: vi.fn(),
 }))
 vi.mock('./kube', () => ({
     apiCall: vi.fn(),
@@ -463,23 +463,22 @@ describe('deployStudyContainer', () => {
 describe('runK8sStudies', () => {
     it('should log and deploy studies that are not already deployed', async () => {
         vi.mocked(api.toaGetJobsRequest).mockResolvedValue({
-            jobs: [
-                {jobId: '1'},
-                {jobId: '2'}
-            ]
+            jobs: [{ jobId: '1' }, { jobId: '2' }],
         })
-        vi.mocked(api.managementAppGetReadyStudiesRequest).mockResolvedValue({jobs: [
-            {
-                jobId: '1',
-                title: 'job1',
-                containerLocation: 'aws/image',
-            },
-            {
-                jobId: '2',
-                title: 'job2',
-                containerLocation: 'aws/image',
-            },
-        ]})
+        vi.mocked(api.managementAppGetReadyStudiesRequest).mockResolvedValue({
+            jobs: [
+                {
+                    jobId: '1',
+                    title: 'job1',
+                    containerLocation: 'aws/image',
+                },
+                {
+                    jobId: '2',
+                    title: 'job2',
+                    containerLocation: 'aws/image',
+                },
+            ],
+        })
 
         vi.mocked(kube.apiCall).mockResolvedValue({
             items: [
@@ -517,17 +516,17 @@ describe('runK8sStudies', () => {
 
     it('should not deploy studies that are already deployed', async () => {
         vi.mocked(api.toaGetJobsRequest).mockResolvedValue({
-            jobs: [
-                {jobId: '1'}
-            ]
+            jobs: [{ jobId: '1' }],
         })
-        vi.mocked(api.managementAppGetReadyStudiesRequest).mockResolvedValue({jobs: [
-            {
-                jobId: '1',
-                title: 'job1',
-                containerLocation: 'aws/image',
-            }
-        ]})
+        vi.mocked(api.managementAppGetReadyStudiesRequest).mockResolvedValue({
+            jobs: [
+                {
+                    jobId: '1',
+                    title: 'job1',
+                    containerLocation: 'aws/image',
+                },
+            ],
+        })
         vi.mocked(kube.apiCall).mockResolvedValue({
             items: [
                 {
