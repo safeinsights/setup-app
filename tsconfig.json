@@ -13,15 +13,10 @@
         "isolatedModules": true,
         "jsx": "preserve",
         "incremental": true,
-        "plugins": [
-            {
-                "name": "next"
-            }
-        ],
-        "paths": {
-            "@/*": ["./src/*"]
-        }
+        "plugins": [{ "name": "next" }],
+        "paths": { "@/*": ["./src/*"], "@/tests/*": ["./tests/*"] },
+        "types": ["vitest/globals"]
     },
-    "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "vitest.config.mts"],
+    "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "vitest.config.mjs"],
     "exclude": ["node_modules"]
 }

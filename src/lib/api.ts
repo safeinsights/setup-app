@@ -24,7 +24,7 @@ const generateManagementAppToken = (): string => {
 export const managementAppGetReadyStudiesRequest = async (): Promise<ManagementAppGetReadyStudiesResponse> => {
     const endpoint = process.env.MANAGEMENT_APP_BASE_URL + '/api/studies/ready'
     const token = generateManagementAppToken()
-    console.log('BMA: Fetching ready studies ...')
+    console.log(`BMA: Fetching ready studies from ${endpoint} ...`)
     const response = await fetch(endpoint, {
         method: 'GET',
         headers: {
@@ -48,7 +48,7 @@ export const managementAppGetReadyStudiesRequest = async (): Promise<ManagementA
 
 // Functions for interacting with the Trusted Output App
 const generateTOAToken = (): string => {
-    const token = Buffer.from(process.env.TOA_BASIC_AUTH || '').toString('base64')
+    const token = Buffer.from(process.env.TOA_BASIC_AUTH ?? '').toString('base64')
     if (token.length === 0) {
         throw new Error('TOA token failed to generate')
     }
@@ -59,7 +59,7 @@ export const toaGetJobsRequest = async (): Promise<TOAGetJobsResponse> => {
     const endpoint = process.env.TOA_BASE_URL + '/api/jobs'
     const token = generateTOAToken()
 
-    console.log('TOA: Fetching jobs ...')
+    console.log(`TOA: Fetching jobs from ${endpoint} ...`)
     const response = await fetch(endpoint, {
         method: 'GET',
         headers: {
