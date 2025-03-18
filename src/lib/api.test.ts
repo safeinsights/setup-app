@@ -25,7 +25,10 @@ describe('managementAppGetReadyStudiesRequest', () => {
         const result = await managementAppGetReadyStudiesRequest()
 
         expect(mockSignToken).toHaveBeenCalledOnce()
-        expect(mockSignToken).toHaveBeenCalledWith({ iss: 'openstax' }, 'mockprivatekeyvalue', { algorithm: 'RS256' })
+        expect(mockSignToken).toHaveBeenCalledWith({ iss: 'openstax' }, 'mockprivatekeyvalue', {
+            algorithm: 'RS256',
+            expiresIn: 60,
+        })
         expect(global.fetch).toHaveBeenCalledOnce()
         expect(global.fetch).toHaveBeenCalledWith('https://bma:12345/api/studies/ready', {
             method: 'GET',

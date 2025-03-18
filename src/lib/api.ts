@@ -13,7 +13,7 @@ const generateManagementAppToken = (): string => {
 
     let token = ''
     if (privateKey && memberId) {
-        token = jwt.sign({ iss: memberId }, privateKey, { algorithm: 'RS256' })
+        token = jwt.sign({ iss: memberId }, privateKey, { algorithm: 'RS256', expiresIn: 60 })
     }
     if (token.length === 0) {
         throw new Error('Managment App token failed to generate')
