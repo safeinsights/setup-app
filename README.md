@@ -12,7 +12,7 @@ $ ./deploy/push-ecr-image.sh
 
 ### Developer testing
 
-Currently, the application polling loop does not perform any actual work. Instead, the application can be tested by invoking a `run-studies.ts` script either locally or in the deployed container on ECS Fargate.
+The `/scripts` dir contains two options for triggering the app to poll and run jobs. `poll` triggers every hour and is what runs on prod. To test manually, use `manual-run`.
 
 #### Local testing steps
 
@@ -26,5 +26,8 @@ Run the script (make sure you have AWS credentials for your target region create
 
 ```bash
 $ npm install
-$ npx tsx ./src/lib/run-studies.ts
+$ npx tsx ./src/scripts/manual-run.ts
 ```
+
+Options:
+- `--ignore-aws`: provide if you do not want the setup app to filter out jobs that have previously been created in AWS, i.e. if you want to run the same job twice.
