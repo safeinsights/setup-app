@@ -30,4 +30,5 @@ $ npx tsx ./src/scripts/manual-run.ts
 ```
 
 Options:
-- `--ignore-aws`: provide if you do not want the setup app to filter out jobs that have previously been created in AWS, i.e. if you want to run the same job twice.
+
+-   `--ignore-aws`: provide if you do not want the setup app to filter out jobs that have previously been created in AWS, i.e. if you want to run the same job twice.
