@@ -2,8 +2,8 @@
 
 ## This application is responsible for:
 
-- Polling the Management App for studies that are ready.
-- Running the Research Container against Secure Enclave data sets.
+-   Polling the Management App for studies that are ready.
+-   Running the Research Container against Secure Enclave data sets.
 
 ## Development
 
