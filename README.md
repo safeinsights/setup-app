@@ -1,5 +1,10 @@
 # SafeInsights Setup Application
 
+## This application is responsible for:
+
+- Polling the Management App for studies that are ready.
+- Running the Research Container against Secure Enclave data sets.
+
 ## Development
 
 ?Currently images from this repo need to be manually pushed by a developer. This can be done by running the following script after setting appropriate AWS credentials:
@@ -32,3 +37,7 @@ $ npx tsx ./src/scripts/manual-run.ts
 Options:
 
 -   `--ignore-aws`: provide if you do not want the setup app to filter out jobs that have previously been created in AWS, i.e. if you want to run the same job twice.
+
+### Authentication with Management App
+
+In `.env`, set the value of `MANAGEMENT_APP_PRIVATE_KEY` using key you set up to authenticate member routes on the [management app](https://github.com/safeinsights/management-app?tab=readme-ov-file#enclave-api-routes).
