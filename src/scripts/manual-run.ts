@@ -16,7 +16,7 @@ const main = async (): Promise<void> => {
 }
 
 const printHelp = () => {
-    console.log('Usage: npx tsx run-studies.ts')
+    console.log('Usage: npx tsx src/scripts/manual-run.ts')
     console.log('Options:')
     console.log('--help             Display this help message')
     console.log('--ignore-aws       Ignore AWS existing jobs and start a new job')
