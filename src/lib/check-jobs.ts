@@ -1,4 +1,4 @@
-import { checkForAWSErroredJobs} from './aws-check-jobs'
+import { checkForAWSErroredJobs } from './aws-check-jobs'
 import { DockerEnclave } from './docker-enclave'
 
 export async function checkForErroredJobs(): Promise<void> {

@@ -1,20 +1,20 @@
-import { managementAppGetReadyStudiesRequest, toaGetJobsRequest, toaUpdateJobStatus } from "./api";
-import { ManagementAppGetReadyStudiesResponse, ManagementAppJob, TOAGetJobsResponse } from "./types";
+import { managementAppGetReadyStudiesRequest, toaGetJobsRequest, toaUpdateJobStatus } from './api'
+import { ManagementAppGetReadyStudiesResponse, ManagementAppJob, TOAGetJobsResponse } from './types'
 
 export interface IEnclave<T> {
-    runStudies(): Promise<void>;
+    runStudies(): Promise<void>
 
-    getAllStudiesInEnclave():Promise< Array<T>>;
+    getAllStudiesInEnclave(): Promise<Array<T>>
 
-    getRunningStudies(): Promise<Array<T>>;
+    getRunningStudies(): Promise<Array<T>>
 
     filterJobsInEnclave(
         bmaReadysResults: ManagementAppGetReadyStudiesResponse,
         toaGetJobsResult: TOAGetJobsResponse,
-    runningJobsInEnclave: Array<T>):  ManagementAppGetReadyStudiesResponse;
+        runningJobsInEnclave: Array<T>,
+    ): ManagementAppGetReadyStudiesResponse
 
-    launchStudy(job: ManagementAppJob, toaEndpointWithJobId: string): Promise<void>;
-    
+    launchStudy(job: ManagementAppJob, toaEndpointWithJobId: string): Promise<void>
 }
 
 export class Enclave<T> implements IEnclave<T> {
@@ -23,7 +23,7 @@ export class Enclave<T> implements IEnclave<T> {
         console.log(
             `Found ${bmaReadysResults.jobs.length} jobs in management app. Job ids: ${bmaReadysResults.jobs.map((job) => job.jobId)}`,
         )
-        bmaReadysResults.jobs.forEach((job)=>{
+        bmaReadysResults.jobs.forEach((job) => {
             console.log(job)
         })
 
@@ -72,7 +72,7 @@ export class Enclave<T> implements IEnclave<T> {
         throw new Error('Method not implemented.')
     }
 
-    async cleanup(): Promise<void>{
+    async cleanup(): Promise<void> {
         throw new Error('Method not implemented.')
     }
     async checkForErroredJobs(): Promise<void> {

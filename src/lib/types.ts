@@ -46,8 +46,12 @@ export type KubernetesApiResponse = {
     items?: KubernetesJob[]
 }
 
-export type DockerApiResponse = Error | DockerApiSuccessResponse | DockerApiContainersResponse |DockerApiContainersResponse[] | DockerApiImageResponse
-
+export type DockerApiResponse =
+    | Error
+    | DockerApiSuccessResponse
+    | DockerApiContainersResponse
+    | DockerApiContainersResponse[]
+    | DockerApiImageResponse
 
 export type DockerApiSuccessResponse = {
     Id?: string
@@ -59,7 +63,7 @@ export type DockerApiContainersResponse = {
     Names: string[]
     ImageID: string
     Command: string
-    Labels: {[key: string]: string | number}
+    Labels: { [key: string]: string | number }
     State: string
     Status: string
 }

@@ -47,7 +47,7 @@ function dockerApiCall(
         socketPath: undefined,
         headers: {
             'Content-Type': 'application/json',
-            'X-Registry-Auth': process.env.DOCKER_REGISTRY_AUTH ?? ''
+            'X-Registry-Auth': process.env.DOCKER_REGISTRY_AUTH ?? '',
         },
     }
     console.log(`Headers: ${JSON.stringify(options.headers)}`)
@@ -103,7 +103,7 @@ function dockerApiCall(
     })
 }
 
-async function pullContainer(imageLocation: string):Promise<DockerApiResponse> {
+async function pullContainer(imageLocation: string): Promise<DockerApiResponse> {
     const path = `images/create?fromImage=${imageLocation}`
     try {
         console.log(`Docker => Pulling container from ${imageLocation}`)
@@ -141,7 +141,8 @@ function filterContainers(
     console.log('Filetering Docker containers...')
     if (containers != null && containers.length > 0) {
         return containers.filter(
-            (container) => state.includes(container.State) &&
+            (container) =>
+                state.includes(container.State) &&
                 Object.keys(filters).every((key) => container.Labels[key] === filters[key]),
         )
     }
@@ -149,4 +150,3 @@ function filterContainers(
 }
 
 export { createContainerObject, dockerApiCall, filterContainers, pullContainer }
-
