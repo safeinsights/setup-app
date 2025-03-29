@@ -1,3 +1,4 @@
+import { toaUpdateJobStatus } from './api'
 import { createContainerObject, dockerApiCall, filterContainers, pullContainer } from './docker'
 import { Enclave, IEnclave } from './enclave'
 import {
@@ -28,7 +29,7 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
                 component: 'research-container',
                 'managed-by': 'setup-app',
             },
-            'completed',
+            ['completed'],
         )
         successfulContainers.forEach(async container=>{
             console.log(`Removing Container ${container.Id}`)
@@ -60,7 +61,7 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
                 component: 'research-container',
                 'managed-by': 'setup-app',
             },
-            'running',
+            ['running'],
         )
     }
     async launchStudy(job: ManagementAppJob, toaEndpointWithJobId: string): Promise<void> {
@@ -85,6 +86,28 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
             console.error(errMsg)
             throw new Error(errMsg)
         }
+    }
+
+    async checkForErroredJobs(): Promise<void> {
+        console.log("Polling for jobs that errored!")
+
+        const exitedContainers = filterContainers(
+            await this.getAllStudiesInEnclave(),
+            {
+                component: 'research-container',
+                'managed-by': 'setup-app',
+            },
+            ['exited'],
+        )
+        exitedContainers.forEach(async container => {
+            const errorMsg = `Container ${container.Id} exited with message: ${container.Status}`
+            console.log(errorMsg)
+            await toaUpdateJobStatus(container.Labels?.instance.toString(),{
+                status: 'JOB-ERRORED',
+                message: errorMsg
+            })
+        })
+
     }
 }
 

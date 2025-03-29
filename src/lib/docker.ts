@@ -114,21 +114,21 @@ async function pullContainer(imageLocation: string):Promise<DockerApiResponse> {
         throw new Error(errMsg)
     }
 }
-function createContainerObject(imageLocation: string, runId: string, studyTitle: string) {
-    const name = `research-container-${runId}`
+function createContainerObject(imageLocation: string, jobId: string, studyTitle: string) {
+    const name = `research-container-${jobId}`
     studyTitle = studyTitle.toLowerCase()
     console.log(`Creating Docker container job: ${name}`)
-    const toaEndpointWithRunId = `${process.env.TOA_BASE_URL}/api/run/${runId}`
+    const toaEndpointWithjobId = `${process.env.TOA_BASE_URL}/api/run/${jobId}`
     const container = {
         Image: imageLocation,
         Labels: {
             app: name,
             component: 'research-container',
             'part-of': studyTitle,
-            instance: runId,
+            instance: jobId,
             'managed-by': 'setup-app',
         },
-        Env: [`TRUSTED_OUTPUT_ENDPOINT=${toaEndpointWithRunId}`],
+        Env: [`TRUSTED_OUTPUT_ENDPOINT=${toaEndpointWithjobId}`],
     }
     return container
 }
@@ -136,13 +136,12 @@ function createContainerObject(imageLocation: string, runId: string, studyTitle:
 function filterContainers(
     containers: DockerApiContainersResponse[],
     filters: { [key: string]: string | number },
-    state: string,
+    state: string[],
 ): DockerApiContainersResponse[] {
     console.log('Filetering Docker containers...')
     if (containers != null && containers.length > 0) {
         return containers.filter(
-            (container) =>
-                container.State === state &&
+            (container) => state.includes(container.State) &&
                 Object.keys(filters).every((key) => container.Labels[key] === filters[key]),
         )
     }

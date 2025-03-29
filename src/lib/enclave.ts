@@ -75,4 +75,7 @@ export class Enclave<T> implements IEnclave<T> {
     async cleanup(): Promise<void>{
         throw new Error('Method not implemented.')
     }
+    async checkForErroredJobs(): Promise<void> {
+        throw new Error('Method not implemented.')
+    }
 }

@@ -1,4 +1,4 @@
-type ManagementAppJob = {
+export type ManagementAppJob = {
     jobId: string
     title: string
     containerLocation: string
@@ -44,6 +44,28 @@ export type KubernetesJobsResponse = {
 export type KubernetesApiResponse = {
     status?: string
     items?: KubernetesJob[]
+}
+
+export type DockerApiResponse = Error | DockerApiSuccessResponse | DockerApiContainersResponse |DockerApiContainersResponse[] | DockerApiImageResponse
+
+
+export type DockerApiSuccessResponse = {
+    Id?: string
+}
+
+export type DockerApiContainersResponse = {
+    Id: string
+    Images: string
+    Names: string[]
+    ImageID: string
+    Command: string
+    Labels: {[key: string]: string | number}
+    State: string
+    Status: string
+}
+
+export type DockerApiImageResponse = {
+    status: string
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

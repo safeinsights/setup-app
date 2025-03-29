@@ -5,7 +5,7 @@ import { KubernetesApiResponse } from './types'
 
 export const DEFAULT_SERVICE_ACCOUNT_PATH = '/var/run/secrets/kubernetes.io/serviceaccount'
 
-function apiCall(group: string, path: string, method: string, body?: unknown): Promise<KubernetesApiResponse> {
+function k8sApiCall(group: string, path: string, method: string, body?: unknown): Promise<KubernetesApiResponse> {
     const namespace = getNamespace()
     const kubeAPIServer = process.env.K8S_APISERVER || `https://kubernetes.default.svc.cluster.local`
     const kubeAPIServerURL = `${kubeAPIServer}/apis/${group}/v1/namespaces/${namespace}/${path}`
@@ -89,4 +89,4 @@ function initHTTPSTrustStore(): void {
     https.globalAgent.options.ca = [...tls.rootCertificates, fs.readFileSync(certFile, 'utf8')]
 }
 
-export { apiCall, getNamespace, initHTTPSTrustStore, getKubeAPIServiceAccountToken }
+export { k8sApiCall, getNamespace, initHTTPSTrustStore, getKubeAPIServiceAccountToken }
