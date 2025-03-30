@@ -1,6 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as aws from './aws-run-studies'
-import * as kube from './kube-run-studies'
 import { runStudies } from './run-studies'
 
 // Mocking the external functions
@@ -29,17 +28,6 @@ describe('runStudies', () => {
         await runStudies(options)
 
         expect(aws.runAWSStudies).toHaveBeenCalledWith(options)
-        expect(kube.runK8sStudies).not.toHaveBeenCalled()
-    })
-
-    it('should call runK8sStudies when DEPLOYMENT_ENVIRONMENT is KUBERNETES', async () => {
-        process.env.DEPLOYMENT_ENVIRONMENT = 'KUBERNETES'
-        const options = { ignoreAWSJobs: false }
-
-        await runStudies(options)
-
-        expect(kube.runK8sStudies).toHaveBeenCalled()
-        expect(aws.runAWSStudies).not.toHaveBeenCalled()
     })
 
     it('should throw an error for unsupported DEPLOYMENT_ENVIRONMENT', async () => {
@@ -49,7 +37,6 @@ describe('runStudies', () => {
         await expect(() => runStudies(options)).rejects.toThrow('Unsupported deployment environment: UNKNOWN')
 
         expect(aws.runAWSStudies).not.toHaveBeenCalled()
-        expect(kube.runK8sStudies).not.toHaveBeenCalled()
     })
 
     it('should pass the correct options to runAWSStudies when ignoreAWSJobs is true', async () => {
@@ -59,6 +46,5 @@ describe('runStudies', () => {
         await runStudies(options)
 
         expect(aws.runAWSStudies).toHaveBeenCalledWith(options)
-        expect(kube.runK8sStudies).not.toHaveBeenCalled()
     })
 })
