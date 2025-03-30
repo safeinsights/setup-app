@@ -89,11 +89,10 @@ function initHTTPSTrustStore(): void {
     https.globalAgent.options.ca = [...tls.rootCertificates, fs.readFileSync(certFile, 'utf8')]
 }
 
-function createKubernetesJob(imageLocation: string, runId: string, studyTitle: string) {
-    const name = `research-container-${runId}`
+function createKubernetesJob(imageLocation: string, jobId: string, studyTitle: string, toaEndpointWithJobId:string) {
+    const name = `research-container-${jobId}`
     studyTitle = studyTitle.toLowerCase()
     console.log(`Creating Kubernetes job: ${name}`)
-    const toaEndpointWithRunId = `${process.env.TOA_BASE_URL}/api/run/${runId}`
     const deployment = {
         apiVersion: 'batch/v1',
         kind: 'Job',
@@ -104,7 +103,7 @@ function createKubernetesJob(imageLocation: string, runId: string, studyTitle: s
                 app: name,
                 component: 'research-container',
                 'part-of': studyTitle,
-                instance: runId,
+                instance: jobId,
                 'managed-by': 'setup-app',
             },
         },
@@ -115,7 +114,7 @@ function createKubernetesJob(imageLocation: string, runId: string, studyTitle: s
                         app: name,
                         component: 'research-container',
                         'part-of': studyTitle,
-                        instance: runId,
+                        instance: jobId,
                         'managed-by': 'setup-app',
                         role: 'toa-access',
                     },
@@ -131,7 +130,7 @@ function createKubernetesJob(imageLocation: string, runId: string, studyTitle: s
                     env: [
                         {
                             name: 'TRUSTED_OUTPUT_ENDPOINT',
-                            value: toaEndpointWithRunId,
+                            value: toaEndpointWithJobId,
                         },
                     ],
                     restartPolicy: 'Never',

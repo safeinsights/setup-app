@@ -55,7 +55,7 @@ class KubernetesEnclave extends Enclave<KubernetesApiJobsResponse> implements IE
     }
 
     async launchStudy(job: ManagementAppJob, toaEndpointWithJobId: string): Promise<void> {
-        const kubeJob = createKubernetesJob(job.containerLocation, job.jobId, job.title)
+        const kubeJob = createKubernetesJob(job.containerLocation, job.jobId, job.title, toaEndpointWithJobId)
         console.log(`Deploying Job ==> ${JSON.stringify(kubeJob)}`)
         try {
             const response: KubernetesApiResponse = await k8sApiCall('batch', 'jobs', 'POST', kubeJob)

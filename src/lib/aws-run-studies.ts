@@ -5,7 +5,6 @@ import {
     registerECSTaskDefinition,
     runECSFargateTask,
     JOB_ID_TAG_KEY,
-    TITLE_TAG_KEY,
     getAllTaskDefinitionsWithJobId,
     deleteECSTaskDefinitions,
     getAllTasksWithJobId,

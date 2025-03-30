@@ -5,8 +5,7 @@ import {
     DEFAULT_SERVICE_ACCOUNT_PATH,
     getKubeAPIServiceAccountToken,
     getNamespace,
-    initHTTPSTrustStore,
-    k8sApiCall,
+    initHTTPSTrustStore
 } from './kube'
 
 vi.mock('https', () => ({
