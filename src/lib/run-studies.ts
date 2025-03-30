@@ -1,5 +1,5 @@
 import { runAWSStudies } from './aws-run-studies'
-import { runK8sStudies } from './kube-run-studies'
+import { KubernetesEnclave } from './kube-enclave'
 import { DockerEnclave } from './docker-enclave'
 export async function runStudies(options: { ignoreAWSJobs: boolean }): Promise<void> {
     const deploymentEnvironment = process.env.DEPLOYMENT_ENVIRONMENT ?? 'AWS' /* v8 ignore next */
@@ -7,7 +7,7 @@ export async function runStudies(options: { ignoreAWSJobs: boolean }): Promise<v
         await runAWSStudies(options)
     } else if (deploymentEnvironment === 'KUBERNETES') {
         console.log('Running Setup App in Kubernetes environment')
-        await runK8sStudies()
+        await new KubernetesEnclave().runStudies()
     } else if (deploymentEnvironment === 'DOCKER') {
         console.log('Running Setup App in Docker environment')
         await new DockerEnclave().runStudies()

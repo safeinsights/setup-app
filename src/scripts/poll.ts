@@ -1,7 +1,11 @@
 import { checkForErroredJobs } from '../lib/check-jobs'
 import { runStudies } from '../lib/run-studies'
 
-const pollIntervall: number = Number(process.env.POLL_INTERVALL) || 3600000
+const pollStudiesInterval = parseInt(process.env.POLL_STUDIES_INTERVAL_MINUTES || '10')
+const pollForErroredJobsInterval = parseInt(process.env.POLL_ERRORED_JOBS_INTERVAL_MINUTES || '5')
+
+console.log('Polling interval for studies:', pollStudiesInterval)
+console.log('Polling interval for failed jobs:', pollForErroredJobsInterval)
 function pollStudies(): void {
     console.log(`Polling management app at ${new Date()}`)
 
@@ -13,9 +17,9 @@ function pollForErroredJobs(): void {
     checkForErroredJobs()
 }
 
-// Poll for studies once now and then every PollIntervall ms
+// Poll for studies once now and then 2 minutes by default (for dev)
 pollStudies()
-setInterval(pollStudies, pollIntervall)
+setInterval(pollStudies, pollStudiesInterval * 60 * 1000)
 
-// Poll for errored tasks every pollIntervall ms
-setInterval(pollForErroredJobs, pollIntervall)
+// Poll for errored tasks every 5 minutes by default
+setInterval(pollForErroredJobs, pollForErroredJobsInterval * 60 * 1000)
