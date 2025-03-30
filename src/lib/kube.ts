@@ -89,7 +89,7 @@ function initHTTPSTrustStore(): void {
     https.globalAgent.options.ca = [...tls.rootCertificates, fs.readFileSync(certFile, 'utf8')]
 }
 
-function createKubernetesJob(imageLocation: string, jobId: string, studyTitle: string, toaEndpointWithJobId:string) {
+function createKubernetesJob(imageLocation: string, jobId: string, studyTitle: string, toaEndpointWithJobId: string) {
     const name = `research-container-${jobId}`
     studyTitle = studyTitle.toLowerCase()
     console.log(`Creating Kubernetes job: ${name}`)

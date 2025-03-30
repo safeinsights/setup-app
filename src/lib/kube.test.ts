@@ -1,12 +1,7 @@
 import { getServiceAccountDir } from '@/tests/unit.helpers'
 import * as fs from 'fs'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-    DEFAULT_SERVICE_ACCOUNT_PATH,
-    getKubeAPIServiceAccountToken,
-    getNamespace,
-    initHTTPSTrustStore
-} from './kube'
+import { DEFAULT_SERVICE_ACCOUNT_PATH, getKubeAPIServiceAccountToken, getNamespace, initHTTPSTrustStore } from './kube'
 
 vi.mock('https', () => ({
     request: vi.fn(),
