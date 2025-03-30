@@ -114,11 +114,10 @@ async function pullContainer(imageLocation: string): Promise<DockerApiResponse> 
         throw new Error(errMsg)
     }
 }
-function createContainerObject(imageLocation: string, jobId: string, studyTitle: string) {
+function createContainerObject(imageLocation: string, jobId: string, studyTitle: string, toaEndpointWithjobId: string) {
     const name = `research-container-${jobId}`
     studyTitle = studyTitle.toLowerCase()
     console.log(`Creating Docker container job: ${name}`)
-    const toaEndpointWithjobId = `${process.env.TOA_BASE_URL}/api/run/${jobId}`
     const container = {
         Image: imageLocation,
         Labels: {

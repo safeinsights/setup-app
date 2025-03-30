@@ -1,7 +1,7 @@
 import fs from 'fs'
 import https from 'https'
 import tls from 'tls'
-import { KubernetesApiResponse } from './types'
+import { KubernetesApiResponse, KubernetesJob } from './types'
 
 export const DEFAULT_SERVICE_ACCOUNT_PATH = '/var/run/secrets/kubernetes.io/serviceaccount'
 
@@ -89,4 +89,78 @@ function initHTTPSTrustStore(): void {
     https.globalAgent.options.ca = [...tls.rootCertificates, fs.readFileSync(certFile, 'utf8')]
 }
 
-export { k8sApiCall, getNamespace, initHTTPSTrustStore, getKubeAPIServiceAccountToken }
+function createKubernetesJob(imageLocation: string, runId: string, studyTitle: string) {
+    const name = `research-container-${runId}`
+    studyTitle = studyTitle.toLowerCase()
+    console.log(`Creating Kubernetes job: ${name}`)
+    const toaEndpointWithRunId = `${process.env.TOA_BASE_URL}/api/run/${runId}`
+    const deployment = {
+        apiVersion: 'batch/v1',
+        kind: 'Job',
+        metadata: {
+            name: name,
+            namespace: getNamespace(),
+            labels: {
+                app: name,
+                component: 'research-container',
+                'part-of': studyTitle,
+                instance: runId,
+                'managed-by': 'setup-app',
+            },
+        },
+        spec: {
+            template: {
+                metadata: {
+                    labels: {
+                        app: name,
+                        component: 'research-container',
+                        'part-of': studyTitle,
+                        instance: runId,
+                        'managed-by': 'setup-app',
+                        role: 'toa-access',
+                    },
+                },
+                spec: {
+                    containers: [
+                        {
+                            name: name,
+                            image: imageLocation,
+                            ports: [],
+                        },
+                    ],
+                    env: [
+                        {
+                            name: 'TRUSTED_OUTPUT_ENDPOINT',
+                            value: toaEndpointWithRunId,
+                        },
+                    ],
+                    restartPolicy: 'Never',
+                    //TODO Add image Secret pulls to deloyment?
+                },
+            },
+        },
+    }
+    return deployment
+}
+
+function filterDeployments(
+    deployments: Array<KubernetesJob>,
+    filters: { [key: string]: string | number },
+): KubernetesJob[] {
+    console.log('Filtering Kubernetes deployments...')
+    if (deployments != null && deployments.length > 0) {
+        return deployments.filter((deployment) =>
+            Object.keys(filters).every((key) => deployment.metadata.labels[key] === filters[key]),
+        )
+    }
+    return []
+}
+
+export {
+    k8sApiCall,
+    getNamespace,
+    initHTTPSTrustStore,
+    getKubeAPIServiceAccountToken,
+    createKubernetesJob,
+    filterDeployments,
+}

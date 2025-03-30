@@ -37,14 +37,12 @@ export type KubernetesJob = {
     }
 }
 
-export type KubernetesJobsResponse = {
-    jobs: KubernetesJob[]
+export type KubernetesApiJobsResponse = {
+    status?: string
+    items: KubernetesJob[]
 }
 
-export type KubernetesApiResponse = {
-    status?: string
-    items?: KubernetesJob[]
-}
+export type KubernetesApiResponse = KubernetesApiJobsResponse | KubernetesJob
 
 export type DockerApiResponse =
     | Error

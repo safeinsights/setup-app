@@ -15,10 +15,13 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
         toaGetJobsResult: TOAGetJobsResponse,
         runningJobsInEnclave: DockerApiContainersResponse[],
     ): ManagementAppGetReadyStudiesResponse {
+        console.log('Filtering Docker jobs')
         if (!runningJobsInEnclave?.length) return bmaReadysResults || { jobs: [] }
 
         return {
-            jobs: bmaReadysResults.jobs.filter((job) => toaGetJobsResult.jobs.map((r) => r.jobId).includes(job.jobId)),
+            jobs: bmaReadysResults.jobs.filter((job) =>
+                runningJobsInEnclave.map((r) => r.Labels?.instance).includes(job.jobId),
+            ),
         }
     }
 
@@ -69,7 +72,7 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
         )
     }
     async launchStudy(job: ManagementAppJob, toaEndpointWithJobId: string): Promise<void> {
-        const container = createContainerObject(job.containerLocation, job.jobId, job.title)
+        const container = createContainerObject(job.containerLocation, job.jobId, job.title, toaEndpointWithJobId)
         console.log(`Deploying Container ==> ${JSON.stringify(container)}`)
         try {
             const result = await pullContainer(job.containerLocation)
