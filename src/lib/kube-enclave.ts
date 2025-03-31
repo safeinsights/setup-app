@@ -26,8 +26,6 @@ class KubernetesEnclave extends Enclave<KubernetesApiJobsResponse> implements IE
         }
     }
 
-    async cleanup(): Promise<void> {}
-
     async getAllStudiesInEnclave(): Promise<KubernetesApiJobsResponse[]> {
         try {
             const jobs: KubernetesApiResponse = (await k8sApiCall('batch', 'jobs', 'GET')) as KubernetesApiJobsResponse
@@ -42,14 +40,15 @@ class KubernetesEnclave extends Enclave<KubernetesApiJobsResponse> implements IE
 
     async getRunningStudies(): Promise<KubernetesApiJobsResponse[]> {
         console.log('Kubernetes => Retrieving running research jobs')
-        const deployments: KubernetesJob[] = (await this.getAllStudiesInEnclave()).flatMap((s) => s?.items)
+        const jobs: KubernetesJob[] = (await this.getAllStudiesInEnclave()).flatMap((s) => s?.items)
         return [
             {
-                items: filterDeployments(deployments, {
+                items: filterDeployments(jobs, {
                     component: 'research-container',
                     'managed-by': 'setup-app',
                     role: 'toa-access',
                 }),
+                //TODO Pass state of the job to the filter
             },
         ]
     }

@@ -8,6 +8,8 @@ export interface IEnclave<T> {
 
     getRunningStudies(): Promise<Array<T>>
 
+    cleanup(): Promise<void>
+
     filterJobsInEnclave(
         bmaReadysResults: ManagementAppGetReadyStudiesResponse,
         toaGetJobsResult: TOAGetJobsResponse,
@@ -15,6 +17,8 @@ export interface IEnclave<T> {
     ): ManagementAppGetReadyStudiesResponse
 
     launchStudy(job: ManagementAppJob, toaEndpointWithJobId: string): Promise<void>
+
+    checkForErroredJobs(): Promise<void>
 }
 
 export class Enclave<T> implements IEnclave<T> {
