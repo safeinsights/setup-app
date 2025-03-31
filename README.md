@@ -1,8 +1,13 @@
 # SafeInsights Setup Application
 
+## This application is responsible for:
+
+-   Polling the Management App for studies that are ready.
+-   Running the Research Container against Secure Enclave data sets.
+
 ## Development
 
-Currently images from this repo need to be manually pushed by a developer. This can be done by running the following script after setting appropriate AWS credentials:
+Running the CD pipeline will deploy new images from this repo. To manually push the image, run the following script after setting appropriate AWS credentials:
 
 ```bash
 $ ./deploy/push-ecr-image.sh
@@ -12,7 +17,7 @@ $ ./deploy/push-ecr-image.sh
 
 ### Developer testing
 
-Currently, the application polling loop does not perform any actual work. Instead, the application can be tested by invoking a `run-studies.ts` script either locally or in the deployed container on ECS Fargate.
+The `/scripts` dir contains two options for triggering the app to poll and run jobs. `poll` will run jobs at a set interval and is what runs on prod. To manually trigger a poll+run cycle, use `manual-run`.
 
 #### Local testing steps
 
@@ -26,5 +31,13 @@ Run the script (make sure you have AWS credentials for your target region create
 
 ```bash
 $ npm install
-$ npx tsx ./src/lib/run-studies.ts
+$ npx tsx ./src/scripts/manual-run.ts
 ```
+
+Options:
+
+-   `--ignore-aws`: provide if you do not want the setup app to filter out jobs that have previously been created in AWS, i.e. if you want to run the same job twice.
+
+### Authentication with Management App
+
+In `.env`, set the value of `MANAGEMENT_APP_PRIVATE_KEY` using key you set up to authenticate member routes on the [management app](https://github.com/safeinsights/management-app?tab=readme-ov-file#enclave-api-routes).
