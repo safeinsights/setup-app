@@ -7,7 +7,7 @@
 
 ## Development
 
-?Currently images from this repo need to be manually pushed by a developer. This can be done by running the following script after setting appropriate AWS credentials:
+Running the CD pipeline will deploy new images from this repo. To manually push the image, run the following script after setting appropriate AWS credentials:
 
 ```bash
 $ ./deploy/push-ecr-image.sh
@@ -17,7 +17,7 @@ $ ./deploy/push-ecr-image.sh
 
 ### Developer testing
 
-The `/scripts` dir contains two options for triggering the app to poll and run jobs. `poll` triggers every hour and is what runs on prod. To test manually, use `manual-run`.
+The `/scripts` dir contains two options for triggering the app to poll and run jobs. `poll` will run jobs at a set interval and is what runs on prod. To manually trigger a poll+run cycle, use `manual-run`.
 
 #### Local testing steps
 
