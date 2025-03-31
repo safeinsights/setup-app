@@ -59,6 +59,7 @@ export class Enclave<T> implements IEnclave<T> {
         this.cleanup()
     }
 
+    /* v8 ignore start */
     filterJobsInEnclave(
         _bmaReadysResults: ManagementAppGetReadyStudiesResponse,
         _toaGetJobsResult: TOAGetJobsResponse,
@@ -82,4 +83,5 @@ export class Enclave<T> implements IEnclave<T> {
     async checkForErroredJobs(): Promise<void> {
         throw new Error('Method not implemented.')
     }
+    /* v8 ignore end */
 }
