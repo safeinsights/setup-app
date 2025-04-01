@@ -37,7 +37,7 @@ export class Enclave<T> implements IEnclave<T> {
         )
 
         const jobsInEnclave: Array<T> = await this.getRunningStudies()
-        const filteredResult: ManagementAppGetReadyStudiesResponse = this.filterJobsInEnclave(
+        const filteredResult: ManagementAppGetReadyStudiesResponse = await this.filterJobsInEnclave(
             bmaReadysResults,
             toaGetJobsResult,
             jobsInEnclave,
@@ -58,7 +58,7 @@ export class Enclave<T> implements IEnclave<T> {
         }
         this.cleanup()
     }
-
+    // The following methods are individually tested in the derived classes
     /* v8 ignore start */
     filterJobsInEnclave(
         _bmaReadysResults: ManagementAppGetReadyStudiesResponse,
