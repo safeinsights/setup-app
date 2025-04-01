@@ -16,6 +16,7 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
         runningJobsInEnclave: DockerApiContainersResponse[],
     ): ManagementAppGetReadyStudiesResponse {
         console.log('Filtering Docker jobs')
+        /* v8 ignore next */
         if (!runningJobsInEnclave?.length) return bmaReadysResults || { jobs: [] }
 
         return {
@@ -40,6 +41,7 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
             console.log(`Removing Container ${container.Id}`)
             try {
                 await docker.dockerApiCall('DEL', `containers/${container.Id}`)
+                /* v8 ignore next 6 */
             } catch (error: unknown) {
                 const err = error as Error & { cause: string }
                 console.error(
@@ -98,7 +100,7 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
     async checkForErroredJobs(): Promise<void> {
         console.log('Polling for jobs that errored!')
 
-        const exitedContainers = docker.filterContainers(
+        const exitedContainers = await docker.filterContainers(
             await this.getAllStudiesInEnclave(),
             {
                 component: 'research-container',

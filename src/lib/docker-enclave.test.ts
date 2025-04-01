@@ -2,8 +2,10 @@ import { vi, describe, it, expect } from 'vitest'
 import { DockerEnclave } from './docker-enclave'
 import { ManagementAppGetReadyStudiesResponse, TOAGetJobsResponse, DockerApiContainersResponse } from './types'
 import * as docker from './docker'
+import * as api from './api'
 
 vi.mock('./docker')
+vi.mock('./api')
 
 describe('DockerEnclave', () => {
     it('filterJobsInEnclave should return jobs that are in the enclave', () => {
@@ -130,6 +132,14 @@ describe('DockerEnclave', () => {
         const enclave = new DockerEnclave()
         const containers = await enclave.getAllStudiesInEnclave()
 
+        expect(containers).toEqual([])
+        expect(dockerApiCall).toHaveBeenCalledWith('GET', 'containers/json')
+    })
+
+    it('getAllStudiesInEnclave: Return empty when the api call throws an error', async () => {
+        const dockerApiCall = vi.mocked(docker.dockerApiCall).mockRejectedValue(new Error('Error'))
+        const enclave = new DockerEnclave()
+        const containers = await enclave.getAllStudiesInEnclave()
         expect(containers).toEqual([])
         expect(dockerApiCall).toHaveBeenCalledWith('GET', 'containers/json')
     })
@@ -320,5 +330,51 @@ describe('DockerEnclave', () => {
         const error = new Error('Docker API Call Error: Failed to deploy My Study with run id 123. Cause: {}')
         vi.mocked(docker.dockerApiCall).mockRejectedValueOnce(error)
         await expect(enclave.launchStudy(job, job.toaEndpointWithJobId)).rejects.toThrow(error)
+    })
+
+    it('checkForErroredJobs', async () => {
+        const enclave = new DockerEnclave()
+        const failedContainers = [
+            {
+                Id: '1234567890',
+                Images: 'test',
+                Names: ['research-container-1234567890'],
+                ImageID: 'sha256:1234567890',
+                Command: 'test/container-1',
+                Labels: {
+                    instance: '1234567890',
+                    component: 'research-container',
+                    'managed-by': 'setup-app',
+                },
+                State: 'exited',
+                Status: 'exited',
+            },
+            {
+                Id: '0987654321',
+                Images: 'test',
+                Names: ['research-container-0987654321'],
+                ImageID: 'sha256:0987654321',
+                Command: 'test/container-2',
+                Labels: {
+                    instance: '0987654321',
+                    component: 'research-container',
+                    'managed-by': 'setup-app',
+                },
+                State: 'exited',
+                Status: 'exited',
+            },
+        ]
+        const mockUpdateJobStatus = vi.mocked(api.toaUpdateJobStatus)
+        vi.mocked(docker.dockerApiCall).mockResolvedValue(failedContainers)
+        vi.mocked(docker.filterContainers).mockResolvedValue(failedContainers)
+        await enclave.checkForErroredJobs()
+        expect(mockUpdateJobStatus).nthCalledWith(1, '1234567890', {
+            status: 'JOB-ERRORED',
+            message: 'Container 1234567890 exited with message: exited',
+        })
+        expect(mockUpdateJobStatus).nthCalledWith(2, '0987654321', {
+            status: 'JOB-ERRORED',
+            message: 'Container 0987654321 exited with message: exited',
+        })
     })
 })

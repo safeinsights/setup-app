@@ -1,6 +1,8 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as aws from './aws-run-studies'
 import { runStudies } from './run-studies'
+import { DockerEnclave } from './docker-enclave'
+import { KubernetesEnclave } from './kube-enclave'
 
 // Mocking the external functions
 vi.mock('./aws-run-studies')
@@ -46,5 +48,23 @@ describe('runStudies', () => {
         await runStudies(options)
 
         expect(aws.runAWSStudies).toHaveBeenCalledWith(options)
+    })
+
+    it('should call docker launchstudy when deployment environment is DOCKER', async () => {
+        process.env.DEPLOYMENT_ENVIRONMENT = 'DOCKER'
+        const dockerRunStudies = vi.spyOn(DockerEnclave.prototype, 'runStudies').mockImplementation(() => {
+            return Promise.resolve()
+        })
+        await runStudies({ ignoreAWSJobs: false })
+        expect(dockerRunStudies).toHaveBeenCalled()
+    })
+
+    it('should call kubernetes launchstudy when deployment environment is Kubernetes', async () => {
+        process.env.DEPLOYMENT_ENVIRONMENT = 'KUBERNETES'
+        const kubernetesRunStudies = vi.spyOn(KubernetesEnclave.prototype, 'runStudies').mockImplementation(() => {
+            return Promise.resolve()
+        })
+        await runStudies({ ignoreAWSJobs: false })
+        expect(kubernetesRunStudies).toHaveBeenCalled()
     })
 })
