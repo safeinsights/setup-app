@@ -1,5 +1,5 @@
 import { toaUpdateJobStatus } from './api'
-import { createContainerObject, dockerApiCall, filterContainers, pullContainer } from './docker'
+import * as docker from './docker'
 import { Enclave, IEnclave } from './enclave'
 import {
     DockerApiContainersResponse,
@@ -28,7 +28,7 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
     async cleanup(): Promise<void> {
         console.log('Cleaning up the enclave. Removing successfully rand studies.')
 
-        const successfulContainers = filterContainers(
+        const successfulContainers = docker.filterContainers(
             await this.getAllStudiesInEnclave(),
             {
                 component: 'research-container',
@@ -39,7 +39,7 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
         successfulContainers.forEach(async (container) => {
             console.log(`Removing Container ${container.Id}`)
             try {
-                await dockerApiCall('DEL', `containers/${container.Id}`)
+                await docker.dockerApiCall('DEL', `containers/${container.Id}`)
             } catch (error: unknown) {
                 const err = error as Error & { cause: string }
                 console.error(
@@ -51,7 +51,7 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
 
     async getAllStudiesInEnclave(): Promise<DockerApiContainersResponse[]> {
         try {
-            const containers: DockerApiResponse = await dockerApiCall('GET', 'containers/json')
+            const containers: DockerApiResponse = await docker.dockerApiCall('GET', 'containers/json')
             console.log(`Pulled the following containers: ${JSON.stringify(containers)}`)
             return containers as DockerApiContainersResponse[]
         } catch (error: unknown) {
@@ -62,7 +62,7 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
     }
     async getRunningStudies(): Promise<DockerApiContainersResponse[]> {
         console.log('Docker => Retrieving running research containers')
-        return filterContainers(
+        return docker.filterContainers(
             await this.getAllStudiesInEnclave(),
             {
                 component: 'research-container',
@@ -72,15 +72,20 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
         )
     }
     async launchStudy(job: ManagementAppJob, toaEndpointWithJobId: string): Promise<void> {
-        const container = createContainerObject(job.containerLocation, job.jobId, job.title, toaEndpointWithJobId)
+        const container = await docker.createContainerObject(
+            job.containerLocation,
+            job.jobId,
+            job.title,
+            toaEndpointWithJobId,
+        )
         console.log(`Deploying Container ==> ${JSON.stringify(container)}`)
         try {
-            const result = await pullContainer(job.containerLocation)
+            const result = await docker.pullContainer(job.containerLocation)
             console.log(`Pull result ${JSON.stringify(result)}`)
             const path = `containers/create?name=rc-${job.jobId}`
-            const response: DockerApiResponse = await dockerApiCall('POST', path, container)
+            const response: DockerApiResponse = await docker.dockerApiCall('POST', path, container)
             if ('Id' in response) {
-                await dockerApiCall('POST', `containers/${response.Id}/start`, undefined, true)
+                await docker.dockerApiCall('POST', `containers/${response.Id}/start`, undefined, true)
             }
             console.log(`Successfully deployed ${job.title} with run id ${job.jobId}`)
         } catch (error: unknown) {
@@ -93,7 +98,7 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
     async checkForErroredJobs(): Promise<void> {
         console.log('Polling for jobs that errored!')
 
-        const exitedContainers = filterContainers(
+        const exitedContainers = docker.filterContainers(
             await this.getAllStudiesInEnclave(),
             {
                 component: 'research-container',
