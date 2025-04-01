@@ -1,5 +1,5 @@
 import { vi, describe, it, expect } from 'vitest'
-import { checkForErroredJobs } from './check-jobs'
+import { checkForAWSErroredJobs } from './aws-check-jobs'
 import * as api from './api'
 import * as aws from './aws'
 import { ECSClient, TaskStopCode } from '@aws-sdk/client-ecs'
@@ -12,7 +12,7 @@ describe('checkForErroredJobs()', () => {
         vi.mocked(aws.getAllTasksWithJobId).mockResolvedValue([])
 
         const mockDescribeECSTasks = vi.mocked(aws.describeECSTasks)
-        await checkForErroredJobs()
+        await checkForAWSErroredJobs()
 
         expect(mockDescribeECSTasks).not.toHaveBeenCalled()
     })
@@ -42,7 +42,7 @@ describe('checkForErroredJobs()', () => {
             $metadata: {},
         })
 
-        await checkForErroredJobs()
+        await checkForAWSErroredJobs()
 
         expect(mockDescribeECSTasks).toHaveBeenCalledOnce()
         expect(mockDescribeECSTasks).toHaveBeenCalledWith(expect.any(ECSClient), 'MOCK_ECS_CLUSTER', ['arn1', 'arn2'])
@@ -79,7 +79,7 @@ describe('checkForErroredJobs()', () => {
             $metadata: {},
         })
 
-        await checkForErroredJobs()
+        await checkForAWSErroredJobs()
 
         expect(mockDescribeECSTasks).toHaveBeenCalledOnce()
         expect(mockDescribeECSTasks).toHaveBeenCalledWith(expect.any(ECSClient), 'MOCK_ECS_CLUSTER', ['arn1', 'arn2'])
@@ -116,7 +116,7 @@ describe('checkForErroredJobs()', () => {
             $metadata: {},
         })
 
-        await checkForErroredJobs()
+        await checkForAWSErroredJobs()
 
         expect(mockDescribeECSTasks).toHaveBeenCalledOnce()
         expect(mockDescribeECSTasks).toHaveBeenCalledWith(expect.any(ECSClient), 'MOCK_ECS_CLUSTER', ['arn1', 'arn2'])
@@ -140,7 +140,7 @@ describe('checkForErroredJobs()', () => {
             $metadata: {},
         })
 
-        await checkForErroredJobs()
+        await checkForAWSErroredJobs()
 
         expect(mockDescribeECSTasks).toHaveBeenCalledOnce()
         expect(mockDescribeECSTasks).toHaveBeenCalledWith(expect.any(ECSClient), 'MOCK_ECS_CLUSTER', ['arn1', 'arn2'])
@@ -173,7 +173,7 @@ describe('checkForErroredJobs()', () => {
             $metadata: {},
         })
 
-        await checkForErroredJobs()
+        await checkForAWSErroredJobs()
 
         expect(mockDescribeECSTasks).toHaveBeenCalledOnce()
         expect(mockDescribeECSTasks).toHaveBeenCalledWith(expect.any(ECSClient), 'MOCK_ECS_CLUSTER', ['arn1', 'arn2'])
