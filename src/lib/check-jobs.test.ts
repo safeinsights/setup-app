@@ -1,46 +1,32 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { checkForErroredJobs } from './check-jobs'
+import * as acj from './aws-check-jobs'
 import { DockerEnclave } from './docker-enclave'
+import { KubernetesEnclave } from './kube-enclave'
 
-vi.mock('./docker-enclave')
-vi.mock('./check-jobs')
-vi.mock('./kube-enclave', async () => {
-    const kubeEnclave = await import('./kube-enclave')
-    return {
-        ...kubeEnclave,
-        KubernetesEnclave: class extends kubeEnclave.KubernetesEnclave {
-            constructor() {
-                super()
-                this.checkForErroredJobs = vi.fn().mockImplementation(() => {
-                    throw new Error('Method not implemented.')
-                })
-            }
-        },
-    }
-})
+vi.mock('./aws-check-jobs')
+describe('checkForErroredJobs', () => {
+    it('should call checkForAWSErroredJobs when deployment environment is AWS', async () => {
+        process.env.DEPLOYMENT_ENVIRONMENT = 'AWS'
+        const checkForAWSErroredJobsMock = vi.mocked(acj.checkForAWSErroredJobs)
+        await checkForErroredJobs()
+        expect(checkForAWSErroredJobsMock).toHaveBeenCalled()
+    })
+    it('should call docker error check when deployment environment is DOCKER', async () => {
+        process.env.DEPLOYMENT_ENVIRONMENT = 'DOCKER'
+        const checkForDockerErroredJobsMock = vi.spyOn(DockerEnclave.prototype, 'checkForErroredJobs')
+        await checkForErroredJobs()
+        expect(checkForDockerErroredJobsMock).toHaveBeenCalled()
+    })
 
-describe('CheckForKubernetesErroredJobs', () => {
-    beforeEach(async () => {
-        process.env = {
-            ...process.env,
-            DEPLOYMENT_ENVIRONMENT: 'TEST',
-        }
+    it('should call kubernetes error check when deployment environment is Kubernetes', async () => {
+        process.env.DEPLOYMENT_ENVIRONMENT = 'KUBERNETES'
+        const checkForKubernetesErroredJobsMock = vi.spyOn(KubernetesEnclave.prototype, 'checkForErroredJobs')
+        await expect(checkForErroredJobs()).rejects.toThrow('Method not implemented.')
+        expect(checkForKubernetesErroredJobsMock).toHaveBeenCalled()
     })
-    it('throw not Implemented error for Kubernetes', async () => {
-        expect(() => checkForErroredJobs()).toThrow(`Method not implemented.`)
-    })
-})
-
-describe('CheckForDockerErroredJobs', () => {
-    beforeEach(async () => {
-        process.env = {
-            ...process.env,
-            DEPLOYMENT_ENVIRONMENT: 'TEST',
-        }
-    })
-    it('Docker - Check for error jobs', async () => {
-        const { DockerEnclave: MockedDockerEnclave } = await import('./docker-enclave')
-        const mocked = new MockedDockerEnclave()
-        expect(mocked).toBeInstanceOf(DockerEnclave)
+    it('should throw an error when deployment environment is unsupported', async () => {
+        process.env.DEPLOYMENT_ENVIRONMENT = 'TEST'
+        await expect(checkForErroredJobs()).rejects.toThrow('Unsupported deployment environment: TEST')
     })
 })
