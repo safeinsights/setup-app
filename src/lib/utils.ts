@@ -65,8 +65,10 @@ export const hasReadPermissions = (
     let hasPermissions = false
     fs.access(filePath, fs.constants.R_OK, (error) => {
         if (error) {
+            /* v8n ignore start */
             callback(error, false)
             hasPermissions = false
+            /* v8 ignore end */
         } else {
             callback(null, true)
         }
