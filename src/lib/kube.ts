@@ -1,68 +1,9 @@
 import fs from 'fs'
 import https from 'https'
 import tls from 'tls'
-import { KubernetesApiResponse, KubernetesJob } from './types'
+import { KubernetesJob } from './types'
 
 export const DEFAULT_SERVICE_ACCOUNT_PATH = '/var/run/secrets/kubernetes.io/serviceaccount'
-
-function k8sApiCall(group: string, path: string, method: string, body?: unknown): Promise<KubernetesApiResponse> {
-    const namespace = getNamespace()
-    const kubeAPIServer = process.env.K8S_APISERVER || `https://kubernetes.default.svc.cluster.local`
-    const kubeAPIServerURL = `${kubeAPIServer}/apis/${group}/v1/namespaces/${namespace}/${path}`
-    const kubeAPIServerAccountToken = getKubeAPIServiceAccountToken()
-    initHTTPSTrustStore()
-    console.log(`K8s: Making ${method} => ${kubeAPIServerURL}`)
-    const url = new URL(kubeAPIServerURL)
-    const options: {
-        hostname: string
-        port: number | undefined
-        path: string
-        method: string
-        headers: { [key: string]: string }
-    } = {
-        hostname: url.hostname,
-        port: url.port ? parseInt(url.port, 10) : 443,
-        path: url.pathname + url.search,
-        method: method.toUpperCase(),
-        headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${kubeAPIServerAccountToken}`,
-        },
-    }
-
-    if (method.toUpperCase() === 'POST' && body) {
-        options.headers['Content-Length'] = Buffer.byteLength(JSON.stringify(body)).toString()
-    }
-
-    return new Promise((resolve, reject) => {
-        const req = https.request(options, (response) => {
-            let data = ''
-
-            response.on('data', (chunk) => {
-                data += chunk
-            })
-
-            response.on('end', () => {
-                try {
-                    resolve(JSON.parse(data))
-                } catch (error: unknown) {
-                    reject(new Error(`Failed to parse JSON: ${JSON.stringify(error)}`))
-                }
-            })
-        })
-
-        req.on('error', (error) => {
-            console.error('K8s API => Error:', error)
-            reject(error)
-        })
-
-        if (method.toUpperCase() === 'POST' && body) {
-            req.write(JSON.stringify(body))
-        }
-
-        req.end()
-    })
-}
 
 function getNamespace(): string {
     const namespaceFile = `${process.env.K8S_SERVICEACCOUNT_PATH ?? DEFAULT_SERVICE_ACCOUNT_PATH}/namespace`
@@ -155,11 +96,4 @@ function filterDeployments(
     return []
 }
 
-export {
-    k8sApiCall,
-    getNamespace,
-    initHTTPSTrustStore,
-    getKubeAPIServiceAccountToken,
-    createKubernetesJob,
-    filterDeployments,
-}
+export { getNamespace, initHTTPSTrustStore, getKubeAPIServiceAccountToken, createKubernetesJob, filterDeployments }

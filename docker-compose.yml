@@ -1,0 +1,29 @@
+services:
+    setup-app:
+        env_file: .env
+        container_name: setup-app
+        environment:
+            CI: $CI
+        build:
+            context: .
+            dockerfile: Dockerfile
+        volumes:
+            - type: bind
+              source: ./src
+              target: /code/src
+            - type: bind
+              source: ~/.docker/run/docker.sock 
+              target: /var/run/docker.sock
+              read_only: true
+        restart: no ## Update to always, on-failure or unless-stopped in production environment
+        networks:
+            - setup-app
+        # For local dev only, assuming devs are just running `docker compose up`
+        command: ['npx', 'tsx', 'src/scripts/poll.ts']
+
+        extra_hosts:
+            - 'host.docker.internal:host-gateway'
+networks:
+    setup-app:
+volumes:
+    node_modules:

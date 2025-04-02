@@ -1,6 +1,7 @@
 import { ManagementAppGetReadyStudiesResponse, TOAGetJobsResponse } from './types'
 import { ResourceTagMapping } from '@aws-sdk/client-resource-groups-tagging-api'
 import { JOB_ID_TAG_KEY } from './aws'
+import fs from 'fs'
 
 const getJobIdFromResourceTagMapping = (resource: ResourceTagMapping): string | undefined => {
     return resource.Tags?.find((tag) => tag.Key === JOB_ID_TAG_KEY)?.Value
@@ -55,3 +56,21 @@ export const ensureValueWithError = <T>(value: T | null | undefined, message?: s
     }
     return value
 }
+
+/* v8n ignore start */
+export const hasReadPermissions = (
+    filePath: string,
+    callback: (error: Error | null, hasPermissions: boolean) => void,
+): boolean => {
+    let hasPermissions = false
+    fs.access(filePath, fs.constants.R_OK, (error) => {
+        if (error) {
+            callback(error, false)
+            hasPermissions = false
+        } else {
+            callback(null, true)
+        }
+    })
+    return hasPermissions
+}
+/* v8n ignore end */

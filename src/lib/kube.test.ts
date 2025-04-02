@@ -1,7 +1,13 @@
 import { getServiceAccountDir } from '@/tests/unit.helpers'
 import * as fs from 'fs'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { DEFAULT_SERVICE_ACCOUNT_PATH, getKubeAPIServiceAccountToken, getNamespace, initHTTPSTrustStore } from './kube'
+import {
+    createKubernetesJob,
+    DEFAULT_SERVICE_ACCOUNT_PATH,
+    getKubeAPIServiceAccountToken,
+    getNamespace,
+    initHTTPSTrustStore,
+} from './kube'
 
 vi.mock('https', () => ({
     request: vi.fn(),
@@ -50,5 +56,60 @@ describe('Get Service Account items', () => {
         delete process.env.K8S_SERVICEACCOUNT_PATH
         expect(fs.existsSync(filePath)).toBe(false)
         expect(() => initHTTPSTrustStore()).toThrow(`Certificate file not found!`)
+    })
+
+    it('createKubernetesJob: should return a Kubernetes job object with the correct properties', () => {
+        const imageLocation = 'my-image'
+        const jobId = '1234567890'
+        const studyTitle = 'My Study Title'
+        const toaEndpointWithJobId = 'https://example.com/toa?job_id=1234567890'
+
+        const job = createKubernetesJob(imageLocation, jobId, studyTitle, toaEndpointWithJobId)
+
+        expect(job).toEqual({
+            apiVersion: 'batch/v1',
+            kind: 'Job',
+            metadata: {
+                name: `research-container-${jobId}`,
+                namespace: getNamespace(),
+                labels: {
+                    app: `research-container-${jobId}`,
+                    component: 'research-container',
+                    'part-of': studyTitle.toLowerCase(),
+                    instance: jobId,
+                    'managed-by': 'setup-app',
+                },
+            },
+            spec: {
+                template: {
+                    metadata: {
+                        labels: {
+                            app: `research-container-${jobId}`,
+                            component: 'research-container',
+                            'part-of': studyTitle.toLowerCase(),
+                            instance: jobId,
+                            'managed-by': 'setup-app',
+                            role: 'toa-access',
+                        },
+                    },
+                    spec: {
+                        containers: [
+                            {
+                                name: `research-container-${jobId}`,
+                                image: imageLocation,
+                                ports: [],
+                            },
+                        ],
+                        env: [
+                            {
+                                name: 'TRUSTED_OUTPUT_ENDPOINT',
+                                value: toaEndpointWithJobId,
+                            },
+                        ],
+                        restartPolicy: 'Never',
+                    },
+                },
+            },
+        })
     })
 })

@@ -1,107 +1,6 @@
-import fs from 'fs'
-import http from 'http'
-import https from 'https'
+import { dockerApiCall } from './api'
 import { DockerApiContainersResponse, DockerApiResponse } from './types'
-
-function hasReadPermissions(
-    filePath: string,
-    callback: (error: Error | null, hasPermissions: boolean) => void,
-): boolean {
-    let hasPermissions = false
-    fs.access(filePath, fs.constants.R_OK, (error) => {
-        if (error) {
-            callback(error, false)
-            hasPermissions = false
-        } else {
-            callback(null, true)
-        }
-    })
-    return hasPermissions
-}
-function dockerApiCall(
-    method: string,
-    path: string,
-    body?: unknown,
-    ignoreResponse: boolean = false,
-): Promise<DockerApiResponse> {
-    const protocol = process.env.DOCKER_API_PROTOCOL ?? 'https'
-    const host = process.env.DOCKER_API_HOST ?? 'localhost'
-    const port = process.env.DOCKER_API_PORT ?? 443
-    const apiVersion = process.env.DOCKER_API_VERSION ?? 'v1.48'
-    const socketPath = process.env.DOCKER_SOCKET ?? '/var/run/docker.sock'
-    path = path.startsWith('/') ? path : `/${path}`
-    const url = new URL(`${protocol}://${host}:${port}/${apiVersion}${path}`)
-    console.log(`Connecting to docker Engine API: ${url.toString()}`)
-    const options: {
-        hostname: string
-        port: number | undefined
-        path: string
-        method: string
-        socketPath: string | undefined
-        headers: { [key: string]: string }
-    } = {
-        hostname: url.hostname,
-        port: url.port ? parseInt(url.port, 10) : 443,
-        path: url.pathname + url.search,
-        method: method.toUpperCase(),
-        socketPath: undefined,
-        headers: {
-            'Content-Type': 'application/json',
-            'X-Registry-Auth': process.env.DOCKER_REGISTRY_AUTH ?? '',
-        },
-    }
-    console.log(`Headers: ${JSON.stringify(options.headers)}`)
-    let msg: string = ''
-    const canReadDockerSock = hasReadPermissions(socketPath, (error: Error | null) => {
-        if (error) {
-            msg = `Error Accessing file ${socketPath}. Cause: ${JSON.stringify(error)}`
-        } else {
-            msg = `The Docker socket was found with sufficient permissions at: ${socketPath}`
-        }
-    })
-    if (canReadDockerSock) {
-        options.socketPath = socketPath
-    }
-    console.log(`${msg}`)
-    if (method.toUpperCase() === 'POST' && body) {
-        console.log(`Sending POST request to Docker API with body: ${JSON.stringify(body)}`)
-        options.headers['Content-Length'] = Buffer.byteLength(JSON.stringify(body)).toString()
-    }
-    return new Promise((resolve, reject) => {
-        const req = (protocol === 'http' ? http : https).request(options, (response) => {
-            let data = ''
-
-            response.on('data', (chunk) => {
-                data += chunk
-            })
-
-            response.on('end', () => {
-                try {
-                    console.log(`Response: ${data}`)
-                    if (data && !ignoreResponse) {
-                        const result: DockerApiResponse = JSON.parse(data)
-                        if ('message' in result) reject(result)
-                        else resolve(result)
-                    }
-                    resolve({})
-                } catch (error: unknown) {
-                    reject(new Error(`Failed to parse JSON: ${JSON.stringify(error)}`))
-                }
-            })
-        })
-
-        req.on('error', (error) => {
-            console.error('Docker API => Error:', error)
-            reject(error)
-        })
-
-        if (method.toUpperCase() === 'POST' && body) {
-            req.write(JSON.stringify(body))
-        }
-
-        req.end()
-    })
-}
+import { hasReadPermissions } from './utils'
 
 async function pullContainer(imageLocation: string): Promise<DockerApiResponse> {
     const path = `images/create?fromImage=${imageLocation}`
@@ -114,6 +13,7 @@ async function pullContainer(imageLocation: string): Promise<DockerApiResponse> 
         throw new Error(errMsg)
     }
 }
+
 function createContainerObject(imageLocation: string, jobId: string, studyTitle: string, toaEndpointWithjobId: string) {
     const name = `research-container-${jobId}`
     studyTitle = studyTitle.toLowerCase()
@@ -148,4 +48,4 @@ function filterContainers(
     return []
 }
 
-export { createContainerObject, dockerApiCall, filterContainers, pullContainer }
+export { createContainerObject, filterContainers, hasReadPermissions, pullContainer }
