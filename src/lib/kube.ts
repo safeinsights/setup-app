@@ -27,8 +27,9 @@ function initHTTPSTrustStore(): void {
     if (!fs.existsSync(certFile)) {
         throw new Error(`Certificate file not found!`)
     }
-    /* v8 ignore next 2 */
+    /* v8 ignore start */
     https.globalAgent.options.ca = [...tls.rootCertificates, fs.readFileSync(certFile, 'utf8')]
+    /* v8 ignore end */
 }
 
 function createKubernetesJob(imageLocation: string, jobId: string, studyTitle: string, toaEndpointWithJobId: string) {

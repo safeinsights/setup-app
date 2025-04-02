@@ -8,6 +8,7 @@ export const checkForErroredJobs = async (): Promise<void> => {
         await checkForAWSErroredJobs()
     } else if (deploymentEnvironment === 'KUBERNETES') {
         console.log('Running Setup App in Kubernetes environment')
+        /* v8 ignore next */
         await new KubernetesEnclave().checkForErroredJobs()
     } else if (deploymentEnvironment === 'DOCKER') {
         console.log('Running Setup App in Docker environment')

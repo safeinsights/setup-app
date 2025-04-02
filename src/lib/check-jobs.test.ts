@@ -1,6 +1,6 @@
-import { describe, it, expect, vi } from 'vitest'
-import { checkForErroredJobs } from './check-jobs'
+import { describe, expect, it, vi } from 'vitest'
 import * as acj from './aws-check-jobs'
+import { checkForErroredJobs } from './check-jobs'
 import { DockerEnclave } from './docker-enclave'
 import { KubernetesEnclave } from './kube-enclave'
 
