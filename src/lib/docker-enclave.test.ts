@@ -118,7 +118,7 @@ describe('DockerEnclave', () => {
                 Status: 'completed',
             },
         ]
-        const dockerApiCall = vi.mocked(docker.dockerApiCall).mockResolvedValue({ Id: '' })
+        const dockerApiCall = vi.mocked(api.dockerApiCall).mockResolvedValue({ Id: '' })
         vi.spyOn(enclave, 'getAllStudiesInEnclave').mockResolvedValue(jobs)
         vi.mocked(docker.filterContainers).mockReturnValue(jobs)
         await enclave.cleanup()
@@ -128,7 +128,7 @@ describe('DockerEnclave', () => {
     })
 
     it('getAllStudiesInEnclave: should return an empty array if there are no containers', async () => {
-        const dockerApiCall = vi.mocked(docker.dockerApiCall).mockResolvedValue([])
+        const dockerApiCall = vi.mocked(api.dockerApiCall).mockResolvedValue([])
         const enclave = new DockerEnclave()
         const containers = await enclave.getAllStudiesInEnclave()
 
@@ -137,7 +137,7 @@ describe('DockerEnclave', () => {
     })
 
     it('getAllStudiesInEnclave: Return empty when the api call throws an error', async () => {
-        const dockerApiCall = vi.mocked(docker.dockerApiCall).mockRejectedValue(new Error('Error'))
+        const dockerApiCall = vi.mocked(api.dockerApiCall).mockRejectedValue(new Error('Error'))
         const enclave = new DockerEnclave()
         const containers = await enclave.getAllStudiesInEnclave()
         expect(containers).toEqual([])
@@ -175,7 +175,7 @@ describe('DockerEnclave', () => {
                 Status: 'completed',
             },
         ]
-        const dockerApiCall = vi.mocked(docker.dockerApiCall).mockResolvedValue(jobs)
+        const dockerApiCall = vi.mocked(api.dockerApiCall).mockResolvedValue(jobs)
 
         const enclave = new DockerEnclave()
         const result = await enclave.getAllStudiesInEnclave()
@@ -252,7 +252,7 @@ describe('DockerEnclave', () => {
 
     it('launchStudy: should call docker.pullContainer with the correct image', async () => {
         const enclave = new DockerEnclave()
-        vi.mocked(docker.dockerApiCall).mockResolvedValue([])
+        vi.mocked(api.dockerApiCall).mockResolvedValue([])
         const job = {
             containerLocation: 'my-image:latest',
             jobId: '123',
@@ -269,7 +269,7 @@ describe('DockerEnclave', () => {
         expect(docker.pullContainer).toHaveBeenCalledWith('my-image:latest')
     })
 
-    it('launchStudy: should call docker.dockerApiCall with the correct path and data', async () => {
+    it('launchStudy: should call api.dockerApiCall with the correct path and data', async () => {
         const enclave = new DockerEnclave()
 
         const container = {
@@ -283,7 +283,7 @@ describe('DockerEnclave', () => {
             },
             Env: [`TRUSTED_OUTPUT_ENDPOINT=http://example.com/job/123`],
         }
-        vi.mocked(docker.dockerApiCall).mockResolvedValue({ Id: '123' })
+        vi.mocked(api.dockerApiCall).mockResolvedValue({ Id: '123' })
         vi.mocked(docker.createContainerObject).mockResolvedValue(container)
 
         const job = {
@@ -300,10 +300,10 @@ describe('DockerEnclave', () => {
             'http://example.com/job/123',
         )
         expect(docker.pullContainer).toHaveBeenCalledWith('my-image:latest')
-        expect(docker.dockerApiCall).nthCalledWith(1, 'POST', `containers/create?name=rc-123`, container)
+        expect(api.dockerApiCall).nthCalledWith(1, 'POST', `containers/create?name=rc-123`, container)
     })
 
-    it('launcStudy: should call docker.dockerApiCall with the correct path and data when starting the container', async () => {
+    it('launcStudy: should call api.dockerApiCall with the correct path and data when starting the container', async () => {
         const enclave = new DockerEnclave()
         const job = {
             containerLocation: 'my-image:latest',
@@ -314,9 +314,9 @@ describe('DockerEnclave', () => {
         const response = {
             Id: 'abc123',
         }
-        vi.mocked(docker.dockerApiCall).mockResolvedValueOnce(response)
+        vi.mocked(api.dockerApiCall).mockResolvedValueOnce(response)
         await enclave.launchStudy(job, job.toaEndpointWithJobId)
-        expect(docker.dockerApiCall).toHaveBeenCalledWith('POST', `containers/${response.Id}/start`, undefined, true)
+        expect(api.dockerApiCall).toHaveBeenCalledWith('POST', `containers/${response.Id}/start`, undefined, true)
     })
 
     it('should throw an error if the docker API call fails', async () => {
@@ -328,7 +328,7 @@ describe('DockerEnclave', () => {
             toaEndpointWithJobId: 'http://example.com/job/123',
         }
         const error = new Error('Docker API Call Error: Failed to deploy My Study with run id 123. Cause: {}')
-        vi.mocked(docker.dockerApiCall).mockRejectedValueOnce(error)
+        vi.mocked(api.dockerApiCall).mockRejectedValueOnce(error)
         await expect(enclave.launchStudy(job, job.toaEndpointWithJobId)).rejects.toThrow(error)
     })
 
@@ -365,7 +365,7 @@ describe('DockerEnclave', () => {
             },
         ]
         const mockUpdateJobStatus = vi.mocked(api.toaUpdateJobStatus)
-        vi.mocked(docker.dockerApiCall).mockResolvedValue(failedContainers)
+        vi.mocked(api.dockerApiCall).mockResolvedValue(failedContainers)
         vi.mocked(docker.filterContainers).mockResolvedValue(failedContainers)
         await enclave.checkForErroredJobs()
         expect(mockUpdateJobStatus).nthCalledWith(1, '1234567890', {

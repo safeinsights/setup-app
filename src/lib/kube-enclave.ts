@@ -1,5 +1,6 @@
+import { k8sApiCall } from './api'
 import { Enclave, IEnclave } from './enclave'
-import { createKubernetesJob, filterDeployments, k8sApiCall } from './kube'
+import { createKubernetesJob, filterDeployments } from './kube'
 import {
     KubernetesApiJobsResponse,
     KubernetesApiResponse,
