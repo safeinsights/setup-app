@@ -12,7 +12,7 @@ services:
               source: ./src
               target: /code/src
             - type: bind
-              source: ~/.docker/run/docker.sock 
+              source: ~/.docker/run/docker.sock
               target: /var/run/docker.sock
               read_only: true
         restart: no ## Update to always, on-failure or unless-stopped in production environment
