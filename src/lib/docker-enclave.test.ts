@@ -284,7 +284,7 @@ describe('DockerEnclave', () => {
             Env: [`TRUSTED_OUTPUT_ENDPOINT=http://example.com/job/123`],
         }
         vi.mocked(api.dockerApiCall).mockResolvedValue({ Id: '123' })
-        vi.mocked(docker.createContainerObject).mockResolvedValue(container)
+        vi.mocked(docker.createContainerObject).mockReturnValue(container)
 
         const job = {
             containerLocation: 'my-image:latest',
@@ -366,7 +366,7 @@ describe('DockerEnclave', () => {
         ]
         const mockUpdateJobStatus = vi.mocked(api.toaUpdateJobStatus)
         vi.mocked(api.dockerApiCall).mockResolvedValue(failedContainers)
-        vi.mocked(docker.filterContainers).mockResolvedValue(failedContainers)
+        vi.mocked(docker.filterContainers).mockReturnValue(failedContainers)
         await enclave.checkForErroredJobs()
         expect(mockUpdateJobStatus).nthCalledWith(1, '1234567890', {
             status: 'JOB-ERRORED',
