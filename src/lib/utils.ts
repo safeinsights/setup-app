@@ -57,7 +57,7 @@ export const ensureValueWithError = <T>(value: T | null | undefined, message?: s
     return value
 }
 
-/* v8n ignore start */
+/* v8 ignore start */
 export const hasReadPermissions = (
     filePath: string,
     callback: (error: Error | null, hasPermissions: boolean) => void,
@@ -65,14 +65,12 @@ export const hasReadPermissions = (
     let hasPermissions = false
     fs.access(filePath, fs.constants.R_OK, (error) => {
         if (error) {
-            /* v8n ignore start */
             callback(error, false)
             hasPermissions = false
-            /* v8 ignore end */
         } else {
             callback(null, true)
         }
     })
     return hasPermissions
 }
-/* v8n ignore end */
+/* v8 ignore end */

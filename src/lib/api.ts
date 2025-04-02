@@ -54,6 +54,7 @@ export const managementAppGetReadyStudiesRequest = async (): Promise<ManagementA
 
 // Functions for interacting with the Trusted Output App
 const generateTOAToken = (): string => {
+    /* v8 ignore next */
     const token = Buffer.from(process.env.TOA_BASIC_AUTH ?? '').toString('base64')
     if (token.length === 0) {
         throw new Error('TOA token failed to generate')
