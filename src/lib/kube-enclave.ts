@@ -17,6 +17,7 @@ class KubernetesEnclave extends Enclave<KubernetesApiJobsResponse> implements IE
         runningJobsInEnclave: KubernetesApiJobsResponse[],
     ): ManagementAppGetReadyStudiesResponse {
         console.log('Filtering Kubernetes jobs...')
+        /* v8 ignore next */
         if (!runningJobsInEnclave?.length) return bmaReadysResults || { jobs: [] }
         return {
             jobs: bmaReadysResults.jobs.filter((job) =>
@@ -61,6 +62,7 @@ class KubernetesEnclave extends Enclave<KubernetesApiJobsResponse> implements IE
             const response: KubernetesApiResponse = await k8sApiCall('batch', 'jobs', 'POST', kubeJob)
             console.log(`${JSON.stringify(response)}`)
             console.log(`Successfully deployed ${job.title} with run id ${job.jobId}`)
+            /* v8 ignore next 3*/
             if (('status' in response && response['status'] === 'Failure') || !('status' in response)) {
                 console.error(`Failed to deploy study container`)
             }

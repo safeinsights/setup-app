@@ -2,12 +2,124 @@ import { describe, expect, it, vi } from 'vitest'
 import * as api from './api'
 import * as kube from './kube'
 import { KubernetesEnclave } from './kube-enclave'
-import { KubernetesJob } from './types'
+import {
+    KubernetesApiJobsResponse,
+    KubernetesJob,
+    ManagementAppGetReadyStudiesResponse,
+    TOAGetJobsResponse,
+} from './types'
 
 vi.mock('./kube')
 vi.mock('./api')
 
 describe('KubernetesEnclave', () => {
+    it('filterJobsInEnclave should return jobs that are in the enclave', () => {
+        const bmaReadysResults: ManagementAppGetReadyStudiesResponse = {
+            jobs: [
+                {
+                    jobId: '1234567890',
+                    title: 'Test Job 1',
+                    containerLocation: 'test/container-1',
+                },
+                {
+                    jobId: '0987654321',
+                    title: 'Test Job 2',
+                    containerLocation: 'test/container-2',
+                },
+            ],
+        }
+
+        const toaGetJobsResult: TOAGetJobsResponse = {
+            jobs: [
+                {
+                    jobId: '1234567890',
+                },
+                {
+                    jobId: '0987654321',
+                },
+            ],
+        }
+
+        const runningJobsInEnclave: KubernetesApiJobsResponse[] = [
+            {
+                items: [
+                    {
+                        metadata: {
+                            name: 'rc-1234567890',
+                            namespace: 'test',
+                            labels: {
+                                app: 'rc-1234567890',
+                                component: 'research-container',
+                                'managed-by': 'setup-app',
+                                role: 'toa-access',
+                                instance: '1234567890',
+                            },
+                        },
+                        spec: {
+                            selector: {
+                                matchLabels: {
+                                    studyId: 'rc-1234567890',
+                                    jobId: '1234567890',
+                                },
+                            },
+                        },
+                        status: {
+                            active: 0,
+                            startTime: 'startTime',
+                        },
+                    },
+                    {
+                        metadata: {
+                            name: 'rc-0987654321',
+                            namespace: 'test',
+                            labels: {
+                                app: 'rc-0987654321',
+                                component: 'research-container',
+                                'managed-by': 'setup-app',
+                                role: 'toa-access',
+                                instance: '0987654321',
+                            },
+                        },
+                        spec: {
+                            selector: {
+                                matchLabels: {
+                                    studyId: 'rc-0987654321',
+                                    jobId: '0987654321',
+                                },
+                            },
+                        },
+                        status: {
+                            active: 0,
+                            startTime: 'startTime',
+                        },
+                    },
+                ],
+            },
+        ]
+
+        const kubernetesEnclave = new KubernetesEnclave()
+        const filteredJobs = kubernetesEnclave.filterJobsInEnclave(
+            bmaReadysResults,
+            toaGetJobsResult,
+            runningJobsInEnclave,
+        )
+
+        expect(filteredJobs).toEqual({
+            jobs: [
+                {
+                    jobId: '1234567890',
+                    title: 'Test Job 1',
+                    containerLocation: 'test/container-1',
+                },
+                {
+                    jobId: '0987654321',
+                    title: 'Test Job 2',
+                    containerLocation: 'test/container-2',
+                },
+            ],
+        })
+    })
+
     it('launchStudy should call k8sApiCall with the correct path and data', async () => {
         const enclave = new KubernetesEnclave()
 
@@ -176,6 +288,14 @@ describe('KubernetesEnclave', () => {
         const jobs = await enclave.getAllStudiesInEnclave()
 
         expect(jobs).toEqual([{ items: [] }])
+        expect(k8sApiCall).toHaveBeenCalledWith('batch', 'jobs', 'GET')
+    })
+    it('getAllStudiesInEnclave: should return an empty array if an error occured', async () => {
+        const k8sApiCall = vi.mocked(api.k8sApiCall).mockRejectedValue(new Error('Error'))
+        const enclave = new KubernetesEnclave()
+        const jobs = await enclave.getAllStudiesInEnclave()
+
+        expect(jobs).toEqual([])
         expect(k8sApiCall).toHaveBeenCalledWith('batch', 'jobs', 'GET')
     })
     it('getAllStudiesInEnclave: should return a list of jobs if they exist', async () => {
