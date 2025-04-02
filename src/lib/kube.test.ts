@@ -4,10 +4,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
     createKubernetesJob,
     DEFAULT_SERVICE_ACCOUNT_PATH,
+    filterDeployments,
     getKubeAPIServiceAccountToken,
     getNamespace,
     initHTTPSTrustStore,
 } from './kube'
+import { KubernetesJob } from './types'
 
 vi.mock('https', () => ({
     request: vi.fn(),
@@ -111,5 +113,65 @@ describe('Get Service Account items', () => {
                 },
             },
         })
+    })
+    it('filterDeployments: filters deployments by labels', () => {
+        const deployments: KubernetesJob[] = [
+            {
+                metadata: {
+                    name: 'test',
+                    namespace: 'test',
+                    labels: {
+                        studyId: 'ABC123',
+                        jobId: 'XYZ789',
+                    },
+                },
+                spec: {
+                    selector: {
+                        matchLabels: {
+                            studyId: 'ABC123',
+                            jobId: 'XYZ789',
+                        },
+                    },
+                },
+                status: {
+                    active: 1,
+                    startTime: 'startTime',
+                },
+            },
+            {
+                metadata: {
+                    name: 'test',
+                    namespace: 'test',
+                    labels: {
+                        studyId: 'DEF456',
+                        jobId: 'IJK123',
+                    },
+                },
+                spec: {
+                    selector: {
+                        matchLabels: {
+                            studyId: 'DEF456',
+                            jobId: 'IJK123',
+                        },
+                    },
+                },
+                status: {
+                    active: 0,
+                    startTime: 'startTime',
+                },
+            },
+        ]
+
+        const filteredDeployments = filterDeployments(deployments, { studyId: 'ABC123', jobId: 'XYZ789' })
+
+        expect(filteredDeployments).toHaveLength(1)
+        expect(filteredDeployments[0].metadata.labels.studyId).toBe('ABC123')
+    })
+
+    it('filterDeployments: return empty if deployments is empty', () => {
+        const deployments: KubernetesJob[] = []
+        const filteredDeployments = filterDeployments(deployments, { studyId: 'ABC123', jobId: 'XYZ789' })
+
+        expect(filteredDeployments).toHaveLength(0)
     })
 })

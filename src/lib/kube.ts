@@ -27,6 +27,7 @@ function initHTTPSTrustStore(): void {
     if (!fs.existsSync(certFile)) {
         throw new Error(`Certificate file not found!`)
     }
+    /* v8 ignore next */
     https.globalAgent.options.ca = [...tls.rootCertificates, fs.readFileSync(certFile, 'utf8')]
 }
 
