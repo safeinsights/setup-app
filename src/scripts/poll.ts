@@ -6,7 +6,6 @@ const pollForErroredJobsInterval = parseInt(process.env.POLL_ERRORED_JOBS_INTERV
 
 console.log('Polling interval for studies:', pollStudiesInterval)
 console.log('Polling interval for failed jobs:', pollForErroredJobsInterval)
-
 function pollStudies(): void {
     console.log(`Polling management app at ${new Date()}`)
 

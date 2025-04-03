@@ -1,182 +1,32 @@
-import { vi, describe, it, expect } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import * as acj from './aws-check-jobs'
 import { checkForErroredJobs } from './check-jobs'
-import * as api from './api'
-import * as aws from './aws'
-import { ECSClient, TaskStopCode } from '@aws-sdk/client-ecs'
+import { DockerEnclave } from './docker-enclave'
+import { KubernetesEnclave } from './kube-enclave'
 
-vi.mock('./api')
-vi.mock('./aws')
-
-describe('checkForErroredJobs()', () => {
-    it('exits early if there are no tasks with jobId tag', async () => {
-        vi.mocked(aws.getAllTasksWithJobId).mockResolvedValue([])
-
-        const mockDescribeECSTasks = vi.mocked(aws.describeECSTasks)
+vi.mock('./aws-check-jobs')
+describe('checkForErroredJobs', () => {
+    it('should call checkForAWSErroredJobs when deployment environment is AWS', async () => {
+        process.env.DEPLOYMENT_ENVIRONMENT = 'AWS'
+        const checkForAWSErroredJobsMock = vi.mocked(acj.checkForAWSErroredJobs)
         await checkForErroredJobs()
-
-        expect(mockDescribeECSTasks).not.toHaveBeenCalled()
+        expect(checkForAWSErroredJobsMock).toHaveBeenCalled()
     })
-    it('makes call to TOA for task that fails to start', async () => {
-        vi.mocked(aws.getAllTasksWithJobId).mockResolvedValue([
-            {
-                ResourceARN: 'arn1',
-            },
-            {
-                ResourceARN: 'arn2',
-            },
-        ])
-
-        const mockDescribeECSTasks = vi.mocked(aws.describeECSTasks)
-        const mockToaUpdateJobStatus = vi.mocked(api.toaUpdateJobStatus)
-        const mockTask = {
-            stopCode: TaskStopCode.TASK_FAILED_TO_START,
-            tags: [
-                {
-                    key: aws.JOB_ID_TAG_KEY,
-                    value: 'jobId1',
-                },
-            ],
-        }
-        mockDescribeECSTasks.mockResolvedValue({
-            tasks: [mockTask],
-            $metadata: {},
-        })
-
+    it('should call docker error check when deployment environment is DOCKER', async () => {
+        process.env.DEPLOYMENT_ENVIRONMENT = 'DOCKER'
+        const checkForDockerErroredJobsMock = vi.spyOn(DockerEnclave.prototype, 'checkForErroredJobs')
         await checkForErroredJobs()
-
-        expect(mockDescribeECSTasks).toHaveBeenCalledOnce()
-        expect(mockDescribeECSTasks).toHaveBeenCalledWith(expect.any(ECSClient), 'MOCK_ECS_CLUSTER', ['arn1', 'arn2'])
-        expect(mockToaUpdateJobStatus).toHaveBeenCalledOnce()
-        expect(mockToaUpdateJobStatus).toHaveBeenLastCalledWith('jobId1', {
-            status: 'JOB-ERRORED',
-            message: 'Task failed to start',
-        })
+        expect(checkForDockerErroredJobsMock).toHaveBeenCalled()
     })
-    it('makes call to TOA for task that exits with non-zero exit code', async () => {
-        vi.mocked(aws.getAllTasksWithJobId).mockResolvedValue([
-            {
-                ResourceARN: 'arn1',
-            },
-            {
-                ResourceARN: 'arn2',
-            },
-        ])
 
-        const mockDescribeECSTasks = vi.mocked(aws.describeECSTasks)
-        const mockToaUpdateJobStatus = vi.mocked(api.toaUpdateJobStatus)
-        const mockTask = {
-            containers: [{ exitCode: 1 }],
-            stopCode: TaskStopCode.ESSENTIAL_CONTAINER_EXITED,
-            tags: [
-                {
-                    key: aws.JOB_ID_TAG_KEY,
-                    value: 'jobId1',
-                },
-            ],
-        }
-        mockDescribeECSTasks.mockResolvedValue({
-            tasks: [mockTask],
-            $metadata: {},
-        })
-
-        await checkForErroredJobs()
-
-        expect(mockDescribeECSTasks).toHaveBeenCalledOnce()
-        expect(mockDescribeECSTasks).toHaveBeenCalledWith(expect.any(ECSClient), 'MOCK_ECS_CLUSTER', ['arn1', 'arn2'])
-        expect(mockToaUpdateJobStatus).toHaveBeenCalledOnce()
-        expect(mockToaUpdateJobStatus).toHaveBeenLastCalledWith('jobId1', {
-            status: 'JOB-ERRORED',
-            message: 'Task container stopped with non-zero exit code',
-        })
+    it('should call kubernetes error check when deployment environment is Kubernetes', async () => {
+        process.env.DEPLOYMENT_ENVIRONMENT = 'KUBERNETES'
+        const checkForKubernetesErroredJobsMock = vi.spyOn(KubernetesEnclave.prototype, 'checkForErroredJobs')
+        await expect(checkForErroredJobs()).rejects.toThrow('Method not implemented.')
+        expect(checkForKubernetesErroredJobsMock).toHaveBeenCalled()
     })
-    it('does not make call to TOA for task that exits with zero exit code', async () => {
-        vi.mocked(aws.getAllTasksWithJobId).mockResolvedValue([
-            {
-                ResourceARN: 'arn1',
-            },
-            {
-                ResourceARN: 'arn2',
-            },
-        ])
-
-        const mockDescribeECSTasks = vi.mocked(aws.describeECSTasks)
-        const mockToaUpdateJobStatus = vi.mocked(api.toaUpdateJobStatus)
-        const mockTask = {
-            containers: [{ exitCode: 0 }],
-            stopCode: TaskStopCode.ESSENTIAL_CONTAINER_EXITED,
-            tags: [
-                {
-                    key: aws.JOB_ID_TAG_KEY,
-                    value: 'jobId1',
-                },
-            ],
-        }
-        mockDescribeECSTasks.mockResolvedValue({
-            tasks: [mockTask],
-            $metadata: {},
-        })
-
-        await checkForErroredJobs()
-
-        expect(mockDescribeECSTasks).toHaveBeenCalledOnce()
-        expect(mockDescribeECSTasks).toHaveBeenCalledWith(expect.any(ECSClient), 'MOCK_ECS_CLUSTER', ['arn1', 'arn2'])
-        expect(mockToaUpdateJobStatus).not.toHaveBeenCalled()
-    })
-    it('behaves gracefully when describeECSTasks returns undefined tasks', async () => {
-        vi.mocked(aws.getAllTasksWithJobId).mockResolvedValue([
-            {
-                ResourceARN: 'arn1',
-            },
-            {
-                ResourceARN: 'arn2',
-            },
-        ])
-
-        const mockDescribeECSTasks = vi.mocked(aws.describeECSTasks)
-        const mockToaUpdateJobStatus = vi.mocked(api.toaUpdateJobStatus)
-
-        mockDescribeECSTasks.mockResolvedValue({
-            tasks: undefined,
-            $metadata: {},
-        })
-
-        await checkForErroredJobs()
-
-        expect(mockDescribeECSTasks).toHaveBeenCalledOnce()
-        expect(mockDescribeECSTasks).toHaveBeenCalledWith(expect.any(ECSClient), 'MOCK_ECS_CLUSTER', ['arn1', 'arn2'])
-        expect(mockToaUpdateJobStatus).not.toHaveBeenCalled()
-    })
-    it('behaves gracefully if stopped task has no container data', async () => {
-        vi.mocked(aws.getAllTasksWithJobId).mockResolvedValue([
-            {
-                ResourceARN: 'arn1',
-            },
-            {
-                ResourceARN: 'arn2',
-            },
-        ])
-
-        const mockDescribeECSTasks = vi.mocked(aws.describeECSTasks)
-        const mockToaUpdateJobStatus = vi.mocked(api.toaUpdateJobStatus)
-        const mockTask = {
-            containers: undefined,
-            stopCode: TaskStopCode.ESSENTIAL_CONTAINER_EXITED,
-            tags: [
-                {
-                    key: aws.JOB_ID_TAG_KEY,
-                    value: 'jobId1',
-                },
-            ],
-        }
-        mockDescribeECSTasks.mockResolvedValue({
-            tasks: [mockTask],
-            $metadata: {},
-        })
-
-        await checkForErroredJobs()
-
-        expect(mockDescribeECSTasks).toHaveBeenCalledOnce()
-        expect(mockDescribeECSTasks).toHaveBeenCalledWith(expect.any(ECSClient), 'MOCK_ECS_CLUSTER', ['arn1', 'arn2'])
-        expect(mockToaUpdateJobStatus).not.toHaveBeenCalled()
+    it('should throw an error when deployment environment is unsupported', async () => {
+        process.env.DEPLOYMENT_ENVIRONMENT = 'TEST'
+        await expect(checkForErroredJobs()).rejects.toThrow('Unsupported deployment environment: TEST')
     })
 })

@@ -30,7 +30,7 @@ describe('managementAppGetReadyStudiesRequest', () => {
             expiresIn: 60,
         })
         expect(global.fetch).toHaveBeenCalledOnce()
-        expect(global.fetch).toHaveBeenCalledWith('http://bma:12345/api/studies/ready', {
+        expect(global.fetch).toHaveBeenCalledWith('https://bma:12345/api/studies/ready', {
             method: 'GET',
             headers: {
                 Authorization: 'Bearer mocktokenvalue',
@@ -88,7 +88,7 @@ describe('toaGetJobsRequest', () => {
         const result = await toaGetJobsRequest()
 
         const mockToken = Buffer.from('testusername:testpassword').toString('base64')
-        expect(global.fetch).toHaveBeenCalledWith('http://toa:67890/api/jobs', {
+        expect(global.fetch).toHaveBeenCalledWith('https://toa:67890/api/jobs', {
             method: 'GET',
             headers: {
                 Authorization: `Basic ${mockToken}`,
@@ -130,7 +130,7 @@ describe('toaUpdateJobStatus', () => {
         const result = await toaUpdateJobStatus('jobId1234', { status: 'JOB-ERRORED', message: 'Error message' })
 
         const mockToken = Buffer.from('testusername:testpassword').toString('base64')
-        expect(global.fetch).toHaveBeenCalledWith('http://toa:67890/api/job/jobId1234', {
+        expect(global.fetch).toHaveBeenCalledWith('https://toa:67890/api/job/jobId1234', {
             method: 'PUT',
             headers: {
                 Authorization: `Basic ${mockToken}`,
