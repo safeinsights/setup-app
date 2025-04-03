@@ -2,8 +2,8 @@
 
 ## This application is responsible for:
 
-- Polling the Management App for studies that are ready.
-- Running the Research Container against Secure Enclave data sets.
+-   Polling the Management App for studies that are ready.
+-   Running the Research Container against Secure Enclave data sets.
 
 ## Development
 
@@ -36,7 +36,7 @@ $ npx tsx ./src/scripts/manual-run.ts
 
 Options:
 
-- `--ignore-aws`: provide if you do not want the setup app to filter out jobs that have previously been created in AWS, i.e. if you want to run the same job twice.
+-   `--ignore-aws`: provide if you do not want the setup app to filter out jobs that have previously been created in AWS, i.e. if you want to run the same job twice.
 
 ### Authentication with Management App
 
@@ -54,20 +54,20 @@ Currently, the Docker and Kubernetes environments extend `Enclave` as `DockerEnc
 
 The Setup App can be deployed in a Docker environment using the [docker-compose.yml](docker-compose.yml) file. The Docker engine API is used to perform various operations such as:
 
-- Pulling images from private registries
-- Listing and filtering containers
-- Starting, stopping, and removing containers
+-   Pulling images from private registries
+-   Listing and filtering containers
+-   Starting, stopping, and removing containers
 
 #### Requirements
 
 To start the Setup app using Docker, the following environment variables must be set:
 
-- `DEPLOYMENT_ENVIRONMENT`: Set to `DOCKER` to indicate that the deployment is running in a Docker environment.
-- `DOCKER_SOCKET`: Points to the path where the `docker.sock` file is mounted. This socket is used to build REST API requests to the Docker Engine.
-- `DOCKER_API_HOST`: Specifies the host where the Docker Engine API is available.
-- `DOCKER_API_PORT`: Indicates the port where the Docker Engine API is exposed.
-- `DOCKER_API_VERSION`: Specifies the version of the Docker Engine API to use when building URLs for REST requests.
-- `DOCKER_REGISTRY_AUTH`: A base64-encoded value used to authenticate against private registries.
+-   `DEPLOYMENT_ENVIRONMENT`: Set to `DOCKER` to indicate that the deployment is running in a Docker environment.
+-   `DOCKER_SOCKET`: Points to the path where the `docker.sock` file is mounted. This socket is used to build REST API requests to the Docker Engine.
+-   `DOCKER_API_HOST`: Specifies the host where the Docker Engine API is available.
+-   `DOCKER_API_PORT`: Indicates the port where the Docker Engine API is exposed.
+-   `DOCKER_API_VERSION`: Specifies the version of the Docker Engine API to use when building URLs for REST requests.
+-   `DOCKER_REGISTRY_AUTH`: A base64-encoded value used to authenticate against private registries.
 
 #### Enabling the Docker Engine API (Development)
 
