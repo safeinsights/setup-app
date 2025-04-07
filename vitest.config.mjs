@@ -14,7 +14,8 @@ export default defineConfig({
         reporters: ['verbose'],
         include: ['src/lib/*.(test).{js,jsx,ts,tsx}'],
         coverage: {
-            enabled: Boolean(IS_CI || process.env.COVERAGE),
+            // eslint-disable-next-line no-undef
+            enabled: Boolean(!!process.env.CI || process.env.COVERAGE),
             thresholds: { 100: true },
             include: ['src/lib/*.{js,jsx,ts,tsx}'],
             reportsDirectory: 'tmp/code-coverage/unit',
