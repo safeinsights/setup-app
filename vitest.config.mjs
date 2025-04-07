@@ -18,7 +18,7 @@ export default defineConfig({
             enabled: Boolean(!!process.env.CI || process.env.COVERAGE),
             thresholds: { 100: true },
             include: ['src/lib/*.{js,jsx,ts,tsx}'],
-            reportsDirectory: 'tmp/code-coverage/unit',
+            reportsDirectory: 'test-results/unit',
             clean: true,
             coverageReportOptions: {
                 reports: ['raw', 'console-details', 'v8', 'html'],
