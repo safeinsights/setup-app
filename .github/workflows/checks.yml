@@ -21,8 +21,6 @@ jobs:
               run: npm run typecheck
             - name: Unit Test
               run: npm run test:unit
-            - name: npm run Test coverage
-              run: npm run test:coverage
             - name: Add code coverage to actions summary
               run: |
                   ls -lat ./test-results/
