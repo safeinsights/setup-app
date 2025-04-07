@@ -11,8 +11,8 @@
         "lint:fix": "prettier --write . && eslint . --fix",
         "typecheck": "tsc --noEmit",
         "checks": "run-p -c typecheck lint",
-        "test:unit": "vitest",
-        "test": "run-p -c test:*"
+        "test:unit": "vitest --coverage",
+        "test:coverage": "tsx tests/merged-coverage.ts"
     },
     "author": "Nathan Stitt",
     "license": "AGPL-3.0-or-later",
@@ -34,7 +34,8 @@
         "npm-run-all": "*",
         "prettier": "*",
         "vite-tsconfig-paths": "^5.0.1",
-        "vitest": "*"
+        "vitest": "*",
+        "vitest-monocart-coverage": "^3.0.1"
     },
     "dependencies": {
         "@aws-sdk/client-ecs": "^3.668.0",
