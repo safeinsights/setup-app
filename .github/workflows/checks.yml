@@ -21,6 +21,19 @@ jobs:
               run: npm run typecheck
             - name: Unit Test
               run: npm run test:unit
+            - name: npm run Test coverage
+              run: npm run test:coverage
+            - name: Add code coverage to actions summary
+              run: |
+                  cat test-results/coverage/coverage-summary.md >> $GITHUB_STEP_SUMMARY
+                  cat test-results/coverage/coverage-details.md >> $GITHUB_STEP_SUMMARY
+            - name: Coverage Diff
+              uses: bultkrantz/coverage-diff-action@v5.0.1
+              with:
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+                  base-summary-filename: base-summary.json
+                  coverage-filename: test-results/coverage/coverage-summary.json
+                  allowed-to-fail: true
             - uses: actions/upload-artifact@v4
               if: failure()
               with:
