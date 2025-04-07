@@ -21,6 +21,7 @@ export default defineConfig({
             include: ['src/lib/*.{js,jsx,ts,tsx}'],
             reportsDirectory: 'test-results/unit',
             clean: true,
+            reportOnFailure: true,
             coverageReportOptions: {
                 reports: ['raw', 'console-details', 'v8', 'html'],
                 outpuDir: 'test-results/unit',
