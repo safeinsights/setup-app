@@ -25,8 +25,7 @@ jobs:
               run: npm run test:coverage
             - name: Add code coverage to actions summary
               run: |
-                  cat test-results/coverage/coverage-summary.md >> $GITHUB_STEP_SUMMARY
-                  cat test-results/coverage/coverage-details.md >> $GITHUB_STEP_SUMMARY
+                  ls -lat ./test-results/
             - name: Coverage Diff
               uses: bultkrantz/coverage-diff-action@v5.0.1
               with:

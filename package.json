@@ -12,8 +12,7 @@
         "lint:fix": "prettier --write . && eslint . --fix",
         "typecheck": "tsc --noEmit",
         "checks": "run-p -c typecheck lint",
-        "test:unit": "vitest --coverage",
-        "test:coverage": "tsx tests/merged-coverage.ts"
+        "test:unit": "vitest --coverage"
     },
     "author": "Nathan Stitt",
     "license": "AGPL-3.0-or-later",
