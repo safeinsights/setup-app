@@ -3,7 +3,7 @@ import { testsCoverageSourceFilter } from './coverage.mjs'
 
 const coverageOptions: CoverageReportOptions = {
     name: 'Coverage Report',
-    inputDir: ['./test-results/unit/raw'],
+    inputDir: ['./test-results/unit'],
     outputDir: './test-results/coverage',
     sourceFilter: testsCoverageSourceFilter,
     clean: true,
