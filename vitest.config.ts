@@ -22,6 +22,6 @@ export default defineConfig({
             clean: true,
             reportOnFailure: true,
             provider: 'v8',
-        },  
+        },
     },
 })
