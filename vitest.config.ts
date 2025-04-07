@@ -4,7 +4,6 @@ import tsconfigPaths from 'vite-tsconfig-paths'
 import { defineConfig } from 'vitest/config'
 import { testsCoverageSourceFilter } from './tests/coverage.mjs'
 
-// eslint-disable-next-line no-undef
 const IS_CI = !!process.env.CI
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -17,7 +16,6 @@ export default defineConfig({
         reporters: IS_CI ? ['github-actions'] : ['verbose'],
         include: ['src/lib/*.(test).{js,jsx,ts,tsx}'],
         coverage: {
-            // eslint-disable-next-line no-undef
             enabled: Boolean(IS_CI || process.env.COVERAGE),
             thresholds: { 100: true },
             include: ['src/lib/*.{js,jsx,ts,tsx}'],
@@ -33,6 +31,6 @@ export default defineConfig({
             },
             provider: 'custom',
             customProviderModule: 'vitest-monocart-coverage',
-        },
+        } as any, // eslint-disable-line
     },
 })
