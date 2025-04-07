@@ -2,7 +2,6 @@ import { vanillaExtractPlugin } from '@vanilla-extract/vite-plugin'
 import react from '@vitejs/plugin-react'
 import tsconfigPaths from 'vite-tsconfig-paths'
 import { defineConfig } from 'vitest/config'
-import { testsCoverageSourceFilter } from './tests/coverage.mjs'
 
 const IS_CI = !!process.env.CI
 // https://vitejs.dev/config/
@@ -22,16 +21,7 @@ export default defineConfig({
             reportsDirectory: 'test-results/unit',
             clean: true,
             reportOnFailure: true,
-            coverageReportOptions: {
-                reports: ['raw', 'console-details', 'v8', 'html'],
-                outpuDir: 'test-results/unit',
-                clean: true,
-                lcov: true,
-                filter: { '**/*.css': false, '**/*': true },
-                sourceFilter: testsCoverageSourceFilter,
-            },
-            provider: 'custom',
-            customProviderModule: 'vitest-monocart-coverage',
-        } as any, // eslint-disable-line
+            provider: 'v8',
+        },  
     },
 })

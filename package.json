@@ -24,7 +24,6 @@
         "@types/react": "18.3",
         "@vanilla-extract/vite-plugin": "^4.0.16",
         "@vitejs/plugin-react": "^4.3.2",
-        "@vitest/coverage-v8": "^2.1.1",
         "aws-sdk-client-mock": "^4.1.0",
         "dotenv": "*",
         "eslint": "*",
@@ -36,7 +35,7 @@
         "prettier": "*",
         "vite-tsconfig-paths": "^5.0.1",
         "vitest": "*",
-        "vitest-monocart-coverage": "^3.0.1"
+        "@vitest/coverage-v8": "*"
     },
     "dependencies": {
         "@aws-sdk/client-ecs": "^3.668.0",
