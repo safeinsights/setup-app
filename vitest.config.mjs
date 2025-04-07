@@ -4,6 +4,8 @@ import tsconfigPaths from 'vite-tsconfig-paths'
 import { defineConfig } from 'vitest/config'
 import { testsCoverageSourceFilter } from './tests/coverage.mjs'
 
+// eslint-disable-next-line no-undef
+const IS_CI = !!process.env.CI
 // https://vitejs.dev/config/
 export default defineConfig({
     plugins: [react(), tsconfigPaths(), vanillaExtractPlugin()],
@@ -11,24 +13,26 @@ export default defineConfig({
         setupFiles: ['tests/vitest.setup.ts'],
         mockReset: true,
         environment: 'happy-dom',
-        reporters: ['verbose'],
+
+        reporters: IS_CI ? ['github-actions'] : ['verbose'],
         include: ['src/lib/*.(test).{js,jsx,ts,tsx}'],
         coverage: {
             // eslint-disable-next-line no-undef
-            enabled: Boolean(!!process.env.CI || process.env.COVERAGE),
+            enabled: Boolean(IS_CI || process.env.COVERAGE),
             thresholds: { 100: true },
             include: ['src/lib/*.{js,jsx,ts,tsx}'],
             reportsDirectory: 'test-results/unit',
             clean: true,
             coverageReportOptions: {
                 reports: ['raw', 'console-details', 'v8', 'html'],
-                reportsDirectory: 'test-results/unit',
+                outpuDir: 'test-results/unit',
                 clean: true,
+                lcov: true,
                 filter: { '**/*.css': false, '**/*': true },
                 sourceFilter: testsCoverageSourceFilter,
-                provider: 'custom',
-                customProviderModule: 'vitest-monocart-coverage',
             },
+            provider: 'custom',
+            customProviderModule: 'vitest-monocart-coverage',
         },
     },
 })
