@@ -17,8 +17,7 @@ function pollForErroredJobs(): void {
     checkForErroredJobs()
 }
 
-// Poll for studies once now and then 2 minutes by default (for dev)
-pollStudies()
+// Poll for studies every 10 minutes by default (for dev)
 setInterval(pollStudies, pollStudiesInterval * 60 * 1000)
 
 // Poll for errored tasks every 5 minutes by default
