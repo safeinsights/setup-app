@@ -14,7 +14,12 @@ import { getKubeAPIServiceAccountToken, getNamespace, initHTTPSTrustStore } from
 import { execSync } from 'node:child_process'
 
 export const getGitCommitHash = () => {
-    return execSync('git rev-parse HEAD').toString().trim()
+    try {
+        return execSync('git rev-parse HEAD').toString().trim()
+    } catch (error) {
+        console.error('Failed to retrieve Git commit hash:', error)
+        return 'unknown'
+    }
 }
 
 // Functions for interacting with the Management App
