@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { managementAppGetReadyStudiesRequest, toaGetJobsRequest, toaUpdateJobStatus } from './api'
+import { getGitCommitHash, managementAppGetReadyStudiesRequest, toaGetJobsRequest, toaUpdateJobStatus } from './api'
 import jwt from 'jsonwebtoken'
 
 describe('managementAppGetReadyStudiesRequest', () => {
@@ -35,6 +35,7 @@ describe('managementAppGetReadyStudiesRequest', () => {
             headers: {
                 Authorization: 'Bearer mocktokenvalue',
                 'Content-Type': 'application/json',
+                'commit-hash': getGitCommitHash()
             },
         })
         expect(result).toEqual(mockStudiesData)
@@ -93,6 +94,7 @@ describe('toaGetJobsRequest', () => {
             headers: {
                 Authorization: `Basic ${mockToken}`,
                 'Content-Type': 'application/json',
+                'commit-hash': getGitCommitHash()
             },
         })
         expect(result).toEqual(mockTOAData)
@@ -135,6 +137,7 @@ describe('toaUpdateJobStatus', () => {
             headers: {
                 Authorization: `Basic ${mockToken}`,
                 'Content-Type': 'application/json',
+                'commit-hash': getGitCommitHash()
             },
             body: JSON.stringify({ status: 'JOB-ERRORED', message: 'Error message' }),
         })
