@@ -14,7 +14,7 @@ import { getKubeAPIServiceAccountToken, getNamespace, initHTTPSTrustStore } from
 import { execSync } from 'node:child_process'
 
 export const getGitCommitHash = () => {
-    return execSync("git rev-parse HEAD").toString().trim()
+    return execSync('git rev-parse HEAD').toString().trim()
 }
 
 // Functions for interacting with the Management App
@@ -41,7 +41,7 @@ export const managementAppGetReadyStudiesRequest = async (): Promise<ManagementA
         headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
-            'commit-hash': getGitCommitHash()
+            'commit-hash': getGitCommitHash(),
         },
     })
 
@@ -78,7 +78,7 @@ export const toaGetJobsRequest = async (): Promise<TOAGetJobsResponse> => {
         headers: {
             Authorization: `Basic ${token}`,
             'Content-Type': 'application/json',
-            'commit-hash': getGitCommitHash()
+            'commit-hash': getGitCommitHash(),
         },
     })
 
@@ -108,7 +108,7 @@ export const toaUpdateJobStatus = async (
         headers: {
             Authorization: `Basic ${token}`,
             'Content-Type': 'application/json',
-            'commit-hash': getGitCommitHash()
+            'commit-hash': getGitCommitHash(),
         },
         body: JSON.stringify(data),
     })
@@ -153,7 +153,7 @@ export const dockerApiCall = async (
         headers: {
             'Content-Type': 'application/json',
             'X-Registry-Auth': process.env.DOCKER_REGISTRY_AUTH ?? '',
-            'commit-hash': getGitCommitHash()
+            'commit-hash': getGitCommitHash(),
         },
     }
     console.log(`Headers: ${JSON.stringify(options.headers)}`)
@@ -236,7 +236,7 @@ export const k8sApiCall = (
         headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${kubeAPIServerAccountToken}`,
-            'commit-hash': getGitCommitHash()
+            'commit-hash': getGitCommitHash(),
         },
     }
 
