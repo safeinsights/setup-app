@@ -1,5 +1,5 @@
 import { toaUpdateJobStatus } from '../lib/api'
-import { describeECSTasks, getAllTasksWithJobId, JOB_ID_TAG_KEY } from '../lib/aws'
+import { describeECSTasks, getAllTasksWithJobId, getLogsForTask, JOB_ID_TAG_KEY } from '../lib/aws'
 import { ensureValueWithError } from '../lib/utils'
 import { ECSClient, TaskStopCode } from '@aws-sdk/client-ecs'
 import { ResourceGroupsTaggingAPIClient } from '@aws-sdk/client-resource-groups-tagging-api'
@@ -49,6 +49,10 @@ export async function checkForAWSErroredJobs(): Promise<void> {
             for (const container of job.containers ?? []) {
                 const maybeExitCode = container.exitCode
                 if (maybeExitCode !== undefined && maybeExitCode !== 0) {
+                    const taskId = job.taskArn?.split('/').at(-1)
+                    const _logs = await getLogsForTask(taskId)
+                    // TODO: Do stuff with logs
+
                     await toaUpdateJobStatus(jobId, {
                         status: 'JOB-ERRORED',
                         message: 'Task container stopped with non-zero exit code',

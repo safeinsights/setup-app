@@ -37,6 +37,7 @@
         "vitest": "*"
     },
     "dependencies": {
+        "@aws-sdk/client-cloudwatch-logs": "^3.821.0",
         "@aws-sdk/client-ecs": "^3.668.0",
         "@aws-sdk/client-resource-groups-tagging-api": "^3.668.0",
         "clsx": "*",

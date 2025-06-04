@@ -17,6 +17,12 @@ import {
     DescribeTasksCommandOutput,
 } from '@aws-sdk/client-ecs'
 import {
+    CloudWatchLogsClient,
+    LogGroup,
+    paginateDescribeLogGroups,
+    paginateFilterLogEvents,
+} from '@aws-sdk/client-cloudwatch-logs'
+import {
     GetResourcesCommandInput,
     paginateGetResources,
     ResourceGroupsTaggingAPIClient,
@@ -219,4 +225,44 @@ export async function getAllTasksWithJobId(client: ResourceGroupsTaggingAPIClien
     const resourceTypeFilters = ['ecs:task']
     const logMessage = 'Getting all tasks with jobId ...'
     return await getResourceCommandWrapper(tagFilters, resourceTypeFilters, client, logMessage)
+}
+
+export async function getLogsForTask(taskId: string) {
+    const client = new CloudWatchLogsClient({})
+
+    const paginatedRCLogGroups = paginateDescribeLogGroups(
+        { client },
+        { logGroupNamePrefix: 'OpenStaxSecureEnclaveStack-ResearchContainerTaskDefResearchContainerLogGroup' }, // TODO: find this programmatically as well??
+    )
+    const researchContainerLogGroups: LogGroup[] = []
+
+    for await (const page of paginatedRCLogGroups) {
+        if (page.logGroups?.every((lg) => !!lg)) {
+            researchContainerLogGroups.push(...page.logGroups)
+        }
+    }
+
+    const messages: string[] = []
+    for (const rcLogGroup of researchContainerLogGroups) {
+        if (rcLogGroup.storedBytes === undefined || rcLogGroup.storedBytes === 0) {
+            continue
+        }
+        const paginatedLogEvents = paginateFilterLogEvents(
+            { client },
+            {
+                logGroupIdentifier: rcLogGroup.logGroupName,
+                logStreamNames: [`ResearchContainer/ResearchContainer/${taskId}`],
+            },
+        )
+
+        for await (const page of paginatedLogEvents) {
+            page.events?.map((event) => {
+                if (event.message) {
+                    messages.push(event.message)
+                }
+            })
+        }
+    }
+
+    return messages
 }
