@@ -230,9 +230,10 @@ export async function getAllTasksWithJobId(client: ResourceGroupsTaggingAPIClien
 export async function getLogsForTask(taskId: string) {
     const client = new CloudWatchLogsClient({})
 
+    // Get all log groups that match the Research Container log group prefix
     const paginatedRCLogGroups = paginateDescribeLogGroups(
         { client },
-        { logGroupNamePrefix: 'OpenStaxSecureEnclaveStack-ResearchContainerTaskDefResearchContainerLogGroup' }, // TODO: find this programmatically as well??
+        { logGroupNamePrefix: 'OpenStaxSecureEnclaveStack-ResearchContainerTaskDefResearchContainerLogGroup' }, // Will this ever change?
     )
     const researchContainerLogGroups: LogGroup[] = []
 
@@ -242,6 +243,7 @@ export async function getLogsForTask(taskId: string) {
         }
     }
 
+    // Search each log group for events matching the task
     const messages: string[] = []
     for (const rcLogGroup of researchContainerLogGroups) {
         if (rcLogGroup.storedBytes === undefined || rcLogGroup.storedBytes === 0) {
