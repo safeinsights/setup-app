@@ -34,6 +34,11 @@ import { ensureValueWithError } from './utils'
 export const JOB_ID_TAG_KEY = 'jobId'
 export const TITLE_TAG_KEY = 'title'
 
+export type LogEntry = {
+    timestamp: number;
+    message: string;
+}
+
 export async function getECSTaskDefinition(
     client: ECSClient,
     taskDefinitionFamily: string,
@@ -227,13 +232,13 @@ export async function getAllTasksWithJobId(client: ResourceGroupsTaggingAPIClien
     return await getResourceCommandWrapper(tagFilters, resourceTypeFilters, client, logMessage)
 }
 
-export async function getLogsForTask(taskId: string) {
+export async function getLogsForTask(taskId: string): Promise<LogEntry[]> {
     const client = new CloudWatchLogsClient({})
 
     // Get all log groups that match the Research Container log group prefix
     const paginatedRCLogGroups = paginateDescribeLogGroups(
         { client },
-        { logGroupNamePrefix: 'OpenStaxSecureEnclaveStack-ResearchContainerTaskDefResearchContainerLogGroup' }, // Will this ever change?
+        { logGroupNamePrefix: 'OpenStaxSecureEnclaveStack-ResearchContainerTaskDefResearchContainerLogGroup' },
     )
     const researchContainerLogGroups: LogGroup[] = []
 
@@ -244,7 +249,7 @@ export async function getLogsForTask(taskId: string) {
     }
 
     // Search each log group for events matching the task
-    const messages: string[] = []
+    const events: LogEntry[] = []
     for (const rcLogGroup of researchContainerLogGroups) {
         if (rcLogGroup.storedBytes === undefined || rcLogGroup.storedBytes === 0) {
             continue
@@ -259,12 +264,13 @@ export async function getLogsForTask(taskId: string) {
 
         for await (const page of paginatedLogEvents) {
             page.events?.map((event) => {
-                if (event.message) {
-                    messages.push(event.message)
-                }
+                events.push({
+                    timestamp: ensureValueWithError(event.timestamp),
+                    message: ensureValueWithError(event.message)
+                })
             })
         }
     }
 
-    return messages
+    return events
 }
