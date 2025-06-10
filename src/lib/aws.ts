@@ -35,8 +35,8 @@ export const JOB_ID_TAG_KEY = 'jobId'
 export const TITLE_TAG_KEY = 'title'
 
 export type LogEntry = {
-    timestamp: number;
-    message: string;
+    timestamp: number
+    message: string
 }
 
 export async function getECSTaskDefinition(
@@ -266,7 +266,7 @@ export async function getLogsForTask(taskId: string): Promise<LogEntry[]> {
             page.events?.map((event) => {
                 events.push({
                     timestamp: ensureValueWithError(event.timestamp),
-                    message: ensureValueWithError(event.message)
+                    message: ensureValueWithError(event.message),
                 })
             })
         }

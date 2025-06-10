@@ -49,7 +49,7 @@ export async function checkForAWSErroredJobs(): Promise<void> {
             for (const container of job.containers ?? []) {
                 const maybeExitCode = container.exitCode
                 if (maybeExitCode !== undefined && maybeExitCode !== 0) {
-                    const taskId = job.taskArn?.split('/').at(-1)
+                    const taskId = ensureValueWithError(job.taskArn?.split('/').at(-1))
                     const logs = await getLogsForTask(taskId)
 
                     await toaUpdateJobStatus(jobId, {

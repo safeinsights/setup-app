@@ -73,6 +73,7 @@ describe('checkForErroredJobs()', () => {
                     value: 'jobId1',
                 },
             ],
+            taskArn: 'testArn',
         }
         mockDescribeECSTasks.mockResolvedValue({
             tasks: [mockTask],
