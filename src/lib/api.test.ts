@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { managementAppGetReadyStudiesRequest, toaGetJobsRequest, toaUpdateJobStatus } from './api'
+import { managementAppGetReadyStudiesRequest, toaGetJobsRequest, toaSendLogs, toaUpdateJobStatus } from './api'
 import jwt from 'jsonwebtoken'
 
 describe('managementAppGetReadyStudiesRequest', () => {
@@ -152,6 +152,39 @@ describe('toaUpdateJobStatus', () => {
     it('should return appropriate value if response status is not success', async () => {
         global.fetch = vi.fn().mockResolvedValue(new Response('Authentication error', { status: 401 }))
         const result = await toaUpdateJobStatus('jobId1234', { status: 'JOB-ERRORED' })
+        expect(result).toEqual({ success: false })
+    })
+})
+
+describe('toaSendLogs', () => {
+    it('should make a POST request with logs', async () => {
+        global.fetch = vi.fn().mockResolvedValue(new Response())
+
+        const mockLogs = [{ timestamp: 1, message: 'Test log message' }]
+
+        const mockFormData = new FormData()
+        mockFormData.append('logs', JSON.stringify(mockLogs))
+
+        const result = await toaSendLogs('jobId456', mockLogs)
+        const mockToken = Buffer.from('testusername:testpassword').toString('base64')
+        expect(global.fetch).toHaveBeenCalledWith('https://toa:67890/api/job/jobId456/upload', {
+            method: 'POST',
+            headers: {
+                Authorization: `Basic ${mockToken}`,
+            },
+            body: mockFormData,
+        })
+
+        expect(result).toEqual({ success: true })
+    })
+
+    it('should notify on an error', async () => {
+        global.fetch = vi.fn().mockResolvedValue(new Response('Error', { status: 500 }))
+
+        const mockLogs = [{ timestamp: 2, message: 'Test log message' }]
+
+        const result = await toaSendLogs('jobId456', mockLogs)
+
         expect(result).toEqual({ success: false })
     })
 })

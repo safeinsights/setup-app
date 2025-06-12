@@ -39,6 +39,8 @@ export type LogEntry = {
     message: string
 }
 
+export const LOG_GROUP_PREFIX = 'OpenStaxSecureEnclaveStack-ResearchContainerTaskDefResearchContainerLogGroup'
+
 export async function getECSTaskDefinition(
     client: ECSClient,
     taskDefinitionFamily: string,
@@ -236,10 +238,7 @@ export async function getLogsForTask(taskId: string): Promise<LogEntry[]> {
     const client = new CloudWatchLogsClient({})
 
     // Get all log groups that match the Research Container log group prefix
-    const paginatedRCLogGroups = paginateDescribeLogGroups(
-        { client },
-        { logGroupNamePrefix: 'OpenStaxSecureEnclaveStack-ResearchContainerTaskDefResearchContainerLogGroup' },
-    )
+    const paginatedRCLogGroups = paginateDescribeLogGroups({ client }, { logGroupNamePrefix: LOG_GROUP_PREFIX })
     const researchContainerLogGroups: LogGroup[] = []
 
     for await (const page of paginatedRCLogGroups) {
