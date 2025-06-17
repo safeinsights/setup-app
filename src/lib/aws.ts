@@ -243,16 +243,15 @@ export async function getLogsForTask(taskId: string): Promise<LogEntry[]> {
 
     for await (const page of paginatedRCLogGroups) {
         if (page.logGroups?.every((lg) => !!lg)) {
-            researchContainerLogGroups.push(...page.logGroups)
+            researchContainerLogGroups.push(
+                ...page.logGroups.filter((lg) => lg.storedBytes !== undefined && lg.storedBytes > 0),
+            )
         }
     }
 
     // Search each log group for events matching the task
     const events: LogEntry[] = []
     for (const rcLogGroup of researchContainerLogGroups) {
-        if (rcLogGroup.storedBytes === undefined || rcLogGroup.storedBytes === 0) {
-            continue
-        }
         const paginatedLogEvents = paginateFilterLogEvents(
             { client },
             {

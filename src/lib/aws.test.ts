@@ -281,8 +281,6 @@ describe('getAllTasksWithJobId', () => {
 
 describe('getLogsForTask', () => {
     it('should return logs for a given task', async () => {
-        // Mock log groups query response
-
         loggingMockClient
             .on(DescribeLogGroupsCommand, {
                 logGroupNamePrefix: LOG_GROUP_PREFIX,
@@ -294,12 +292,15 @@ describe('getLogsForTask', () => {
                         storedBytes: 8,
                     },
                     {
+                        logGroupName: 'no-stored-bytes',
+                    },
+                    {
                         logGroupName: 'empty-group',
+                        storedBytes: 0,
                     },
                 ],
             })
 
-        // Mock log events response
         const testLogEvent = { timestamp: 42, message: 'test log message' }
         loggingMockClient
             .on(FilterLogEventsCommand, {
@@ -310,10 +311,8 @@ describe('getLogsForTask', () => {
                 events: [testLogEvent],
             })
 
-        // call getLogsForTask
         const res = await getLogsForTask('taskId')
 
-        // expect given logs
         expect(res).toStrictEqual([testLogEvent])
     })
 })
