@@ -22,11 +22,15 @@ import {
     deleteECSTaskDefinitions,
     getAllTasksWithJobId,
     describeECSTasks,
+    getLogsForTask,
+    LOG_GROUP_PREFIX,
 } from './aws'
 import { GetResourcesCommand, ResourceGroupsTaggingAPIClient } from '@aws-sdk/client-resource-groups-tagging-api'
+import { CloudWatchLogsClient, DescribeLogGroupsCommand, FilterLogEventsCommand } from '@aws-sdk/client-cloudwatch-logs'
 
 const ecsMockClient = mockClient(ECSClient)
 const taggingMockClient = mockClient(ResourceGroupsTaggingAPIClient)
+const loggingMockClient = mockClient(CloudWatchLogsClient)
 
 beforeEach(() => {
     ecsMockClient.reset()
@@ -272,5 +276,43 @@ describe('getAllTasksWithJobId', () => {
 
         const res = await getAllTasksWithJobId(new ResourceGroupsTaggingAPIClient())
         expect(res).toStrictEqual([])
+    })
+})
+
+describe('getLogsForTask', () => {
+    it('should return logs for a given task', async () => {
+        loggingMockClient
+            .on(DescribeLogGroupsCommand, {
+                logGroupNamePrefix: LOG_GROUP_PREFIX,
+            })
+            .resolves({
+                logGroups: [
+                    {
+                        logGroupName: 'test-log-group',
+                        storedBytes: 8,
+                    },
+                    {
+                        logGroupName: 'no-stored-bytes',
+                    },
+                    {
+                        logGroupName: 'empty-group',
+                        storedBytes: 0,
+                    },
+                ],
+            })
+
+        const testLogEvent = { timestamp: 42, message: 'test log message' }
+        loggingMockClient
+            .on(FilterLogEventsCommand, {
+                logGroupIdentifier: 'test-log-group',
+                logStreamNames: [`ResearchContainer/ResearchContainer/taskId`],
+            })
+            .resolves({
+                events: [testLogEvent],
+            })
+
+        const res = await getLogsForTask('taskId')
+
+        expect(res).toStrictEqual([testLogEvent])
     })
 })

@@ -17,6 +17,12 @@ import {
     DescribeTasksCommandOutput,
 } from '@aws-sdk/client-ecs'
 import {
+    CloudWatchLogsClient,
+    LogGroup,
+    paginateDescribeLogGroups,
+    paginateFilterLogEvents,
+} from '@aws-sdk/client-cloudwatch-logs'
+import {
     GetResourcesCommandInput,
     paginateGetResources,
     ResourceGroupsTaggingAPIClient,
@@ -27,6 +33,13 @@ import { ensureValueWithError } from './utils'
 
 export const JOB_ID_TAG_KEY = 'jobId'
 export const TITLE_TAG_KEY = 'title'
+
+export type LogEntry = {
+    timestamp: number
+    message: string
+}
+
+export const LOG_GROUP_PREFIX = 'OpenStaxSecureEnclaveStack-ResearchContainerTaskDefResearchContainerLogGroup'
 
 export async function getECSTaskDefinition(
     client: ECSClient,
@@ -219,4 +232,43 @@ export async function getAllTasksWithJobId(client: ResourceGroupsTaggingAPIClien
     const resourceTypeFilters = ['ecs:task']
     const logMessage = 'Getting all tasks with jobId ...'
     return await getResourceCommandWrapper(tagFilters, resourceTypeFilters, client, logMessage)
+}
+
+export async function getLogsForTask(taskId: string): Promise<LogEntry[]> {
+    const client = new CloudWatchLogsClient({})
+
+    // Get all log groups that match the Research Container log group prefix
+    const paginatedRCLogGroups = paginateDescribeLogGroups({ client }, { logGroupNamePrefix: LOG_GROUP_PREFIX })
+    const researchContainerLogGroups: LogGroup[] = []
+
+    for await (const page of paginatedRCLogGroups) {
+        if (page.logGroups?.every((lg) => !!lg)) {
+            researchContainerLogGroups.push(
+                ...page.logGroups.filter((lg) => lg.storedBytes !== undefined && lg.storedBytes > 0),
+            )
+        }
+    }
+
+    // Search each log group for events matching the task
+    const events: LogEntry[] = []
+    for (const rcLogGroup of researchContainerLogGroups) {
+        const paginatedLogEvents = paginateFilterLogEvents(
+            { client },
+            {
+                logGroupIdentifier: rcLogGroup.logGroupName,
+                logStreamNames: [`ResearchContainer/ResearchContainer/${taskId}`],
+            },
+        )
+
+        for await (const page of paginatedLogEvents) {
+            page.events?.map((event) => {
+                events.push({
+                    timestamp: ensureValueWithError(event.timestamp),
+                    message: ensureValueWithError(event.message),
+                })
+            })
+        }
+    }
+
+    return events
 }

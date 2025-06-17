@@ -11,6 +11,7 @@ import http from 'http'
 import https from 'https'
 import { hasReadPermissions } from './utils'
 import { getKubeAPIServiceAccountToken, getNamespace, initHTTPSTrustStore } from './kube'
+import { LogEntry } from './aws'
 
 // Functions for interacting with the Management App
 const generateManagementAppToken = (): string => {
@@ -111,6 +112,31 @@ export const toaUpdateJobStatus = async (
     }
 
     console.log(`TOA: Status update for job ${jobId} succeeded!`)
+    return { success: true }
+}
+
+export const toaSendLogs = async (jobId: string, logs: LogEntry[]) => {
+    const endpoint = `${process.env.TOA_BASE_URL}/api/job/${jobId}/upload`
+    const token = generateTOAToken()
+
+    const logForm = new FormData()
+    logForm.append('logs', JSON.stringify(logs))
+
+    console.log(`TOA: Sending logs for job ${jobId} ...`)
+    const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+            Authorization: `Basic ${token}`,
+        },
+        body: logForm,
+    })
+
+    if (!response.ok) {
+        console.log(`TOA: Sending logs for job ${jobId} FAILED!: ${await response.text()}`)
+        return { success: false }
+    }
+
+    console.log(`TOA: Sending logs for job ${jobId} succeeded!`)
     return { success: true }
 }
 
