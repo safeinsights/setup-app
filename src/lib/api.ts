@@ -53,6 +53,26 @@ export const managementAppGetReadyStudiesRequest = async (): Promise<ManagementA
     return data
 }
 
+export const managementAppGetJobStatus = async (jobId: string): Promise<{ status: string; message: null | string }> => {
+    console.log(`BMA: Fetching job status for jobId ${jobId} ...`)
+    const endpoint = `${process.env.MANAGEMENT_APP_BASE_URL}/api/job/${jobId}/status`
+    const token = generateManagementAppToken()
+    const response = await fetch(endpoint, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+    })
+
+    if (!response.ok) {
+        throw new Error(`Received an unexpected ${response.status} from management app`)
+    }
+    console.log(`BMA: Job status for jobId ${jobId} received!`)
+
+    return await response.json()
+}
+
 // Functions for interacting with the Trusted Output App
 const generateTOAToken = (): string => {
     /* v8 ignore next */

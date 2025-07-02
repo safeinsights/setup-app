@@ -1,4 +1,4 @@
-import { toaSendLogs, toaUpdateJobStatus } from '../lib/api'
+import { managementAppGetJobStatus, toaSendLogs, toaUpdateJobStatus } from '../lib/api'
 import { describeECSTasks, getAllTasksWithJobId, getLogsForTask, JOB_ID_TAG_KEY } from '../lib/aws'
 import { ensureValueWithError } from '../lib/utils'
 import { ECSClient, TaskStopCode } from '@aws-sdk/client-ecs'
@@ -49,6 +49,14 @@ export async function checkForAWSErroredJobs(): Promise<void> {
             for (const container of job.containers ?? []) {
                 const maybeExitCode = container.exitCode
                 if (maybeExitCode !== undefined && maybeExitCode !== 0) {
+                    // Prevent sending logs if they have already been sent
+                    const response = await managementAppGetJobStatus(jobId)
+                    if (response.status === 'JOB-ERRORED') {
+                        console.log(`Skipping log send for job ${jobId} as status in BMA is already ${response.status}`)
+                        continue
+                    }
+
+                    // Send logs and update job status
                     const taskId = ensureValueWithError(job.taskArn?.split('/').at(-1))
                     const logs = await getLogsForTask(taskId)
 

@@ -1,5 +1,11 @@
 import { describe, it, expect, vi } from 'vitest'
-import { managementAppGetReadyStudiesRequest, toaGetJobsRequest, toaSendLogs, toaUpdateJobStatus } from './api'
+import {
+    managementAppGetReadyStudiesRequest,
+    managementAppGetJobStatus,
+    toaGetJobsRequest,
+    toaSendLogs,
+    toaUpdateJobStatus,
+} from './api'
 import jwt from 'jsonwebtoken'
 
 describe('managementAppGetReadyStudiesRequest', () => {
@@ -74,6 +80,25 @@ describe('managementAppGetReadyStudiesRequest', () => {
 
         await expect(managementAppGetReadyStudiesRequest()).rejects.toThrow(
             'Management app response does not match expected structure',
+        )
+    })
+})
+
+describe('managementAppGetJobStatus', () => {
+    it('gets a job status from the management app', async () => {
+        const mockSignToken = vi.fn().mockReturnValue('mocktokenvalue')
+        global.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ status: 'TEST-STATUS' })))
+        vi.spyOn(jwt, 'sign').mockImplementation(mockSignToken)
+
+        expect(await managementAppGetJobStatus('jobId1234')).toEqual({ status: 'TEST-STATUS' })
+    })
+    it('errors if unexpected response', async () => {
+        const mockSignToken = vi.fn().mockReturnValue('mocktokenvalue')
+        global.fetch = vi.fn().mockResolvedValue(new Response('Test error', { status: 401 }))
+        vi.spyOn(jwt, 'sign').mockImplementation(mockSignToken)
+
+        await expect(managementAppGetJobStatus('jobId1234')).rejects.toThrow(
+            'Received an unexpected 401 from management app',
         )
     })
 })
