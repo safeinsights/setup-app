@@ -81,7 +81,6 @@ describe('checkForErroredJobs()', () => {
         })
         vi.mocked(api.managementAppGetJobStatus).mockResolvedValue({
             status: 'teststatus',
-            message: null,
         })
 
         await checkForAWSErroredJobs()
@@ -156,7 +155,6 @@ describe('checkForErroredJobs()', () => {
         })
         vi.mocked(api.managementAppGetJobStatus).mockResolvedValue({
             status: 'JOB-ERRORED',
-            message: null,
         })
 
         await checkForAWSErroredJobs()

@@ -53,7 +53,7 @@ export const managementAppGetReadyStudiesRequest = async (): Promise<ManagementA
     return data
 }
 
-export const managementAppGetJobStatus = async (jobId: string): Promise<{ status: string; message: null | string }> => {
+export const managementAppGetJobStatus = async (jobId: string): Promise<{ status: string }> => {
     console.log(`BMA: Fetching job status for jobId ${jobId} ...`)
     const endpoint = `${process.env.MANAGEMENT_APP_BASE_URL}/api/job/${jobId}/status`
     const token = generateManagementAppToken()
