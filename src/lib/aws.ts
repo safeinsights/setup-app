@@ -255,21 +255,25 @@ export async function getLogsForTask(taskId: string): Promise<LogEntry[]> {
     const events: LogEntry[] = []
     console.log(`AWS: START: Getting log events for task ${taskId} ...`)
     for (const rcLogGroup of researchContainerLogGroups) {
-        const paginatedLogEvents = paginateFilterLogEvents(
-            { client },
-            {
-                logGroupIdentifier: rcLogGroup.logGroupName,
-                logStreamNames: [`ResearchContainer/ResearchContainer/${taskId}`],
-            },
-        )
-
-        for await (const page of paginatedLogEvents) {
-            page.events?.map((event) => {
-                events.push({
-                    timestamp: ensureValueWithError(event.timestamp),
-                    message: ensureValueWithError(event.message),
+        try {
+            const paginatedLogEvents = paginateFilterLogEvents(
+                { client },
+                {
+                    logGroupIdentifier: rcLogGroup.logGroupName,
+                    logStreamNames: [`ResearchContainer/ResearchContainer/${taskId}`],
+                },
+            )
+            for await (const page of paginatedLogEvents) {
+                page.events?.map((event) => {
+                    events.push({
+                        timestamp: ensureValueWithError(event.timestamp),
+                        message: ensureValueWithError(event.message),
+                    })
                 })
-            })
+            }
+        } catch (ResourceNotFoundException) {
+            console.warn(`AWS: No log group found for task ${taskId} in log group ${rcLogGroup.logGroupName}`)
+            continue
         }
     }
     console.log(`AWS:   END: paginateFilterLogEvents finished with ${events.length} log events for task ${taskId}`)
