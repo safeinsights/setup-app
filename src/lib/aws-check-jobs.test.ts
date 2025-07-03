@@ -79,6 +79,9 @@ describe('checkForErroredJobs()', () => {
             tasks: [mockTask],
             $metadata: {},
         })
+        vi.mocked(api.managementAppGetJobStatus).mockResolvedValue({
+            status: 'teststatus',
+        })
 
         await checkForAWSErroredJobs()
 
@@ -121,6 +124,41 @@ describe('checkForErroredJobs()', () => {
 
         expect(mockDescribeECSTasks).toHaveBeenCalledOnce()
         expect(mockDescribeECSTasks).toHaveBeenCalledWith(expect.any(ECSClient), 'MOCK_ECS_CLUSTER', ['arn1', 'arn2'])
+        expect(mockToaUpdateJobStatus).not.toHaveBeenCalled()
+    })
+    it('avoids duplicating calls to TOA for the same jobId', async () => {
+        vi.mocked(aws.getAllTasksWithJobId).mockResolvedValue([
+            {
+                ResourceARN: 'arn1',
+            },
+            {
+                ResourceARN: 'arn2',
+            },
+        ])
+
+        const mockDescribeECSTasks = vi.mocked(aws.describeECSTasks)
+        const mockToaUpdateJobStatus = vi.mocked(api.toaUpdateJobStatus)
+        const mockTask = {
+            containers: [{ exitCode: 1 }],
+            stopCode: TaskStopCode.ESSENTIAL_CONTAINER_EXITED,
+            tags: [
+                {
+                    key: aws.JOB_ID_TAG_KEY,
+                    value: 'jobId1',
+                },
+            ],
+            taskArn: 'testArn',
+        }
+        mockDescribeECSTasks.mockResolvedValue({
+            tasks: [mockTask],
+            $metadata: {},
+        })
+        vi.mocked(api.managementAppGetJobStatus).mockResolvedValue({
+            status: 'JOB-ERRORED',
+        })
+
+        await checkForAWSErroredJobs()
+
         expect(mockToaUpdateJobStatus).not.toHaveBeenCalled()
     })
     it('behaves gracefully when describeECSTasks returns undefined tasks', async () => {

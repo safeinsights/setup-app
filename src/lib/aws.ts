@@ -237,6 +237,7 @@ export async function getAllTasksWithJobId(client: ResourceGroupsTaggingAPIClien
 export async function getLogsForTask(taskId: string): Promise<LogEntry[]> {
     const client = new CloudWatchLogsClient({})
 
+    console.log(`AWS: START: Getting log groups for task ${taskId} ...`)
     // Get all log groups that match the Research Container log group prefix
     const paginatedRCLogGroups = paginateDescribeLogGroups({ client }, { logGroupNamePrefix: LOG_GROUP_PREFIX })
     const researchContainerLogGroups: LogGroup[] = []
@@ -248,9 +249,11 @@ export async function getLogsForTask(taskId: string): Promise<LogEntry[]> {
             )
         }
     }
+    console.log(`AWS:   END: paginateDescribeLogGroups finished with ${researchContainerLogGroups.length} log groups`)
 
     // Search each log group for events matching the task
     const events: LogEntry[] = []
+    console.log(`AWS: START: Getting log events for task ${taskId} ...`)
     for (const rcLogGroup of researchContainerLogGroups) {
         const paginatedLogEvents = paginateFilterLogEvents(
             { client },
@@ -269,6 +272,7 @@ export async function getLogsForTask(taskId: string): Promise<LogEntry[]> {
             })
         }
     }
+    console.log(`AWS:   END: paginateFilterLogEvents finished with ${events.length} log events for task ${taskId}`)
 
     return events
 }
