@@ -1,5 +1,4 @@
-import { beforeEach } from 'vitest'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, vi, describe, expect, it } from 'vitest'
 import { mockClient } from 'aws-sdk-client-mock'
 import {
     ECSClient,
@@ -314,5 +313,36 @@ describe('getLogsForTask', () => {
         const res = await getLogsForTask('taskId')
 
         expect(res).toStrictEqual([testLogEvent])
+    })
+
+    it('should handle errors', async () => {
+        loggingMockClient
+            .on(DescribeLogGroupsCommand, {
+                logGroupNamePrefix: LOG_GROUP_PREFIX,
+            })
+            .resolves({
+                logGroups: [
+                    {
+                        logGroupName: 'test-log-group',
+                        storedBytes: 8,
+                    },
+                ],
+            })
+
+        loggingMockClient
+            .on(FilterLogEventsCommand, {
+                logGroupIdentifier: 'test-log-group',
+                logStreamNames: [`ResearchContainer/ResearchContainer/taskId`],
+            })
+            .rejects(new Error('error'))
+
+        const consoleWarnSpy = vi.spyOn(console, 'warn')
+
+        const res = await getLogsForTask('taskId')
+
+        expect(res).toStrictEqual([])
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+            'AWS: No log group found for task taskId in log group test-log-group',
+        )
     })
 })

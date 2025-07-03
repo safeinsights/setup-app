@@ -271,7 +271,7 @@ export async function getLogsForTask(taskId: string): Promise<LogEntry[]> {
                     })
                 })
             }
-        } catch (ResourceNotFoundException) {
+        } catch {
             console.warn(`AWS: No log group found for task ${taskId} in log group ${rcLogGroup.logGroupName}`)
             continue
         }
