@@ -42,8 +42,7 @@
         "@aws-sdk/client-resource-groups-tagging-api": "^3.828.0",
         "clsx": "*",
         "jsonwebtoken": "^9.0.2",
-        "next-swagger-doc": "^0.4",
-        "tsx": "^4.19.1",
+        "tsx": "^4.20.3",
         "typescript-eslint": "^8.21.0"
     }
 }

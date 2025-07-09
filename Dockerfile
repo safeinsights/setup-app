@@ -1,12 +1,16 @@
 FROM node:22-alpine
 
-WORKDIR /code
+ARG USER=node
+ENV HOME /home/$USER
 
-COPY package.json .
-COPY package-lock.json .
+USER $USER
+WORKDIR $HOME/code
+
+COPY --chown=$USER:$USER package.json .
+COPY --chown=$USER:$USER package-lock.json .
 
 RUN npm install
 
-COPY . .
+COPY --chown=$USER:$USER . .
 
 CMD ["npx", "tsx", "src/scripts/poll.ts"]
