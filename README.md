@@ -67,7 +67,8 @@ To start the Setup app using Docker, the following environment variables must be
 -   `DOCKER_API_HOST`: Specifies the host where the Docker Engine API is available.
 -   `DOCKER_API_PORT`: Indicates the port where the Docker Engine API is exposed.
 -   `DOCKER_API_VERSION`: Specifies the version of the Docker Engine API to use when building URLs for REST requests.
--   `DOCKER_REGISTRY_AUTH`: A base64-encoded value used to authenticate against private registries.
+-   `DOCKER_REGISTRY_AUTH`: A base64-encoded value used to authenticate against private registries. More details could be found [here](https://docs.docker.com/reference/api/engine/version/v1.48/#section/Authentication
+)
 
 #### Enabling the Docker Engine API (Development)
 

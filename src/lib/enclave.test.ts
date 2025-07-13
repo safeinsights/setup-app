@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import * as api from './api'
 import { managementAppGetReadyStudiesRequest, toaGetJobsRequest, toaUpdateJobStatus } from './api'
 import { Enclave } from './enclave'
 import { ManagementAppGetReadyStudiesResponse, ManagementAppJob, TOAGetJobsResponse } from './types'
-import * as api from './api'
 
 vi.mock('./api', () => ({
     managementAppGetReadyStudiesRequest: vi.fn(),
@@ -58,7 +58,7 @@ describe('Enclave', () => {
 
         enclave.launchStudy = vi.fn()
         enclave.cleanup = vi.fn()
-        enclave.getRunningStudies = vi.fn().mockResolvedValue(mockRunningJobsInEnclave)
+        enclave.getDeployedStudies = vi.fn().mockResolvedValue(mockRunningJobsInEnclave)
 
         await enclave.runStudies()
 

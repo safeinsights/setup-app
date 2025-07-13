@@ -6,7 +6,7 @@ export interface IEnclave<T> {
 
     getAllStudiesInEnclave(): Promise<Array<T>>
 
-    getRunningStudies(): Promise<Array<T>>
+    getDeployedStudies(): Promise<Array<T>>
 
     cleanup(): Promise<void>
 
@@ -36,8 +36,8 @@ export class Enclave<T> implements IEnclave<T> {
             `Found ${toaGetJobsResult.jobs.length} jobs with results in TOA. Job ids: ${toaGetJobsResult.jobs.map((job) => job.jobId)}`,
         )
 
-        const jobsInEnclave: Array<T> = await this.getRunningStudies()
-        const filteredResult: ManagementAppGetReadyStudiesResponse = await this.filterJobsInEnclave(
+        const jobsInEnclave: Array<T> = await this.getDeployedStudies()
+        const filteredResult: ManagementAppGetReadyStudiesResponse = this.filterJobsInEnclave(
             bmaReadysResults,
             toaGetJobsResult,
             jobsInEnclave,
@@ -51,10 +51,13 @@ export class Enclave<T> implements IEnclave<T> {
             console.log(`Launching study for job ID ${job.jobId}`)
 
             const toaEndpointWithJobId = `${process.env.TOA_BASE_URL}/api/job/${job.jobId}`
-
-            await this.launchStudy(job, toaEndpointWithJobId)
-
-            await toaUpdateJobStatus(job.jobId, { status: 'JOB-PROVISIONING' })
+            try {
+                await this.launchStudy(job, toaEndpointWithJobId)
+                await toaUpdateJobStatus(job.jobId, { status: 'JOB-PROVISIONING' })
+            } catch (error: unknown) {
+                console.log(`ERROR :::: Error launching study. Cause: ${error}`)
+                await toaUpdateJobStatus(job.jobId, { status: 'JOB-ERRORED', message: `${error}` })
+            }
         }
         this.cleanup()
     }
@@ -70,7 +73,7 @@ export class Enclave<T> implements IEnclave<T> {
     getAllStudiesInEnclave(): Promise<T[]> {
         throw new Error('Method not implemented.')
     }
-    getRunningStudies(): Promise<T[]> {
+    getDeployedStudies(): Promise<T[]> {
         throw new Error('Method not implemented.')
     }
     async launchStudy(_job: ManagementAppJob, _toaEndpointWithJobId: string): Promise<void> {

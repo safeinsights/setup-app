@@ -1,8 +1,8 @@
-import { vi, describe, it, expect } from 'vitest'
-import { DockerEnclave } from './docker-enclave'
-import { ManagementAppGetReadyStudiesResponse, TOAGetJobsResponse, DockerApiContainersResponse } from './types'
-import * as docker from './docker'
+import { describe, expect, it, vi } from 'vitest'
 import * as api from './api'
+import * as docker from './docker'
+import { DockerEnclave } from './docker-enclave'
+import { DockerApiContainersResponse, ManagementAppGetReadyStudiesResponse, TOAGetJobsResponse } from './types'
 
 vi.mock('./docker')
 vi.mock('./api')
@@ -188,7 +188,7 @@ describe('DockerEnclave', () => {
         const enclave = new DockerEnclave()
         const filterContainers = vi.mocked(docker.filterContainers).mockResolvedValue([])
         const getAllStudiesInEnclave = vi.spyOn(enclave, 'getAllStudiesInEnclave').mockResolvedValue([])
-        const containers = await enclave.getRunningStudies()
+        const containers = await enclave.getDeployedStudies()
 
         expect(containers).toEqual([])
         expect(getAllStudiesInEnclave).toHaveBeenCalledOnce()
@@ -236,7 +236,7 @@ describe('DockerEnclave', () => {
         const enclave = new DockerEnclave()
         const filterContainers = vi.mocked(docker.filterContainers).mockResolvedValue([running])
         const getAllStudiesInEnclave = vi.spyOn(enclave, 'getAllStudiesInEnclave').mockResolvedValue(jobs)
-        const containers = await enclave.getRunningStudies()
+        const containers = await enclave.getDeployedStudies()
 
         expect(containers).toEqual([running])
         expect(getAllStudiesInEnclave).toHaveBeenCalledOnce()

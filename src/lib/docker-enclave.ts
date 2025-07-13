@@ -1,4 +1,4 @@
-import { toaUpdateJobStatus, dockerApiCall } from './api'
+import { dockerApiCall, toaUpdateJobStatus } from './api'
 import { createContainerObject, filterContainers, pullContainer } from './docker'
 import { Enclave, IEnclave } from './enclave'
 import {
@@ -18,43 +18,55 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
         console.log('Filtering Docker jobs')
         /* v8 ignore next */
         if (!runningJobsInEnclave?.length) return bmaReadysResults || { jobs: [] }
-
+        const jobs: ManagementAppJob[] = bmaReadysResults.jobs.filter((job) =>
+            runningJobsInEnclave.map((r) => r.Labels?.instance !== job.jobId),
+        )
+        console.log(`Found ${jobs.length} jobs that could be deployed!`)
         return {
-            jobs: bmaReadysResults.jobs.filter((job) =>
-                runningJobsInEnclave.map((r) => r.Labels?.instance).includes(job.jobId),
-            ),
+            jobs: jobs,
         }
     }
 
     async cleanup(): Promise<void> {
-        console.log('Cleaning up the enclave. Removing successfully rand studies.')
-
+        console.log('Cleaning up the enclave. Removing successfully ran studies.')
         const successfulContainers = filterContainers(
             await this.getAllStudiesInEnclave(),
             {
                 component: 'research-container',
                 'managed-by': 'setup-app',
             },
-            ['completed'],
+            ['exited'],
         )
         successfulContainers.forEach(async (container) => {
-            console.log(`Removing Container ${container.Id}`)
-            try {
-                await dockerApiCall('DEL', `containers/${container.Id}`)
-                /* v8 ignore next 6 */
-            } catch (error: unknown) {
-                const err = error as Error & { cause: string }
-                console.error(
-                    `Error deleting container: [${container.Id}]. Please check the logs for more details. Cause: ${err['cause']}`,
+            const containerExitResult = await dockerApiCall('GET', `containers/${container.Id}/json`)
+            if ('State' in containerExitResult && typeof containerExitResult?.State === 'object') {
+                if (containerExitResult?.State?.ExitCode === 0) {
+                    await this.removeContainer(container.Id)
+                }
+            } else {
+                console.log(
+                    `Container ${container.Id} did not exit successfully. Please check the logs for more details. Will be cleaned up during the error jobs fetch.`,
                 )
             }
         })
     }
 
+    async removeContainer(id: string): Promise<void> {
+        console.log(`Removing Container ${id}`)
+        try {
+            await dockerApiCall('DELETE', `containers/${id}`)
+            /* v8 ignore next 6 */
+        } catch (error: unknown) {
+            const err = error as Error & { cause: string }
+            console.error(
+                `Error deleting container: [${id}]. Please check the logs for more details. Cause: ${JSON.stringify(err)}`,
+            )
+        }
+    }
+
     async getAllStudiesInEnclave(): Promise<DockerApiContainersResponse[]> {
         try {
-            const containers: DockerApiResponse = await dockerApiCall('GET', 'containers/json')
-            console.log(`Pulled the following containers: ${JSON.stringify(containers)}`)
+            const containers: DockerApiResponse = await dockerApiCall('GET', 'containers/json?all=true')
             return containers as DockerApiContainersResponse[]
         } catch (error: unknown) {
             const err = error as Error & { cause: string }
@@ -62,16 +74,18 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
         }
         return []
     }
-    async getRunningStudies(): Promise<DockerApiContainersResponse[]> {
+    async getDeployedStudies(): Promise<DockerApiContainersResponse[]> {
         console.log('Docker => Retrieving running research containers')
-        return filterContainers(
+        const containers = filterContainers(
             await this.getAllStudiesInEnclave(),
             {
                 component: 'research-container',
                 'managed-by': 'setup-app',
             },
-            ['running'],
+            ['running', 'created', 'restarting', 'removing', 'paused', 'exited', 'dead'],
         )
+        console.log(`Found ${containers.length} containers deployed!`)
+        return containers
     }
     async launchStudy(job: ManagementAppJob, toaEndpointWithJobId: string): Promise<void> {
         const container = createContainerObject(job.containerLocation, job.jobId, job.title, toaEndpointWithJobId)
@@ -104,12 +118,19 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
             ['exited'],
         )
         exitedContainers.forEach(async (container) => {
-            const errorMsg = `Container ${container.Id} exited with message: ${container.Status}`
-            console.log(errorMsg)
-            await toaUpdateJobStatus(container.Labels?.instance.toString(), {
-                status: 'JOB-ERRORED',
-                message: errorMsg,
-            })
+            const containerExitResult = await dockerApiCall('GET', `containers/${container.Id}/json`)
+            if (
+                'State' in containerExitResult &&
+                typeof containerExitResult?.State === 'object' &&
+                containerExitResult?.State?.ExitCode !== 0
+            ) {
+                const errorMsg = `Container ${container.Id} exited with message: ${container.Status}`
+                console.log(errorMsg)
+                await toaUpdateJobStatus(container.Labels?.instance.toString(), {
+                    status: 'JOB-ERRORED',
+                    message: errorMsg,
+                })
+            }
         })
     }
 }
