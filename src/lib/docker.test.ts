@@ -45,7 +45,10 @@ describe('docker', () => {
                 instance: jobId,
                 'managed-by': 'setup-app',
             },
-            Env: [`TRUSTED_OUTPUT_ENDPOINT=${toaEndpointWithJobId}`],
+            Env: [
+                `TRUSTED_OUTPUT_ENDPOINT=${toaEndpointWithJobId}`,
+                'TRUSTED_OUTPUT_BASIC_AUTH=testusername:testpassword',
+            ],
         })
     })
     it('filterContainers: filters containers by state and labels', () => {

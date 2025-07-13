@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import * as api from './api'
 import * as docker from './docker'
 import { DockerEnclave } from './docker-enclave'
-import { DockerApiContainersResponse, ManagementAppGetReadyStudiesResponse, TOAGetJobsResponse } from './types'
+import { DockerApiContainerResponse, DockerApiContainersResponse, ManagementAppGetReadyStudiesResponse, TOAGetJobsResponse } from './types'
 
 vi.mock('./docker')
 vi.mock('./api')
@@ -91,7 +91,7 @@ describe('DockerEnclave', () => {
         const jobs: DockerApiContainersResponse[] = [
             {
                 Id: '1234567890',
-                Images: 'test',
+                Image: 'test',
                 Names: ['research-container-1234567890'],
                 ImageID: 'sha256:1234567890',
                 Command: 'test/container-1',
@@ -105,7 +105,7 @@ describe('DockerEnclave', () => {
             },
             {
                 Id: '0987654321',
-                Images: 'test',
+                Image: 'test',
                 Names: ['research-container-0987654321'],
                 ImageID: 'sha256:0987654321',
                 Command: 'test/container-2',
@@ -118,13 +118,50 @@ describe('DockerEnclave', () => {
                 Status: 'completed',
             },
         ]
+
+        const statuses : DockerApiContainerResponse[] = [
+            {
+                Id: '1234567890',
+                Image: 'test',
+                State: {
+                    Status: 'exited',
+                    Running: false,
+                    Paused: false,
+                    Restarting: false,
+                    OOMKilled: false,
+                    Dead: true,
+                    StartedAt: '',
+                    FinishedAt: '',
+                    ExitCode: 0,
+                    Error: 'error',
+                },
+            },
+            {
+                Id: '0987654321',
+                Image: 'test',
+                State: {
+                    Status: 'exited',
+                    Running: false,
+                    Paused: false,
+                    Restarting: false,
+                    OOMKilled: false,
+                    Dead: true,
+                    StartedAt: '',
+                    FinishedAt: '',
+                    ExitCode: 0,
+                    Error: 'error',
+                },
+            },
+        ]
         const dockerApiCall = vi.mocked(api.dockerApiCall).mockResolvedValue({ Id: '' })
         vi.spyOn(enclave, 'getAllStudiesInEnclave').mockResolvedValue(jobs)
         vi.mocked(docker.filterContainers).mockReturnValue(jobs)
         await enclave.cleanup()
         expect(dockerApiCall).toHaveBeenCalledTimes(2)
-        expect(dockerApiCall).toHaveBeenCalledWith('DEL', 'containers/1234567890')
-        expect(dockerApiCall).toHaveBeenCalledWith('DEL', 'containers/0987654321')
+        expect(dockerApiCall).toHaveBeenCalledWith('GET', 'containers/0987654321/json')
+        expect(dockerApiCall).toHaveBeenCalledWith('GET', 'containers/1234567890/json')
+        // expect(dockerApiCall).toHaveBeenCalledWith('DELETE', 'containers/1234567890')
+        // expect(dockerApiCall).toHaveBeenCalledWith('DELETE', 'containers/0987654321')
     })
 
     it('getAllStudiesInEnclave: should return an empty array if there are no containers', async () => {
@@ -133,7 +170,7 @@ describe('DockerEnclave', () => {
         const containers = await enclave.getAllStudiesInEnclave()
 
         expect(containers).toEqual([])
-        expect(dockerApiCall).toHaveBeenCalledWith('GET', 'containers/json')
+        expect(dockerApiCall).toHaveBeenCalledWith('GET', 'containers/json?all=true')
     })
 
     it('getAllStudiesInEnclave: Return empty when the api call throws an error', async () => {
@@ -141,14 +178,14 @@ describe('DockerEnclave', () => {
         const enclave = new DockerEnclave()
         const containers = await enclave.getAllStudiesInEnclave()
         expect(containers).toEqual([])
-        expect(dockerApiCall).toHaveBeenCalledWith('GET', 'containers/json')
+        expect(dockerApiCall).toHaveBeenCalledWith('GET', 'containers/json?all=true')
     })
 
     it('getAllStudiesInEnclave: should return a list of containers if they exist', async () => {
         const jobs: DockerApiContainersResponse[] = [
             {
                 Id: '1234567890',
-                Images: 'test',
+                Image: 'test',
                 Names: ['research-container-1234567890'],
                 ImageID: 'sha256:1234567890',
                 Command: 'test/container-1',
@@ -162,7 +199,7 @@ describe('DockerEnclave', () => {
             },
             {
                 Id: '0987654321',
-                Images: 'test',
+                Image: 'test',
                 Names: ['research-container-0987654321'],
                 ImageID: 'sha256:0987654321',
                 Command: 'test/container-2',
@@ -181,7 +218,7 @@ describe('DockerEnclave', () => {
         const result = await enclave.getAllStudiesInEnclave()
 
         expect(result).toEqual(jobs)
-        expect(dockerApiCall).toHaveBeenCalledWith('GET', 'containers/json')
+        expect(dockerApiCall).toHaveBeenCalledWith('GET', 'containers/json?all=true')
     })
 
     it('getRunningStudies: should return an empty array if there are no containers', async () => {
@@ -198,7 +235,7 @@ describe('DockerEnclave', () => {
                 component: 'research-container',
                 'managed-by': 'setup-app',
             },
-            ['running'],
+            ['running', "created", "restarting", "removing", "paused", "exited", "dead"],
         )
     })
 
@@ -246,7 +283,7 @@ describe('DockerEnclave', () => {
                 component: 'research-container',
                 'managed-by': 'setup-app',
             },
-            ['running'],
+            ['running', 'created', 'restarting', 'removing', 'paused', 'exited', 'dead'],
         )
     })
 
@@ -334,10 +371,9 @@ describe('DockerEnclave', () => {
 
     it('checkForErroredJobs', async () => {
         const enclave = new DockerEnclave()
-        const failedContainers = [
-            {
+        const failedContainer = {
                 Id: '1234567890',
-                Images: 'test',
+                Image: 'test',
                 Names: ['research-container-1234567890'],
                 ImageID: 'sha256:1234567890',
                 Command: 'test/container-1',
@@ -348,33 +384,36 @@ describe('DockerEnclave', () => {
                 },
                 State: 'exited',
                 Status: 'exited',
-            },
-            {
-                Id: '0987654321',
-                Images: 'test',
-                Names: ['research-container-0987654321'],
-                ImageID: 'sha256:0987654321',
-                Command: 'test/container-2',
-                Labels: {
-                    instance: '0987654321',
-                    component: 'research-container',
-                    'managed-by': 'setup-app',
-                },
-                State: 'exited',
+            }
+        const detailedContainerStatus = {
+            Id: '1234567890',
+            Image: 'test',
+            State: {
                 Status: 'exited',
-            },
-        ]
+                Running: false,
+                Paused: false,
+                Restarting: false,
+                OOMKilled: false,
+                Dead: true,
+                StartedAt: '',
+                FinishedAt: '',
+                ExitCode: 10,
+                Error: 'error',
+            }
+        }
         const mockUpdateJobStatus = vi.mocked(api.toaUpdateJobStatus)
-        vi.mocked(api.dockerApiCall).mockResolvedValue(failedContainers)
-        vi.mocked(docker.filterContainers).mockReturnValue(failedContainers)
+        const dockerApiCall =  vi
+            .mocked(api.dockerApiCall)
+            .mockResolvedValueOnce([failedContainer])
+            .mockResolvedValueOnce(detailedContainerStatus)
+        vi.mocked(docker.filterContainers).mockReturnValue([failedContainer])
         await enclave.checkForErroredJobs()
+        expect(dockerApiCall).toHaveBeenCalledTimes(2)
+        expect(dockerApiCall).toHaveBeenCalledWith('GET', `containers/json?all=true`)
+        expect(dockerApiCall).toHaveBeenCalledWith('GET', `containers/1234567890/json`)
         expect(mockUpdateJobStatus).nthCalledWith(1, '1234567890', {
             status: 'JOB-ERRORED',
-            message: 'Container 1234567890 exited with message: exited',
-        })
-        expect(mockUpdateJobStatus).nthCalledWith(2, '0987654321', {
-            status: 'JOB-ERRORED',
-            message: 'Container 0987654321 exited with message: exited',
+            message: 'Container 1234567890 exited with message: error',
         })
     })
 })

@@ -2,6 +2,7 @@ import { dockerApiCall, toaUpdateJobStatus } from './api'
 import { createContainerObject, filterContainers, pullContainer } from './docker'
 import { Enclave, IEnclave } from './enclave'
 import {
+    DockerApiContainerResponse,
     DockerApiContainersResponse,
     DockerApiResponse,
     ManagementAppGetReadyStudiesResponse,
@@ -118,13 +119,14 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
             ['exited'],
         )
         exitedContainers.forEach(async (container) => {
-            const containerExitResult = await dockerApiCall('GET', `containers/${container.Id}/json`)
+            const containerExitResult: DockerApiContainerResponse = (await dockerApiCall(
+                'GET',
+                `containers/${container.Id}/json`,
+            )) as DockerApiContainerResponse
             if (
-                'State' in containerExitResult &&
-                typeof containerExitResult?.State === 'object' &&
                 containerExitResult?.State?.ExitCode !== 0
             ) {
-                const errorMsg = `Container ${container.Id} exited with message: ${container.Status}`
+                const errorMsg = `Container ${container.Id} exited with message: ${containerExitResult.State.Error}`
                 console.log(errorMsg)
                 await toaUpdateJobStatus(container.Labels?.instance.toString(), {
                     status: 'JOB-ERRORED',

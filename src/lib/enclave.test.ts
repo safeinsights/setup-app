@@ -54,7 +54,7 @@ describe('Enclave', () => {
             ],
         }
 
-        enclave.filterJobsInEnclave = vi.fn().mockResolvedValue(jobs)
+        enclave.filterJobsInEnclave = vi.fn().mockReturnValue(jobs)
 
         enclave.launchStudy = vi.fn()
         enclave.cleanup = vi.fn()
