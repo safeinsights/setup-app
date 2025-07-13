@@ -172,6 +172,14 @@ describe('DockerEnclave', () => {
         expect(dockerApiCall).toHaveBeenCalledWith('DELETE', 'containers/0987654321')
     })
 
+    it('removeContainer: should call dockerApiCall with the correct arguments', async () => {
+        const enclave = new DockerEnclave()
+        const dockerApiCall = vi.mocked(api.dockerApiCall)
+        await enclave.removeContainer('1234567890')
+        expect(dockerApiCall).toBeCalledTimes(1)
+        expect(dockerApiCall).toHaveBeenCalledWith('DELETE', 'containers/1234567890')
+    })
+
     it('getAllStudiesInEnclave: should return an empty array if there are no containers', async () => {
         const dockerApiCall = vi.mocked(api.dockerApiCall).mockResolvedValue([])
         const enclave = new DockerEnclave()

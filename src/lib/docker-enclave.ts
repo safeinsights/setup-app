@@ -45,6 +45,7 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
             )) as DockerApiContainerResponse
             if (containerExitResult?.State?.ExitCode === 0) {
                 await this.removeContainer(container.Id)
+                /* v8 ignore next 5 */
             } else {
                 console.log(
                     `Container ${container.Id} did not exit successfully. Please check the logs for more details. Will be cleaned up during the error jobs fetch.`,

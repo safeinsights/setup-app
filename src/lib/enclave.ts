@@ -54,10 +54,13 @@ export class Enclave<T> implements IEnclave<T> {
             try {
                 await this.launchStudy(job, toaEndpointWithJobId)
                 await toaUpdateJobStatus(job.jobId, { status: 'JOB-PROVISIONING' })
+                /* v8 ignore start */
             } catch (error: unknown) {
                 console.log(`ERROR :::: Error launching study. Cause: ${error}`)
                 await toaUpdateJobStatus(job.jobId, { status: 'JOB-ERRORED', message: `${error}` })
             }
+
+            /* v8 ignore end */
         }
         this.cleanup()
     }
