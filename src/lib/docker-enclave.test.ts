@@ -43,7 +43,7 @@ describe('DockerEnclave', () => {
         const runningJobsInEnclave: DockerApiContainersResponse[] = [
             {
                 Id: '1234567890',
-                Images: 'test',
+                Image: 'test',
                 Names: ['research-container-1234567890'],
                 ImageID: 'sha256:1234567890',
                 Command: 'test/container-1',
@@ -57,7 +57,7 @@ describe('DockerEnclave', () => {
             },
             {
                 Id: '0987654321',
-                Images: 'test',
+                Image: 'test',
                 Names: ['research-container-0987654321'],
                 ImageID: 'sha256:0987654321',
                 Command: 'test/container-2',
@@ -250,7 +250,7 @@ describe('DockerEnclave', () => {
     it('getRunningStudies: should return a filtered array ', async () => {
         const running = {
             Id: '1234567890',
-            Images: 'test',
+            Image: 'test',
             Names: ['research-container-1234567890'],
             ImageID: 'sha256:1234567890',
             Command: 'test/container-1',
@@ -264,7 +264,7 @@ describe('DockerEnclave', () => {
         }
         const completed = {
             Id: '0987654321',
-            Images: 'test',
+            Image: 'test',
             Names: ['research-container-0987654321'],
             ImageID: 'sha256:0987654321',
             Command: 'test/container-2',
