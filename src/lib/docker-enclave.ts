@@ -39,11 +39,12 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
             ['exited'],
         )
         successfulContainers.forEach(async (container) => {
-            const containerExitResult = await dockerApiCall('GET', `containers/${container.Id}/json`)
-            if ('State' in containerExitResult && typeof containerExitResult?.State === 'object') {
-                if (containerExitResult?.State?.ExitCode === 0) {
-                    await this.removeContainer(container.Id)
-                }
+            const containerExitResult = (await dockerApiCall(
+                'GET',
+                `containers/${container.Id}/json`,
+            )) as DockerApiContainerResponse
+            if (containerExitResult?.State?.ExitCode === 0) {
+                await this.removeContainer(container.Id)
             } else {
                 console.log(
                     `Container ${container.Id} did not exit successfully. Please check the logs for more details. Will be cleaned up during the error jobs fetch.`,
@@ -123,9 +124,7 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
                 'GET',
                 `containers/${container.Id}/json`,
             )) as DockerApiContainerResponse
-            if (
-                containerExitResult?.State?.ExitCode !== 0
-            ) {
+            if (containerExitResult?.State?.ExitCode !== 0) {
                 const errorMsg = `Container ${container.Id} exited with message: ${containerExitResult.State.Error}`
                 console.log(errorMsg)
                 await toaUpdateJobStatus(container.Labels?.instance.toString(), {

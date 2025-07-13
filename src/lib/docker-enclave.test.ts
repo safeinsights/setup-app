@@ -2,7 +2,12 @@ import { describe, expect, it, vi } from 'vitest'
 import * as api from './api'
 import * as docker from './docker'
 import { DockerEnclave } from './docker-enclave'
-import { DockerApiContainerResponse, DockerApiContainersResponse, ManagementAppGetReadyStudiesResponse, TOAGetJobsResponse } from './types'
+import {
+    DockerApiContainerResponse,
+    DockerApiContainersResponse,
+    ManagementAppGetReadyStudiesResponse,
+    TOAGetJobsResponse,
+} from './types'
 
 vi.mock('./docker')
 vi.mock('./api')
@@ -119,7 +124,7 @@ describe('DockerEnclave', () => {
             },
         ]
 
-        const statuses : DockerApiContainerResponse[] = [
+        const statuses: DockerApiContainerResponse[] = [
             {
                 Id: '1234567890',
                 Image: 'test',
@@ -153,15 +158,18 @@ describe('DockerEnclave', () => {
                 },
             },
         ]
-        const dockerApiCall = vi.mocked(api.dockerApiCall).mockResolvedValue({ Id: '' })
+        const dockerApiCall = vi
+            .mocked(api.dockerApiCall)
+            .mockResolvedValueOnce(statuses[0])
+            .mockResolvedValueOnce(statuses[1])
         vi.spyOn(enclave, 'getAllStudiesInEnclave').mockResolvedValue(jobs)
         vi.mocked(docker.filterContainers).mockReturnValue(jobs)
         await enclave.cleanup()
-        expect(dockerApiCall).toHaveBeenCalledTimes(2)
+        expect(dockerApiCall).toHaveBeenCalledTimes(4)
         expect(dockerApiCall).toHaveBeenCalledWith('GET', 'containers/0987654321/json')
         expect(dockerApiCall).toHaveBeenCalledWith('GET', 'containers/1234567890/json')
-        // expect(dockerApiCall).toHaveBeenCalledWith('DELETE', 'containers/1234567890')
-        // expect(dockerApiCall).toHaveBeenCalledWith('DELETE', 'containers/0987654321')
+        expect(dockerApiCall).toHaveBeenCalledWith('DELETE', 'containers/1234567890')
+        expect(dockerApiCall).toHaveBeenCalledWith('DELETE', 'containers/0987654321')
     })
 
     it('getAllStudiesInEnclave: should return an empty array if there are no containers', async () => {
@@ -235,7 +243,7 @@ describe('DockerEnclave', () => {
                 component: 'research-container',
                 'managed-by': 'setup-app',
             },
-            ['running', "created", "restarting", "removing", "paused", "exited", "dead"],
+            ['running', 'created', 'restarting', 'removing', 'paused', 'exited', 'dead'],
         )
     })
 
@@ -372,19 +380,19 @@ describe('DockerEnclave', () => {
     it('checkForErroredJobs', async () => {
         const enclave = new DockerEnclave()
         const failedContainer = {
-                Id: '1234567890',
-                Image: 'test',
-                Names: ['research-container-1234567890'],
-                ImageID: 'sha256:1234567890',
-                Command: 'test/container-1',
-                Labels: {
-                    instance: '1234567890',
-                    component: 'research-container',
-                    'managed-by': 'setup-app',
-                },
-                State: 'exited',
-                Status: 'exited',
-            }
+            Id: '1234567890',
+            Image: 'test',
+            Names: ['research-container-1234567890'],
+            ImageID: 'sha256:1234567890',
+            Command: 'test/container-1',
+            Labels: {
+                instance: '1234567890',
+                component: 'research-container',
+                'managed-by': 'setup-app',
+            },
+            State: 'exited',
+            Status: 'exited',
+        }
         const detailedContainerStatus = {
             Id: '1234567890',
             Image: 'test',
@@ -399,10 +407,10 @@ describe('DockerEnclave', () => {
                 FinishedAt: '',
                 ExitCode: 10,
                 Error: 'error',
-            }
+            },
         }
         const mockUpdateJobStatus = vi.mocked(api.toaUpdateJobStatus)
-        const dockerApiCall =  vi
+        const dockerApiCall = vi
             .mocked(api.dockerApiCall)
             .mockResolvedValueOnce([failedContainer])
             .mockResolvedValueOnce(detailedContainerStatus)
