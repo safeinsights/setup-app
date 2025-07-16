@@ -16,12 +16,7 @@ import {
     DescribeTasksCommand,
     DescribeTasksCommandOutput,
 } from '@aws-sdk/client-ecs'
-import {
-    CloudWatchLogsClient,
-    LogGroup,
-    paginateDescribeLogGroups,
-    paginateFilterLogEvents,
-} from '@aws-sdk/client-cloudwatch-logs'
+import { CloudWatchLogsClient, paginateFilterLogEvents } from '@aws-sdk/client-cloudwatch-logs'
 import {
     GetResourcesCommandInput,
     paginateGetResources,
@@ -38,8 +33,6 @@ export type LogEntry = {
     timestamp: number
     message: string
 }
-
-export const LOG_GROUP_PREFIX = 'OpenStaxSecureEnclaveStack-ResearchContainerTaskDefResearchContainerLogGroup'
 
 export async function getECSTaskDefinition(
     client: ECSClient,
@@ -234,48 +227,39 @@ export async function getAllTasksWithJobId(client: ResourceGroupsTaggingAPIClien
     return await getResourceCommandWrapper(tagFilters, resourceTypeFilters, client, logMessage)
 }
 
-export async function getLogsForTask(taskId: string): Promise<LogEntry[]> {
-    const client = new CloudWatchLogsClient({})
+export async function getLogsForTask(taskId: string, taskDefArn: string): Promise<LogEntry[]> {
+    const logsClient = new CloudWatchLogsClient({})
+    const ecsClient = new ECSClient()
 
-    console.log(`AWS: START: Getting log groups for task ${taskId} ...`)
-    // Get all log groups that match the Research Container log group prefix
-    const paginatedRCLogGroups = paginateDescribeLogGroups({ client }, { logGroupNamePrefix: LOG_GROUP_PREFIX })
-    const researchContainerLogGroups: LogGroup[] = []
+    // Get full task definition to find the log configuration
+    const taskDefData = await getECSTaskDefinition(ecsClient, taskDefArn)
+    const logConfiguration = taskDefData.taskDefinition?.containerDefinitions?.find(
+        (container) => container.name === 'ResearchContainer',
+    )?.logConfiguration
+    ensureValueWithError(logConfiguration, `Could not find log configuration for task ${taskId}`)
+    console.log(`Found log configuration`, logConfiguration)
 
-    for await (const page of paginatedRCLogGroups) {
-        if (page.logGroups?.every((lg) => !!lg)) {
-            researchContainerLogGroups.push(
-                ...page.logGroups.filter((lg) => lg.storedBytes !== undefined && lg.storedBytes > 0),
-            )
-        }
-    }
-    console.log(`AWS:   END: paginateDescribeLogGroups finished with ${researchContainerLogGroups.length} log groups`)
+    const logGroupName = ensureValueWithError(logConfiguration?.options?.['awslogs-group'])
 
-    // Search each log group for events matching the task
+    // Get the log events for the task
     const events: LogEntry[] = []
     console.log(`AWS: START: Getting log events for task ${taskId} ...`)
-    for (const rcLogGroup of researchContainerLogGroups) {
-        try {
-            const paginatedLogEvents = paginateFilterLogEvents(
-                { client },
-                {
-                    logGroupIdentifier: rcLogGroup.logGroupName,
-                    logStreamNames: [`ResearchContainer/ResearchContainer/${taskId}`],
-                },
-            )
-            for await (const page of paginatedLogEvents) {
-                page.events?.map((event) => {
-                    events.push({
-                        timestamp: ensureValueWithError(event.timestamp),
-                        message: ensureValueWithError(event.message),
-                    })
-                })
-            }
-        } catch {
-            console.warn(`AWS: No log group found for task ${taskId} in log group ${rcLogGroup.logGroupName}`)
-            continue
-        }
+    const paginatedLogEvents = paginateFilterLogEvents(
+        { client: logsClient },
+        {
+            logGroupIdentifier: logGroupName,
+            logStreamNames: [`ResearchContainer/ResearchContainer/${taskId}`],
+        },
+    )
+    for await (const page of paginatedLogEvents) {
+        page.events?.map((event) => {
+            events.push({
+                timestamp: ensureValueWithError(event.timestamp),
+                message: ensureValueWithError(event.message),
+            })
+        })
     }
+
     console.log(`AWS:   END: paginateFilterLogEvents finished with ${events.length} log events for task ${taskId}`)
 
     return events
