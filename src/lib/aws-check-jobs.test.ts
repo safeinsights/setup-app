@@ -74,6 +74,7 @@ describe('checkForErroredJobs()', () => {
                 },
             ],
             taskArn: 'testArn',
+            taskDefinitionArn: 'testTaskDefArn',
         }
         mockDescribeECSTasks.mockResolvedValue({
             tasks: [mockTask],

@@ -58,7 +58,7 @@ export async function checkForAWSErroredJobs(): Promise<void> {
 
                     // Send logs and update job status
                     const taskId = ensureValueWithError(job.taskArn?.split('/').at(-1))
-                    const logs = await getLogsForTask(taskId)
+                    const logs = await getLogsForTask(taskId, ensureValueWithError(job.taskDefinitionArn))
 
                     await toaUpdateJobStatus(jobId, {
                         status: 'JOB-ERRORED',

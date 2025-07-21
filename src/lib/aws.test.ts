@@ -1,4 +1,4 @@
-import { beforeEach, vi, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { mockClient } from 'aws-sdk-client-mock'
 import {
     ECSClient,
@@ -22,10 +22,9 @@ import {
     getAllTasksWithJobId,
     describeECSTasks,
     getLogsForTask,
-    LOG_GROUP_PREFIX,
 } from './aws'
 import { GetResourcesCommand, ResourceGroupsTaggingAPIClient } from '@aws-sdk/client-resource-groups-tagging-api'
-import { CloudWatchLogsClient, DescribeLogGroupsCommand, FilterLogEventsCommand } from '@aws-sdk/client-cloudwatch-logs'
+import { CloudWatchLogsClient, FilterLogEventsCommand } from '@aws-sdk/client-cloudwatch-logs'
 
 const ecsMockClient = mockClient(ECSClient)
 const taggingMockClient = mockClient(ResourceGroupsTaggingAPIClient)
@@ -280,24 +279,24 @@ describe('getAllTasksWithJobId', () => {
 
 describe('getLogsForTask', () => {
     it('should return logs for a given task', async () => {
-        loggingMockClient
-            .on(DescribeLogGroupsCommand, {
-                logGroupNamePrefix: LOG_GROUP_PREFIX,
+        ecsMockClient
+            .on(DescribeTaskDefinitionCommand, {
+                taskDefinition: 'taskDefArn',
             })
             .resolves({
-                logGroups: [
-                    {
-                        logGroupName: 'test-log-group',
-                        storedBytes: 8,
-                    },
-                    {
-                        logGroupName: 'no-stored-bytes',
-                    },
-                    {
-                        logGroupName: 'empty-group',
-                        storedBytes: 0,
-                    },
-                ],
+                taskDefinition: {
+                    containerDefinitions: [
+                        {
+                            name: 'ResearchContainer',
+                            logConfiguration: {
+                                logDriver: 'awslogs',
+                                options: {
+                                    'awslogs-group': 'test-log-group',
+                                },
+                            },
+                        },
+                    ],
+                },
             })
 
         const testLogEvent = { timestamp: 42, message: 'test log message' }
@@ -310,39 +309,8 @@ describe('getLogsForTask', () => {
                 events: [testLogEvent],
             })
 
-        const res = await getLogsForTask('taskId')
+        const res = await getLogsForTask('taskId', 'taskDefArn')
 
         expect(res).toStrictEqual([testLogEvent])
-    })
-
-    it('should handle errors', async () => {
-        loggingMockClient
-            .on(DescribeLogGroupsCommand, {
-                logGroupNamePrefix: LOG_GROUP_PREFIX,
-            })
-            .resolves({
-                logGroups: [
-                    {
-                        logGroupName: 'test-log-group',
-                        storedBytes: 8,
-                    },
-                ],
-            })
-
-        loggingMockClient
-            .on(FilterLogEventsCommand, {
-                logGroupIdentifier: 'test-log-group',
-                logStreamNames: [`ResearchContainer/ResearchContainer/taskId`],
-            })
-            .rejects(new Error('error'))
-
-        const consoleWarnSpy = vi.spyOn(console, 'warn')
-
-        const res = await getLogsForTask('taskId')
-
-        expect(res).toStrictEqual([])
-        expect(consoleWarnSpy).toHaveBeenCalledWith(
-            'AWS: No log group found for task taskId in log group test-log-group',
-        )
     })
 })
