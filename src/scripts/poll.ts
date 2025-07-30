@@ -1,8 +1,8 @@
 import { checkForErroredJobs } from '../lib/check-jobs'
 import { runStudies } from '../lib/run-studies'
 
-const pollStudiesInterval = parseInt(process.env.POLL_STUDIES_INTERVAL_SECONDS || '30')
-const pollForErroredJobsInterval = parseInt(process.env.POLL_ERRORED_JOBS_INTERVAL_SECONDS || '60')
+const pollStudiesInterval = parseInt(process.env.POLL_STUDIES_INTERVAL_SECONDS ?? '30')
+const pollForErroredJobsInterval = parseInt(process.env.POLL_ERRORED_JOBS_INTERVAL_SECONDS ?? '60')
 
 console.log('Polling interval for studies:', pollStudiesInterval)
 console.log('Polling interval for failed jobs:', pollForErroredJobsInterval)

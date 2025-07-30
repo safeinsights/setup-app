@@ -50,14 +50,32 @@ export type DockerApiResponse =
     | DockerApiContainersResponse
     | DockerApiContainersResponse[]
     | DockerApiImageResponse
+    | DockerApiContainerResponse
 
 export type DockerApiSuccessResponse = {
     Id?: string
 }
 
+export type DockerApiContainerResponse = {
+    Id: string
+    Image: string
+    State: {
+        Status: string
+        Running: boolean
+        Paused: boolean
+        Restarting: boolean
+        OOMKilled: boolean
+        Dead: boolean
+        Error: string
+        StartedAt: string
+        FinishedAt: string
+        ExitCode?: number
+    }
+}
+
 export type DockerApiContainersResponse = {
     Id: string
-    Images: string
+    Image: string
     Names: string[]
     ImageID: string
     Command: string

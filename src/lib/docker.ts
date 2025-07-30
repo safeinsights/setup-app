@@ -27,7 +27,10 @@ function createContainerObject(imageLocation: string, jobId: string, studyTitle:
             instance: jobId,
             'managed-by': 'setup-app',
         },
-        Env: [`TRUSTED_OUTPUT_ENDPOINT=${toaEndpointWithjobId}`],
+        Env: [
+            `TRUSTED_OUTPUT_ENDPOINT=${toaEndpointWithjobId}`,
+            `TRUSTED_OUTPUT_BASIC_AUTH=${process.env.TOA_BASIC_AUTH}`,
+        ],
     }
     return container
 }
@@ -37,7 +40,7 @@ function filterContainers(
     filters: { [key: string]: string | number },
     state: string[],
 ): DockerApiContainersResponse[] {
-    console.log('Filetering Docker containers...')
+    console.log('Filtering Docker containers...')
     if (containers != null && containers.length > 0) {
         return containers.filter(
             (container) =>

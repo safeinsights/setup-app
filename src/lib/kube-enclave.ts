@@ -40,7 +40,7 @@ class KubernetesEnclave extends Enclave<KubernetesApiJobsResponse> implements IE
         return []
     }
 
-    async getRunningStudies(): Promise<KubernetesApiJobsResponse[]> {
+    async getDeployedStudies(): Promise<KubernetesApiJobsResponse[]> {
         console.log('Kubernetes => Retrieving running research jobs')
         const jobs: KubernetesJob[] = (await this.getAllStudiesInEnclave()).flatMap((s) => s?.items)
         return [

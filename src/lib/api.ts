@@ -31,7 +31,7 @@ const generateManagementAppToken = (): string => {
 export const managementAppGetReadyStudiesRequest = async (): Promise<ManagementAppGetReadyStudiesResponse> => {
     const endpoint = process.env.MANAGEMENT_APP_BASE_URL + '/api/studies/ready'
     const token = generateManagementAppToken()
-    console.log(`BMA: Fetching ready studies from ${endpoint} ...`)
+    console.log(`BMA: Fetching ready studies from ${endpoint}`)
     const response = await fetch(endpoint, {
         method: 'GET',
         headers: {
@@ -193,7 +193,6 @@ export const dockerApiCall = async (
             'X-Registry-Auth': process.env.DOCKER_REGISTRY_AUTH ?? '',
         },
     }
-    console.log(`Headers: ${JSON.stringify(options.headers)}`)
     let msg: string = ''
     const canReadDockerSock = hasReadPermissions(socketPath, (error: Error | null) => {
         if (error) {
@@ -220,7 +219,6 @@ export const dockerApiCall = async (
 
             response.on('end', () => {
                 try {
-                    console.log(`Response: ${data}`)
                     if (data && !ignoreResponse) {
                         const result: DockerApiResponse = JSON.parse(data)
                         if ('message' in result) reject(result)

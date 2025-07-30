@@ -1,0 +1,15 @@
+format: json
+exit-code: 1
+debug: true
+severity:
+    - MEDIUM
+    - HIGH
+    - CRITICAL
+scan:
+    scanners:
+        - vuln
+        - secret
+        - misconfig
+misconfiguration:
+    scanners:
+        - dockerfile

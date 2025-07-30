@@ -45,14 +45,17 @@ describe('docker', () => {
                 instance: jobId,
                 'managed-by': 'setup-app',
             },
-            Env: [`TRUSTED_OUTPUT_ENDPOINT=${toaEndpointWithJobId}`],
+            Env: [
+                `TRUSTED_OUTPUT_ENDPOINT=${toaEndpointWithJobId}`,
+                'TRUSTED_OUTPUT_BASIC_AUTH=testusername:testpassword',
+            ],
         })
     })
     it('filterContainers: filters containers by state and labels', () => {
         const containers: DockerApiContainersResponse[] = [
             {
                 Id: '1234567890',
-                Images: 'test',
+                Image: 'test',
                 ImageID: 'test',
                 Names: ['test1'],
                 Command: '',
@@ -65,7 +68,7 @@ describe('docker', () => {
             },
             {
                 Id: '0987654321',
-                Images: 'test',
+                Image: 'test',
                 ImageID: 'test',
                 Names: ['test2'],
                 Command: '',

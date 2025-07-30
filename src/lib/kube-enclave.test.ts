@@ -206,7 +206,7 @@ describe('KubernetesEnclave', () => {
         const getAllStudiesInEnclave = vi.spyOn(enclave, 'getAllStudiesInEnclave').mockResolvedValue([])
         const filterDeployments = vi.mocked(kube.filterDeployments).mockReturnValue([])
 
-        const result = await enclave.getRunningStudies()
+        const result = await enclave.getDeployedStudies()
 
         expect(result).toEqual([{ items: [] }])
         expect(getAllStudiesInEnclave).toHaveBeenCalledOnce()
@@ -272,7 +272,7 @@ describe('KubernetesEnclave', () => {
         const getAllStudiesInEnclave = vi.spyOn(enclave, 'getAllStudiesInEnclave').mockResolvedValue([{ items: jobs }])
         const filterDeployments = vi.mocked(kube.filterDeployments).mockReturnValue([running])
 
-        const result = await enclave.getRunningStudies()
+        const result = await enclave.getDeployedStudies()
 
         expect(result).toEqual([{ items: [running] }])
         expect(getAllStudiesInEnclave).toHaveBeenCalledOnce()
