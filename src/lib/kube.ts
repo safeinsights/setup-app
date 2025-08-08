@@ -68,16 +68,20 @@ function createKubernetesJob(imageLocation: string, jobId: string, studyTitle: s
                             name: name,
                             image: imageLocation,
                             ports: [],
-                        },
-                    ],
-                    env: [
-                        {
-                            name: 'TRUSTED_OUTPUT_ENDPOINT',
-                            value: toaEndpointWithJobId,
+                            env: [
+                                {
+                                    name: 'TRUSTED_OUTPUT_ENDPOINT',
+                                    value: toaEndpointWithJobId,
+                                },
+                                {
+                                    name: 'TRUSTED_OUTPUT_BASIC_AUTH',
+                                    value: process.env.TOA_BASIC_AUTH,
+                                },
+                            ],
                         },
                     ],
                     restartPolicy: 'Never',
-                    //TODO Add image Secret pulls to deloyment?
+                    imagePullSecrets: [{ name: process.env.HARBOR_PULL_SECRET }],
                 },
             },
         },
@@ -98,4 +102,4 @@ function filterDeployments(
     return []
 }
 
-export { getNamespace, initHTTPSTrustStore, getKubeAPIServiceAccountToken, createKubernetesJob, filterDeployments }
+export { createKubernetesJob, filterDeployments, getKubeAPIServiceAccountToken, getNamespace, initHTTPSTrustStore }

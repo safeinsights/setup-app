@@ -1,4 +1,8 @@
+import http from 'http'
+import https from 'https'
 import jwt from 'jsonwebtoken'
+import { LogEntry } from './aws'
+import { getKubeAPIServiceAccountToken, getNamespace, initHTTPSTrustStore } from './kube'
 import {
     DockerApiResponse,
     KubernetesApiResponse,
@@ -7,11 +11,7 @@ import {
     isManagementAppGetReadyStudiesResponse,
     isTOAGetJobsResponse,
 } from './types'
-import http from 'http'
-import https from 'https'
 import { hasReadPermissions } from './utils'
-import { getKubeAPIServiceAccountToken, getNamespace, initHTTPSTrustStore } from './kube'
-import { LogEntry } from './aws'
 
 // Functions for interacting with the Management App
 const generateManagementAppToken = (): string => {
@@ -245,14 +245,15 @@ export const dockerApiCall = async (
 }
 
 export const k8sApiCall = (
-    group: string,
+    group: string | undefined,
     path: string,
     method: string,
     body?: unknown,
 ): Promise<KubernetesApiResponse> => {
     const namespace = getNamespace()
     const kubeAPIServer = process.env.K8S_APISERVER || `https://kubernetes.default.svc.cluster.local`
-    const kubeAPIServerURL = `${kubeAPIServer}/apis/${group}/v1/namespaces/${namespace}/${path}`
+    const apiPrefix = group === undefined ? 'api' : `apis/${group}`
+    const kubeAPIServerURL = `${kubeAPIServer}/${apiPrefix}/v1/namespaces/${namespace}/${path}`
     const kubeAPIServerAccountToken = getKubeAPIServiceAccountToken()
     initHTTPSTrustStore()
     console.log(`K8s: Making ${method} => ${kubeAPIServerURL}`)
