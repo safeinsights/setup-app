@@ -18,7 +18,7 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
     ): ManagementAppGetReadyStudiesResponse {
         console.log('Filtering Docker jobs')
         /* v8 ignore next */
-        if (!runningJobsInEnclave?.length) return bmaReadysResults || { jobs: [] }
+        if (!runningJobsInEnclave?.length) return { jobs: bmaReadysResults.jobs }
         const jobs: ManagementAppJob[] = bmaReadysResults.jobs.filter((job) =>
             runningJobsInEnclave.map((r) => r.Labels?.instance !== job.jobId),
         )

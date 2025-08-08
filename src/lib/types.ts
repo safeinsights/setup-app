@@ -16,6 +16,16 @@ export type TOAGetJobsResponse = {
     jobs: TOAJob[]
 }
 
+export type KubernetesPod = {
+    metadata: {
+        name: string
+        namespace: string
+        labels: {
+            [key: string]: string | number
+        }
+    }
+}
+
 export type KubernetesJob = {
     metadata: {
         name: string
@@ -30,19 +40,28 @@ export type KubernetesJob = {
                 [key: string]: string | number
             }
         }
+        template: {
+            spec: {
+                containers: [{ name: string }]
+            }
+        }
     }
     status: {
-        active: number
-        startTime: string
+        conditions: [
+            {
+                type: string
+                status: string
+            },
+        ]
     }
 }
 
 export type KubernetesApiJobsResponse = {
     status?: string
-    items: KubernetesJob[]
+    items: KubernetesJob[] | KubernetesPod[]
 }
 
-export type KubernetesApiResponse = KubernetesApiJobsResponse | KubernetesJob
+export type KubernetesApiResponse = KubernetesApiJobsResponse | KubernetesJob | KubernetesPod
 
 export type DockerApiResponse =
     | Error
