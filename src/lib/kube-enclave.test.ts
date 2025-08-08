@@ -2,12 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import * as api from './api'
 import * as kube from './kube'
 import { KubernetesEnclave } from './kube-enclave'
-import {
-    KubernetesApiJobsResponse,
-    KubernetesJob,
-    ManagementAppGetReadyStudiesResponse,
-    TOAGetJobsResponse,
-} from './types'
+import { KubernetesJob, ManagementAppGetReadyStudiesResponse, TOAGetJobsResponse } from './types'
 
 vi.mock('./kube')
 vi.mock('./api')
