@@ -40,60 +40,82 @@ describe('KubernetesEnclave', () => {
             ],
         }
 
-        const runningJobsInEnclave: KubernetesApiJobsResponse[] = [
+        const runningJobsInEnclave: KubernetesJob[] = [
             {
-                items: [
-                    {
-                        metadata: {
-                            name: 'rc-1234567890',
-                            namespace: 'test',
-                            labels: {
-                                app: 'rc-1234567890',
-                                component: 'research-container',
-                                'managed-by': 'setup-app',
-                                role: 'toa-access',
-                                instance: '1234567890',
-                            },
-                        },
-                        spec: {
-                            selector: {
-                                matchLabels: {
-                                    studyId: 'rc-1234567890',
-                                    jobId: '1234567890',
-                                },
-                            },
-                        },
-                        status: {
-                            active: 0,
-                            startTime: 'startTime',
+                metadata: {
+                    name: 'rc-1234567890',
+                    namespace: 'test',
+                    labels: {
+                        app: 'rc-1234567890',
+                        component: 'research-container',
+                        'managed-by': 'setup-app',
+                        role: 'toa-access',
+                        instance: '1234567890',
+                    },
+                },
+                spec: {
+                    selector: {
+                        matchLabels: {
+                            studyId: 'rc-1234567890',
+                            jobId: '1234567890',
                         },
                     },
-                    {
-                        metadata: {
-                            name: 'rc-0987654321',
-                            namespace: 'test',
-                            labels: {
-                                app: 'rc-0987654321',
-                                component: 'research-container',
-                                'managed-by': 'setup-app',
-                                role: 'toa-access',
-                                instance: '0987654321',
-                            },
-                        },
+                    template: {
                         spec: {
-                            selector: {
-                                matchLabels: {
-                                    studyId: 'rc-0987654321',
-                                    jobId: '0987654321',
+                            containers: [
+                                {
+                                    name: 'rc-1234567890',
                                 },
-                            },
-                        },
-                        status: {
-                            active: 0,
-                            startTime: 'startTime',
+                            ],
                         },
                     },
-                ],
+                },
+                status: {
+                    conditions: [
+                        {
+                            type: 'Completed',
+                            status: 'False',
+                        },
+                    ],
+                },
+            },
+            {
+                metadata: {
+                    name: 'rc-0987654321',
+                    namespace: 'test',
+                    labels: {
+                        app: 'rc-0987654321',
+                        component: 'research-container',
+                        'managed-by': 'setup-app',
+                        role: 'toa-access',
+                        instance: '0987654321',
+                    },
+                },
+                spec: {
+                    selector: {
+                        matchLabels: {
+                            studyId: 'rc-0987654321',
+                            jobId: '0987654321',
+                        },
+                    },
+                    template: {
+                        spec: {
+                            containers: [
+                                {
+                                    name: 'rc-0987654321',
+                                },
+                            ],
+                        },
+                    },
+                },
+                status: {
+                    conditions: [
+                        {
+                            type: 'Completed',
+                            status: 'False',
+                        },
+                    ],
+                },
             },
         ]
 
@@ -161,15 +183,16 @@ describe('KubernetesEnclave', () => {
                                 name: 'research-container-123',
                                 image: 'my-image:latest',
                                 ports: [],
-                            },
-                        ],
-                        env: [
-                            {
-                                name: 'TRUSTED_OUTPUT_ENDPOINT',
-                                value: 'http://example.com/job/123',
+                                env: [
+                                    {
+                                        name: 'TRUSTED_OUTPUT_ENDPOINT',
+                                        value: 'http://example.com/job/123',
+                                    },
+                                ],
                             },
                         ],
                         restartPolicy: 'Never',
+                        imagePullSecrets: [{ name: 'secret' }],
                     },
                 },
             },
@@ -236,10 +259,23 @@ describe('KubernetesEnclave', () => {
                         jobId: '1234567890',
                     },
                 },
+                template: {
+                    spec: {
+                        containers: [
+                            {
+                                name: 'rc-1234567890',
+                            },
+                        ],
+                    },
+                },
             },
             status: {
-                active: 1,
-                startTime: 'startTime',
+                conditions: [
+                    {
+                        type: 'Completed',
+                        status: 'False',
+                    },
+                ],
             },
         }
         const completed: KubernetesJob = {
@@ -260,16 +296,29 @@ describe('KubernetesEnclave', () => {
                         jobId: '0987654321',
                     },
                 },
+                template: {
+                    spec: {
+                        containers: [
+                            {
+                                name: 'rc-0987654321',
+                            },
+                        ],
+                    },
+                },
             },
             status: {
-                active: 0,
-                startTime: 'startTime',
+                conditions: [
+                    {
+                        type: 'Completed',
+                        status: 'False',
+                    },
+                ],
             },
         }
         const jobs = [completed, running]
 
         const enclave = new KubernetesEnclave()
-        const getAllStudiesInEnclave = vi.spyOn(enclave, 'getAllStudiesInEnclave').mockResolvedValue([{ items: jobs }])
+        const getAllStudiesInEnclave = vi.spyOn(enclave, 'getAllStudiesInEnclave').mockResolvedValue(jobs)
         const filterDeployments = vi.mocked(kube.filterDeployments).mockReturnValue([running])
 
         const result = await enclave.getDeployedStudies()
@@ -317,10 +366,23 @@ describe('KubernetesEnclave', () => {
                         jobId: '1234567890',
                     },
                 },
+                template: {
+                    spec: {
+                        containers: [
+                            {
+                                name: 'rc-1234567890',
+                            },
+                        ],
+                    },
+                },
             },
             status: {
-                active: 1,
-                startTime: 'startTime',
+                conditions: [
+                    {
+                        type: 'Completed',
+                        status: 'False',
+                    },
+                ],
             },
         }
 

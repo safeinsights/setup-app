@@ -132,10 +132,23 @@ describe('Get Service Account items', () => {
                             jobId: 'XYZ789',
                         },
                     },
+                    template: {
+                        spec: {
+                            containers: [
+                                {
+                                    name: 'ABC123',
+                                },
+                            ],
+                        },
+                    },
                 },
                 status: {
-                    active: 1,
-                    startTime: 'startTime',
+                    conditions: [
+                        {
+                            type: 'Completed',
+                            status: 'False',
+                        },
+                    ],
                 },
             },
             {
@@ -154,10 +167,23 @@ describe('Get Service Account items', () => {
                             jobId: 'IJK123',
                         },
                     },
+                    template: {
+                        spec: {
+                            containers: [
+                                {
+                                    name: 'DEF456',
+                                },
+                            ],
+                        },
+                    },
                 },
                 status: {
-                    active: 0,
-                    startTime: 'startTime',
+                    conditions: [
+                        {
+                            type: 'Completed',
+                            status: 'True',
+                        },
+                    ],
                 },
             },
         ]
