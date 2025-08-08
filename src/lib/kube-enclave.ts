@@ -1,4 +1,4 @@
-import { k8sApiCall } from './api'
+import { k8sApiCall, toaUpdateJobStatus } from './api'
 import { Enclave, IEnclave } from './enclave'
 import { createKubernetesJob, filterDeployments } from './kube'
 import {
@@ -89,7 +89,7 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
                 job.metadata?.labels?.['component'] === 'research-container'
             ) {
                 const statuses = job.status?.conditions?.filter((c) => c.type === 'Complete' && c.status === 'True')
-                if ( statuses && statuses.length > 0) {
+                if (statuses && statuses.length > 0) {
                     console.log(`Cleaning up Job ${job.metadata.labels.instance}`)
                     const jobContainers = containers.filter(
                         (c) =>
@@ -125,6 +125,22 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
                     c.metadata?.labels?.['component'] === 'research-container' &&
                     jobsInEnclaveIds.includes(c.metadata?.labels?.['instance']),
             )
+        if (containers && containers.length > 0) {
+            containers.forEach(async (c) => {
+                if (
+                    c.status?.containerStatuses?.some(
+                        (d) => 'terminated' in d.state && d.state['terminated'].exitCode !== 0,
+                    )
+                ) {
+                    const errorMsg = `Container ${c.metadata.name} exited with non 0 error code`
+                    console.log(errorMsg)
+                    await toaUpdateJobStatus(c.metadata?.labels?.instance.toString(), {
+                        status: 'JOB-ERRORED',
+                        message: errorMsg,
+                    })
+                }
+            })
+        }
     }
 }
 

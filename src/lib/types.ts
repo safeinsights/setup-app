@@ -24,6 +24,20 @@ export type KubernetesPod = {
             [key: string]: string | number
         }
     }
+    status?: {
+        containerStatuses?: [
+            {
+                ready: boolean
+                started: boolean
+                state: {
+                    [key: string]: {
+                        exitCode: number
+                        reason: string
+                    }
+                }
+            },
+        ]
+    }
 }
 
 export type KubernetesJob = {
