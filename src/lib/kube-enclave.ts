@@ -20,7 +20,13 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
         console.log('Filtering Kubernetes jobs...')
         /* v8 ignore next */
         const jobs: ManagementAppJob[] = []
-        const jobsInEnclaveIds = runningJobsInEnclave?.map((i) => i.metadata?.labels?.instance)
+        const jobsInEnclaveIds = runningJobsInEnclave
+            ?.filter(
+                (job) =>
+                    job.metadata?.labels?.['managed-by'] === 'setup-app' &&
+                    job.metadata?.labels?.['component'] === 'research-container',
+            )
+            .map((i) => i.metadata?.labels?.instance)
         console.log(`Jobs running in enclave: ${jobsInEnclaveIds}`)
         bmaReadysResults.jobs.forEach((job) => {
             console.log(`Processing job: ${job.jobId}`)
@@ -83,7 +89,7 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
                 job.metadata?.labels?.['component'] === 'research-container'
             ) {
                 const statuses = job.status?.conditions?.filter((c) => c.type === 'Complete' && c.status === 'True')
-                if (statuses.length > 0) {
+                if ( statuses && statuses.length > 0) {
                     console.log(`Cleaning up Job ${job.metadata.labels.instance}`)
                     const jobContainers = containers.filter(
                         (c) =>
@@ -103,7 +109,22 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
         })
     }
     async checkForErroredJobs(): Promise<void> {
-        console.log('Checking environment for jobs')
+        console.log('Checking environment for errored jobs')
+        const jobsInEnclaveIds = (await this.getAllStudiesInEnclave())
+            ?.filter(
+                (job) =>
+                    job.metadata?.labels?.['managed-by'] === 'setup-app' &&
+                    job.metadata?.labels?.['component'] === 'research-container',
+            )
+            .map((i) => i.metadata?.labels?.instance)
+        const containers = ((await k8sApiCall(undefined, 'pods', 'GET')) as KubernetesApiJobsResponse).items
+            .flatMap((j) => j as KubernetesPod)
+            .filter(
+                (c) =>
+                    c.metadata?.labels?.['managed-by'] === 'setup-app' &&
+                    c.metadata?.labels?.['component'] === 'research-container' &&
+                    jobsInEnclaveIds.includes(c.metadata?.labels?.['instance']),
+            )
     }
 }
 
