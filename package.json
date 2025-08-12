@@ -12,7 +12,9 @@
         "typecheck": "tsc --noEmit",
         "checks": "run-p -c typecheck lint",
         "test:unit": "vitest",
-        "test": "run-p -c test:*"
+        "test": "run-p -c test:*",
+        "lambda:build": "esbuild src/lambda/*.ts --outdir=dist/lambda --bundle --platform=node --target=node20 --external:aws-sdk",
+        "lambda:deploy": "npm run cdk:deploy"
     },
     "author": "Nathan Stitt",
     "license": "AGPL-3.0-or-later",
@@ -26,6 +28,7 @@
         "@vitest/coverage-v8": "^2.1.1",
         "aws-sdk-client-mock": "^4.1.0",
         "dotenv": "*",
+        "esbuild": "^0.24.0",
         "eslint": "*",
         "eslint-config-next": "*",
         "eslint-config-prettier": "*",

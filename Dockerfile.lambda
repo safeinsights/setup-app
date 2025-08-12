@@ -1,0 +1,17 @@
+FROM public.ecr.aws/lambda/nodejs:22
+
+# Copy package files
+COPY package.json package-lock.json ./
+
+# Install all dependencies (including devDependencies for build)
+RUN npm ci
+
+# Copy source code
+COPY src/ ./src/
+COPY tsconfig.json ./
+
+# Build the Lambda function
+RUN npm run lambda:build
+
+# Set the CMD to your Lambda handler
+CMD [ "dist/lambda/setup-app.handler" ]
