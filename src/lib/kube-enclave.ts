@@ -18,8 +18,8 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
         runningJobsInEnclave: KubernetesJob[],
     ): ManagementAppGetReadyStudiesResponse {
         console.log('Filtering Kubernetes jobs...')
-        /* v8 ignore next */
         const jobs: ManagementAppJob[] = []
+        /* v8 ignore next */
         const jobsInEnclaveIds = runningJobsInEnclave
             ?.filter(
                 (job) =>
@@ -110,36 +110,43 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
     }
     async checkForErroredJobs(): Promise<void> {
         console.log('Checking environment for errored jobs')
-        const jobsInEnclaveIds = (await this.getAllStudiesInEnclave())
-            ?.filter(
-                (job) =>
-                    job.metadata?.labels?.['managed-by'] === 'setup-app' &&
-                    job.metadata?.labels?.['component'] === 'research-container',
-            )
-            .map((i) => i.metadata?.labels?.instance)
-        const containers = ((await k8sApiCall(undefined, 'pods', 'GET')) as KubernetesApiJobsResponse).items
-            .flatMap((j) => j as KubernetesPod)
-            .filter(
-                (c) =>
-                    c.metadata?.labels?.['managed-by'] === 'setup-app' &&
-                    c.metadata?.labels?.['component'] === 'research-container' &&
-                    jobsInEnclaveIds.includes(c.metadata?.labels?.['instance']),
-            )
-        if (containers && containers.length > 0) {
-            containers.forEach(async (c) => {
-                if (
-                    c.status?.containerStatuses?.some(
-                        (d) => 'terminated' in d.state && d.state['terminated'].exitCode !== 0,
-                    )
-                ) {
-                    const errorMsg = `Container ${c.metadata.name} exited with non 0 error code`
-                    console.log(errorMsg)
-                    await toaUpdateJobStatus(c.metadata?.labels?.instance.toString(), {
-                        status: 'JOB-ERRORED',
-                        message: errorMsg,
-                    })
-                }
-            })
+        try {
+            const jobsInEnclaveIds = (await this.getAllStudiesInEnclave())
+                ?.filter(
+                    (job) =>
+                        job.metadata?.labels?.['managed-by'] === 'setup-app' &&
+                        job.metadata?.labels?.['component'] === 'research-container',
+                )
+                .map((i) => i.metadata?.labels?.instance)
+            const containers = ((await k8sApiCall(undefined, 'pods', 'GET')) as KubernetesApiJobsResponse).items
+                .flatMap((j) => j as KubernetesPod)
+                .filter(
+                    (c) =>
+                        c.metadata?.labels?.['managed-by'] === 'setup-app' &&
+                        c.metadata?.labels?.['component'] === 'research-container' &&
+                        jobsInEnclaveIds.includes(c.metadata?.labels?.['instance']),
+                )
+            if (containers && containers.length > 0) {
+                /* v8 ignore next 15*/
+                containers.forEach(async (c) => {
+                    if (
+                        c.status?.containerStatuses?.some(
+                            (d) => 'terminated' in d.state && d.state['terminated'].exitCode !== 0,
+                        )
+                    ) {
+                        const errorMsg = `Container ${c.metadata.name} exited with non 0 error code`
+                        console.log(errorMsg)
+                        await toaUpdateJobStatus(c.metadata?.labels?.instance.toString(), {
+                            status: 'JOB-ERRORED',
+                            message: errorMsg,
+                        })
+                    }
+                })
+            }
+        } catch (error: unknown) {
+            const errMsg = `An error occurred while cleaning up environment: ${error}`
+            console.error(errMsg)
+            throw new Error(errMsg)
         }
     }
 }

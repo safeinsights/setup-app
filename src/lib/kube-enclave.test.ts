@@ -1,11 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
 import * as api from './api'
 import * as kube from './kube'
+import { createKubernetesJob } from './kube'
 import { KubernetesEnclave } from './kube-enclave'
 import {
     KubernetesApiJobsResponse,
     KubernetesJob,
     ManagementAppGetReadyStudiesResponse,
+    ManagementAppJob,
     TOAGetJobsResponse,
 } from './types'
 
@@ -79,44 +81,6 @@ describe('KubernetesEnclave', () => {
                     ],
                 },
             },
-            {
-                metadata: {
-                    name: 'rc-0987654321',
-                    namespace: 'test',
-                    labels: {
-                        app: 'rc-0987654321',
-                        component: 'research-container',
-                        'managed-by': 'setup-app',
-                        role: 'toa-access',
-                        instance: '0987654321',
-                    },
-                },
-                spec: {
-                    selector: {
-                        matchLabels: {
-                            studyId: 'rc-0987654321',
-                            jobId: '0987654321',
-                        },
-                    },
-                    template: {
-                        spec: {
-                            containers: [
-                                {
-                                    name: 'rc-0987654321',
-                                },
-                            ],
-                        },
-                    },
-                },
-                status: {
-                    conditions: [
-                        {
-                            type: 'Completed',
-                            status: 'False',
-                        },
-                    ],
-                },
-            },
         ]
 
         const kubernetesEnclave = new KubernetesEnclave()
@@ -126,7 +90,15 @@ describe('KubernetesEnclave', () => {
             runningJobsInEnclave,
         )
 
-        expect(filteredJobs).toEqual({ jobs: [] })
+        expect(filteredJobs).toEqual({
+            jobs: [
+                {
+                    jobId: '0987654321',
+                    title: 'Test Job 2',
+                    containerLocation: 'test/container-2',
+                },
+            ],
+        })
     })
 
     it('launchStudy should call k8sApiCall with the correct path and data', async () => {
@@ -382,5 +354,170 @@ describe('KubernetesEnclave', () => {
 
         expect(k8sApiCall).toHaveBeenCalledWith('batch', 'jobs', 'GET')
         expect(result).toEqual(jobs.items)
+    })
+    it('launchStudy: should successfully deploy the study container', async () => {
+        // Mock successful response
+        const mockResponse = { status: 'Success', items: [] }
+        const k8sApiCall = vi.mocked(api.k8sApiCall).mockResolvedValue(mockResponse)
+        const enclave = new KubernetesEnclave()
+        const job: ManagementAppJob = {
+            jobId: '1234567890',
+            title: 'Test Job 1',
+            containerLocation: 'test/container-1',
+        }
+        const kubeJob = createKubernetesJob(job.containerLocation, job.jobId, job.title, '')
+        await enclave.launchStudy(job, '')
+
+        expect(k8sApiCall).toHaveBeenCalledWith('batch', 'jobs', 'POST', kubeJob)
+    })
+
+    it('cleanup: should delete completed jobs and their containers', async () => {
+        const enclave = new KubernetesEnclave()
+        const job: KubernetesJob = {
+            metadata: {
+                name: 'job-1',
+                namespace: 'ns',
+                labels: {
+                    'managed-by': 'setup-app',
+                    component: 'research-container',
+                    instance: '1234567890',
+                },
+            },
+            spec: {
+                selector: {
+                    matchLabels: {
+                        'managed-by': 'setup-app',
+                        component: 'research-container',
+                        instance: '1234567890',
+                    },
+                },
+                template: {
+                    spec: {
+                        containers: [{ name: 'research-container-1234567890' }],
+                    },
+                },
+            },
+            status: {
+                conditions: [
+                    {
+                        type: 'Complete',
+                        status: 'True',
+                    },
+                ],
+            },
+        }
+        // Mock getAllStudiesInEnclave to return a list of jobs
+        vi.spyOn(enclave, 'getAllStudiesInEnclave').mockResolvedValue([job])
+
+        // Mock k8sApiCall to return a list of pods
+        vi.mocked(api.k8sApiCall).mockResolvedValueOnce({
+            items: [job],
+        })
+
+        // Mock k8sApiCall to delete pods and jobs
+        vi.mocked(api.k8sApiCall).mockResolvedValue({ status: 'Success', items: [job] })
+
+        await enclave.cleanup()
+        expect(api.k8sApiCall).toBeCalledTimes(2)
+    })
+
+    it('cleanup: should not delete jobs that are not completed', async () => {
+        const enclave = new KubernetesEnclave()
+        const job: KubernetesJob = {
+            metadata: {
+                name: 'job-1',
+                namespace: 'ns',
+                labels: {
+                    'managed-by': 'setup-app',
+                    component: 'research-container',
+                    instance: '1234567890',
+                },
+            },
+            spec: {
+                selector: {
+                    matchLabels: {
+                        'managed-by': 'setup-app',
+                        component: 'research-container',
+                        instance: '1234567890',
+                    },
+                },
+                template: {
+                    spec: {
+                        containers: [{ name: 'research-container-1234567890' }],
+                    },
+                },
+            },
+            status: {
+                conditions: [
+                    {
+                        type: 'Complete',
+                        status: 'False',
+                    },
+                ],
+            },
+        }
+
+        // Mock getAllStudiesInEnclave to return a list of jobs
+        vi.spyOn(enclave, 'getAllStudiesInEnclave').mockResolvedValue([job])
+
+        // Mock k8sApiCall to return a list of pods
+        vi.mocked(api.k8sApiCall).mockResolvedValueOnce({
+            items: [],
+        })
+
+        await enclave.cleanup()
+
+        expect(api.k8sApiCall).not.toHaveBeenCalledWith(undefined, `pods/pod-1`, 'DELETE')
+        expect(api.k8sApiCall).not.toHaveBeenCalledWith('batch', `jobs/job-1`, 'DELETE')
+    })
+
+    it('cleanup should not delete jobs that are not completed', async () => {
+        const enclave = new KubernetesEnclave()
+        const job: KubernetesJob = {
+            metadata: {
+                name: 'job-1',
+                namespace: 'ns',
+                labels: {
+                    'managed-by': 'setup-app',
+                    component: 'research-container',
+                    instance: '1234567890',
+                },
+            },
+            spec: {
+                selector: {
+                    matchLabels: {
+                        'managed-by': 'setup-app',
+                        component: 'research-container',
+                        instance: '1234567890',
+                    },
+                },
+                template: {
+                    spec: {
+                        containers: [{ name: 'research-container-1234567890' }],
+                    },
+                },
+            },
+            status: {
+                conditions: [
+                    {
+                        type: 'Complete',
+                        status: 'False',
+                    },
+                ],
+            },
+        }
+
+        // Mock getAllStudiesInEnclave to return a list of jobs
+        vi.spyOn(enclave, 'getAllStudiesInEnclave').mockResolvedValue([job])
+
+        // Mock k8sApiCall to return a list of pods
+        vi.mocked(api.k8sApiCall).mockResolvedValueOnce({
+            items: [],
+        })
+
+        await enclave.cleanup()
+
+        expect(api.k8sApiCall).not.toHaveBeenCalledWith(undefined, `pods/pod-1`, 'DELETE')
+        expect(api.k8sApiCall).not.toHaveBeenCalledWith('batch', `jobs/job-1`, 'DELETE')
     })
 })
