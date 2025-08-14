@@ -2,7 +2,12 @@ import { describe, expect, it, vi } from 'vitest'
 import * as api from './api'
 import * as kube from './kube'
 import { KubernetesEnclave } from './kube-enclave'
-import { KubernetesJob, ManagementAppGetReadyStudiesResponse, TOAGetJobsResponse } from './types'
+import {
+    KubernetesApiJobsResponse,
+    KubernetesJob,
+    ManagementAppGetReadyStudiesResponse,
+    TOAGetJobsResponse,
+} from './types'
 
 vi.mock('./kube')
 vi.mock('./api')
@@ -121,20 +126,7 @@ describe('KubernetesEnclave', () => {
             runningJobsInEnclave,
         )
 
-        expect(filteredJobs).toEqual({
-            jobs: [
-                {
-                    jobId: '1234567890',
-                    title: 'Test Job 1',
-                    containerLocation: 'test/container-1',
-                },
-                {
-                    jobId: '0987654321',
-                    title: 'Test Job 2',
-                    containerLocation: 'test/container-2',
-                },
-            ],
-        })
+        expect(filteredJobs).toEqual({ jobs: [] })
     })
 
     it('launchStudy should call k8sApiCall with the correct path and data', async () => {
@@ -226,7 +218,7 @@ describe('KubernetesEnclave', () => {
 
         const result = await enclave.getDeployedStudies()
 
-        expect(result).toEqual([{ items: [] }])
+        expect(result).toEqual([])
         expect(getAllStudiesInEnclave).toHaveBeenCalledOnce()
         expect(filterDeployments).toHaveBeenCalledWith([], {
             component: 'research-container',
@@ -318,7 +310,7 @@ describe('KubernetesEnclave', () => {
 
         const result = await enclave.getDeployedStudies()
 
-        expect(result).toEqual([{ items: [running] }])
+        expect(result).toEqual([running])
         expect(getAllStudiesInEnclave).toHaveBeenCalledOnce()
         expect(filterDeployments).toHaveBeenCalledWith(jobs, {
             component: 'research-container',
@@ -331,7 +323,7 @@ describe('KubernetesEnclave', () => {
         const enclave = new KubernetesEnclave()
         const jobs = await enclave.getAllStudiesInEnclave()
 
-        expect(jobs).toEqual([{ items: [] }])
+        expect(jobs).toEqual([])
         expect(k8sApiCall).toHaveBeenCalledWith('batch', 'jobs', 'GET')
     })
     it('getAllStudiesInEnclave: should return an empty array if an error occured', async () => {
@@ -343,49 +335,52 @@ describe('KubernetesEnclave', () => {
         expect(k8sApiCall).toHaveBeenCalledWith('batch', 'jobs', 'GET')
     })
     it('getAllStudiesInEnclave: should return a list of jobs if they exist', async () => {
-        const jobs: KubernetesJob = {
-            metadata: {
-                name: 'rc-1234567890',
-                namespace: 'test',
-                labels: {
-                    app: 'rc-1234567890',
-                    component: 'research-container',
-                    'managed-by': 'setup-app',
-                    role: 'toa-access',
-                },
-            },
-            spec: {
-                selector: {
-                    matchLabels: {
-                        studyId: 'rc-1234567890',
-                        jobId: '1234567890',
+        const jobs: KubernetesApiJobsResponse = {
+            items: [
+                {
+                    metadata: {
+                        name: 'rc-1234567890',
+                        namespace: 'test',
+                        labels: {
+                            app: 'rc-1234567890',
+                            component: 'research-container',
+                            'managed-by': 'setup-app',
+                            role: 'toa-access',
+                        },
                     },
-                },
-                template: {
                     spec: {
-                        containers: [
+                        selector: {
+                            matchLabels: {
+                                studyId: 'rc-1234567890',
+                                jobId: '1234567890',
+                            },
+                        },
+                        template: {
+                            spec: {
+                                containers: [
+                                    {
+                                        name: 'rc-1234567890',
+                                    },
+                                ],
+                            },
+                        },
+                    },
+                    status: {
+                        conditions: [
                             {
-                                name: 'rc-1234567890',
+                                type: 'Completed',
+                                status: 'False',
                             },
                         ],
                     },
                 },
-            },
-            status: {
-                conditions: [
-                    {
-                        type: 'Completed',
-                        status: 'False',
-                    },
-                ],
-            },
+            ],
         }
-
         const k8sApiCall = vi.mocked(api.k8sApiCall).mockResolvedValue(jobs)
         const enclave = new KubernetesEnclave()
         const result = await enclave.getAllStudiesInEnclave()
 
-        expect(result).toEqual([jobs])
         expect(k8sApiCall).toHaveBeenCalledWith('batch', 'jobs', 'GET')
+        expect(result).toEqual(jobs.items)
     })
 })

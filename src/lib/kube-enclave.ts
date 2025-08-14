@@ -41,7 +41,7 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
     async getAllStudiesInEnclave(): Promise<KubernetesJob[]> {
         try {
             const jobs: KubernetesApiResponse = (await k8sApiCall('batch', 'jobs', 'GET')) as KubernetesApiJobsResponse
-            console.log(`Pulled the following ${jobs.items.length} jobs.`)
+            console.log(`Pulled the following ${jobs?.items?.length} jobs.`)
             return jobs.items.flatMap((j) => j as KubernetesJob)
         } catch (error: unknown) {
             const err = error as Error & { cause: string }

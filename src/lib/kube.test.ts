@@ -100,15 +100,20 @@ describe('Get Service Account items', () => {
                                 name: `research-container-${jobId}`,
                                 image: imageLocation,
                                 ports: [],
-                            },
-                        ],
-                        env: [
-                            {
-                                name: 'TRUSTED_OUTPUT_ENDPOINT',
-                                value: toaEndpointWithJobId,
+                                env: [
+                                    {
+                                        name: 'TRUSTED_OUTPUT_ENDPOINT',
+                                        value: toaEndpointWithJobId,
+                                    },
+                                    {
+                                        name: 'TRUSTED_OUTPUT_BASIC_AUTH',
+                                        value: 'testusername:testpassword',
+                                    },
+                                ],
                             },
                         ],
                         restartPolicy: 'Never',
+                        imagePullSecrets: [{ name: 'si-docker-config' }],
                     },
                 },
             },
