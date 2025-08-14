@@ -13,7 +13,7 @@ function pollStudies(): void {
 }
 
 function pollForErroredJobs(): void {
-    console.log(`Polling AWS for errored jobs at ${new Date()}`)
+    console.log(`Polling for errored jobs at ${new Date()}`)
     checkForErroredJobs()
 }
 

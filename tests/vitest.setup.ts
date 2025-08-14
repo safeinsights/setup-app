@@ -14,6 +14,7 @@ beforeEach(async () => {
         TOA_BASE_URL: 'https://toa:67890',
         TOA_BASIC_AUTH: 'testusername:testpassword',
         MANAGEMENT_APP_PRIVATE_KEY: 'mockprivatekeyvalue',
+        HARBOR_PULL_SECRET: 'si-docker-config',
     }
 })
 
