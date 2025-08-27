@@ -7,6 +7,7 @@ import {
     KubernetesApiResponse,
     KubernetesJob,
     KubernetesPod,
+    LABELS,
     ManagementAppGetReadyStudiesResponse,
     ManagementAppJob,
     TOAGetJobsResponse,
@@ -23,8 +24,8 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
         const jobsInEnclaveIds = runningJobsInEnclave
             ?.filter(
                 (job) =>
-                    job.metadata?.labels?.['managed-by'] === CONTAINER_TYPES.SETUP_APP &&
-                    job.metadata?.labels?.['component'] === CONTAINER_TYPES.RESEARCH_CONTAINER,
+                    job.metadata?.labels?.[LABELS.MANAGED_BY] === CONTAINER_TYPES.SETUP_APP &&
+                    job.metadata?.labels?.[LABELS.COMPONENT] === CONTAINER_TYPES.RESEARCH_CONTAINER,
             )
             .map((i) => i.metadata?.labels?.instance)
         console.log(`Jobs running in enclave: ${jobsInEnclaveIds}`)
@@ -85,17 +86,17 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
         )
         jobsInEnclave.forEach(async (job) => {
             if (
-                job.metadata?.labels?.['managed-by'] === CONTAINER_TYPES.SETUP_APP &&
-                job.metadata?.labels?.['component'] === CONTAINER_TYPES.RESEARCH_CONTAINER
+                job.metadata?.labels?.[LABELS.MANAGED_BY] === CONTAINER_TYPES.SETUP_APP &&
+                job.metadata?.labels?.[LABELS.COMPONENT] === CONTAINER_TYPES.RESEARCH_CONTAINER
             ) {
                 const statuses = job.status?.conditions?.filter((c) => c.type === 'Complete' && c.status === 'True')
                 if (statuses && statuses.length > 0) {
                     console.log(`Cleaning up Job ${job.metadata.labels.instance}`)
                     const jobContainers = containers.filter(
                         (c) =>
-                            c.metadata?.labels?.['managed-by'] === CONTAINER_TYPES.SETUP_APP &&
-                            c.metadata?.labels?.['component'] === CONTAINER_TYPES.RESEARCH_CONTAINER &&
-                            c.metadata?.labels?.['job-name'] === job.metadata.name,
+                            c.metadata?.labels?.[LABELS.MANAGED_BY] === CONTAINER_TYPES.SETUP_APP &&
+                            c.metadata?.labels?.[LABELS.COMPONENT] === CONTAINER_TYPES.RESEARCH_CONTAINER &&
+                            c.metadata?.labels?.[LABELS.JOB_NAME] === job.metadata.name,
                     )
                     /* v8 ignore next 6 */
                     if (jobContainers && jobContainers.length > 0) {
@@ -115,17 +116,17 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
             const jobsInEnclaveIds = (await this.getAllStudiesInEnclave())
                 ?.filter(
                     (job) =>
-                        job.metadata?.labels?.['managed-by'] === CONTAINER_TYPES.SETUP_APP &&
-                        job.metadata?.labels?.['component'] === CONTAINER_TYPES.RESEARCH_CONTAINER,
+                        job.metadata?.labels?.[LABELS.MANAGED_BY] === CONTAINER_TYPES.SETUP_APP &&
+                        job.metadata?.labels?.[LABELS.COMPONENT] === CONTAINER_TYPES.RESEARCH_CONTAINER,
                 )
                 .map((i) => i.metadata?.labels?.instance)
             const containers = ((await k8sApiCall(undefined, 'pods', 'GET')) as KubernetesApiJobsResponse).items
                 .flatMap((j) => j as KubernetesPod)
                 .filter(
                     (c) =>
-                        c.metadata?.labels?.['managed-by'] === CONTAINER_TYPES.SETUP_APP &&
-                        c.metadata?.labels?.['component'] === CONTAINER_TYPES.RESEARCH_CONTAINER &&
-                        jobsInEnclaveIds.includes(c.metadata?.labels?.['instance']),
+                        c.metadata?.labels?.[LABELS.MANAGED_BY] === CONTAINER_TYPES.SETUP_APP &&
+                        c.metadata?.labels?.[LABELS.COMPONENT] === CONTAINER_TYPES.RESEARCH_CONTAINER &&
+                        jobsInEnclaveIds.includes(c.metadata?.labels?.[LABELS.INSTANCE]),
                 )
             if (containers && containers.length > 0) {
                 containers.forEach(async (c) => {

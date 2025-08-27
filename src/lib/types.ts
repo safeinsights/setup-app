@@ -151,3 +151,10 @@ export enum CONTAINER_TYPES {
     SETUP_APP = 'setup-app',
     RESEARCH_CONTAINER = 'research-container',
 }
+
+export enum LABELS {
+    MANAGED_BY = 'managed-by',
+    COMPONENT = 'component',
+    INSTANCE = 'instance',
+    JOB_NAME = 'job-name',
+}
