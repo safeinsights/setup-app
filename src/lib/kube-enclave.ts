@@ -19,7 +19,6 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
     ): ManagementAppGetReadyStudiesResponse {
         console.log('Filtering Kubernetes jobs...')
         const jobs: ManagementAppJob[] = []
-        /* v8 ignore next */
         const jobsInEnclaveIds = runningJobsInEnclave
             ?.filter(
                 (job) =>
@@ -67,7 +66,7 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
             const response: KubernetesApiResponse = await k8sApiCall('batch', 'jobs', 'POST', kubeJob)
             console.log(`${JSON.stringify(response)}`)
             console.log(`Successfully deployed ${job.title} with run id ${job.jobId}`)
-            /* v8 ignore next 3*/
+            /* v8 ignore next 3 */
             if (('status' in response && response['status'] === 'Failure') || !('status' in response)) {
                 console.error(`Failed to deploy study container`)
             }
@@ -97,6 +96,7 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
                             c.metadata?.labels?.['component'] === 'research-container' &&
                             c.metadata?.labels?.['job-name'] === job.metadata.name,
                     )
+                    /* v8 ignore next 6 */
                     if (jobContainers && jobContainers.length > 0) {
                         jobContainers.forEach(async (c) => {
                             console.log(`Deleting container: ${JSON.stringify(c.metadata.name)}`)
@@ -127,7 +127,6 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
                         jobsInEnclaveIds.includes(c.metadata?.labels?.['instance']),
                 )
             if (containers && containers.length > 0) {
-                /* v8 ignore next 15*/
                 containers.forEach(async (c) => {
                     if (
                         c.status?.containerStatuses?.some(

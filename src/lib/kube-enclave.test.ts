@@ -6,6 +6,7 @@ import { KubernetesEnclave } from './kube-enclave'
 import {
     KubernetesApiJobsResponse,
     KubernetesJob,
+    KubernetesPod,
     ManagementAppGetReadyStudiesResponse,
     ManagementAppJob,
     TOAGetJobsResponse,
@@ -15,7 +16,7 @@ vi.mock('./kube')
 vi.mock('./api')
 
 describe('KubernetesEnclave', () => {
-    it('filterJobsInEnclave should return jobs that are in the enclave', () => {
+    it('filterJobsInEnclave should return jobs that are not in the enclave', () => {
         const bmaReadysResults: ManagementAppGetReadyStudiesResponse = {
             jobs: [
                 {
@@ -92,6 +93,110 @@ describe('KubernetesEnclave', () => {
 
         expect(filteredJobs).toEqual({
             jobs: [
+                {
+                    jobId: '0987654321',
+                    title: 'Test Job 2',
+                    containerLocation: 'test/container-2',
+                },
+            ],
+        })
+    })
+
+    it('filterJobsInEnclave should return all jobs if none are in the enclave', () => {
+        const bmaReadysResults: ManagementAppGetReadyStudiesResponse = {
+            jobs: [
+                {
+                    jobId: '1234567890',
+                    title: 'Test Job 1',
+                    containerLocation: 'test/container-1',
+                },
+                {
+                    jobId: '0987654321',
+                    title: 'Test Job 2',
+                    containerLocation: 'test/container-2',
+                },
+            ],
+        }
+
+        const toaGetJobsResult: TOAGetJobsResponse = {
+            jobs: [
+                {
+                    jobId: '1234567890',
+                },
+                {
+                    jobId: '0987654321',
+                },
+            ],
+        }
+
+        const runningJobsInEnclave: KubernetesJob[] = []
+
+        const kubernetesEnclave = new KubernetesEnclave()
+        const filteredJobs = kubernetesEnclave.filterJobsInEnclave(
+            bmaReadysResults,
+            toaGetJobsResult,
+            runningJobsInEnclave,
+        )
+
+        expect(filteredJobs).toEqual({
+            jobs: [
+                {
+                    jobId: '1234567890',
+                    title: 'Test Job 1',
+                    containerLocation: 'test/container-1',
+                },
+                {
+                    jobId: '0987654321',
+                    title: 'Test Job 2',
+                    containerLocation: 'test/container-2',
+                },
+            ],
+        })
+    })
+
+    it('filterJobsInEnclave should return all jobs if none are in the enclave with mixed cases', () => {
+        const bmaReadysResults: ManagementAppGetReadyStudiesResponse = {
+            jobs: [
+                {
+                    jobId: '1234567890',
+                    title: 'Test Job 1',
+                    containerLocation: 'test/container-1',
+                },
+                {
+                    jobId: '0987654321',
+                    title: 'Test Job 2',
+                    containerLocation: 'test/container-2',
+                },
+            ],
+        }
+
+        const toaGetJobsResult: TOAGetJobsResponse = {
+            jobs: [
+                {
+                    jobId: '1234567890',
+                },
+                {
+                    jobId: '0987654321',
+                },
+            ],
+        }
+
+        const runningJobsInEnclave: KubernetesJob[] = []
+
+        const kubernetesEnclave = new KubernetesEnclave()
+        const filteredJobs = kubernetesEnclave.filterJobsInEnclave(
+            bmaReadysResults,
+            toaGetJobsResult,
+            runningJobsInEnclave,
+        )
+
+        expect(filteredJobs).toEqual({
+            jobs: [
+                {
+                    jobId: '1234567890',
+                    title: 'Test Job 1',
+                    containerLocation: 'test/container-1',
+                },
                 {
                     jobId: '0987654321',
                     title: 'Test Job 2',
@@ -519,5 +624,181 @@ describe('KubernetesEnclave', () => {
 
         expect(api.k8sApiCall).not.toHaveBeenCalledWith(undefined, `pods/pod-1`, 'DELETE')
         expect(api.k8sApiCall).not.toHaveBeenCalledWith('batch', `jobs/job-1`, 'DELETE')
+    })
+
+    it('checkForErroredJobs should log an error message if a container exits with a non-zero exit code', async () => {
+        const enclave = new KubernetesEnclave()
+
+        const erroredJob: KubernetesJob = {
+            metadata: {
+                name: 'job-1',
+                namespace: 'ns',
+                labels: {
+                    'managed-by': 'setup-app',
+                    component: 'research-container',
+                    instance: '1234567890',
+                },
+            },
+            spec: {
+                selector: {
+                    matchLabels: {
+                        'managed-by': 'setup-app',
+                        component: 'research-container',
+                        instance: '1234567890',
+                    },
+                },
+                template: {
+                    spec: {
+                        containers: [{ name: 'research-container-1234567890' }],
+                    },
+                },
+            },
+            status: {
+                conditions: [
+                    {
+                        type: 'Complete',
+                        status: 'False',
+                    },
+                ],
+            },
+        }
+
+        const erroredPod: KubernetesPod = {
+            metadata: {
+                name: 'pod-1',
+                namespace: 'ns',
+                labels: {
+                    'managed-by': 'setup-app',
+                    component: 'research-container',
+                    instance: '1234567890',
+                },
+            },
+            status: {
+                containerStatuses: [
+                    {
+                        ready: false,
+                        started: false,
+                        state: {
+                            terminated: {
+                                exitCode: 1,
+                                reason: '',
+                            },
+                        },
+                    },
+                ],
+            },
+        }
+
+        vi.spyOn(enclave, 'getAllStudiesInEnclave').mockResolvedValue([erroredJob])
+        vi.mocked(api.k8sApiCall).mockResolvedValueOnce({
+            items: [erroredPod],
+        })
+
+        const toaUpdateJobStatus = vi.fn()
+        vi.mocked(api.toaUpdateJobStatus).mockImplementation(toaUpdateJobStatus)
+
+        await enclave.checkForErroredJobs()
+
+        expect(toaUpdateJobStatus).toHaveBeenCalledWith('1234567890', {
+            status: 'JOB-ERRORED',
+            message: `Container pod-1 exited with non 0 error code`,
+        })
+    })
+
+    it('checkForErroredJobs should not log an error message if a container exits with a zero exit code', async () => {
+        const enclave = new KubernetesEnclave()
+
+        const successfulJob: KubernetesJob = {
+            metadata: {
+                name: 'job-1',
+                namespace: 'ns',
+                labels: {
+                    'managed-by': 'setup-app',
+                    component: 'research-container',
+                    instance: '1234567890',
+                },
+            },
+            spec: {
+                selector: {
+                    matchLabels: {
+                        'managed-by': 'setup-app',
+                        component: 'research-container',
+                        instance: '1234567890',
+                    },
+                },
+                template: {
+                    spec: {
+                        containers: [{ name: 'research-container-1234567890' }],
+                    },
+                },
+            },
+            status: {
+                conditions: [
+                    {
+                        type: 'Complete',
+                        status: 'False',
+                    },
+                ],
+            },
+        }
+
+        const successfulPod: KubernetesPod = {
+            metadata: {
+                name: 'pod-1',
+                namespace: 'ns',
+                labels: {
+                    'managed-by': 'setup-app',
+                    component: 'research-container',
+                    instance: '1234567890',
+                },
+            },
+            status: {
+                containerStatuses: [
+                    {
+                        ready: false,
+                        started: false,
+                        state: {
+                            terminated: {
+                                exitCode: 1,
+                                reason: '',
+                            },
+                        },
+                    },
+                ],
+            },
+        }
+
+        vi.spyOn(enclave, 'getAllStudiesInEnclave').mockResolvedValue([successfulJob])
+        vi.mocked(api.k8sApiCall).mockResolvedValueOnce({
+            items: [successfulPod],
+        })
+
+        const toaUpdateJobStatus = vi.fn()
+        vi.mocked(api.toaUpdateJobStatus).mockImplementation(toaUpdateJobStatus)
+
+        await enclave.checkForErroredJobs()
+
+        expect(toaUpdateJobStatus).toHaveBeenCalled()
+    })
+
+    it('checkForErroredJobs should handle an error when fetching jobs', async () => {
+        const enclave = new KubernetesEnclave()
+
+        vi.spyOn(enclave, 'getAllStudiesInEnclave').mockRejectedValue(new Error('Failed to fetch jobs'))
+
+        await expect(enclave.checkForErroredJobs()).rejects.toThrow(
+            `An error occurred while cleaning up environment: Error: Failed to fetch jobs`,
+        )
+    })
+
+    it('checkForErroredJobs should handle an error when fetching pods', async () => {
+        const enclave = new KubernetesEnclave()
+
+        vi.spyOn(enclave, 'getAllStudiesInEnclave').mockResolvedValue([])
+        vi.mocked(api.k8sApiCall).mockRejectedValueOnce(new Error('Failed to fetch pods'))
+
+        await expect(enclave.checkForErroredJobs()).rejects.toThrow(
+            'An error occurred while cleaning up environment: Error: Failed to fetch pods',
+        )
     })
 })
