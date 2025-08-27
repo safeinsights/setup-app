@@ -146,3 +146,8 @@ function isTOAJob(data: any): data is TOAJob {
 export function isTOAGetJobsResponse(data: any): data is TOAGetJobsResponse {
     return typeof data === 'object' && data !== null && Array.isArray(data.jobs) && data.jobs.every(isTOAJob)
 }
+
+export enum CONTAINER_TYPES {
+    SETUP_APP = 'setup-app',
+    RESEARCH_CONTAINER = 'research-container',
+}

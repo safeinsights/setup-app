@@ -2,6 +2,7 @@ import { dockerApiCall, toaUpdateJobStatus } from './api'
 import { createContainerObject, filterContainers, pullContainer } from './docker'
 import { Enclave, IEnclave } from './enclave'
 import {
+    CONTAINER_TYPES,
     DockerApiContainerResponse,
     DockerApiContainersResponse,
     DockerApiResponse,
@@ -33,8 +34,8 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
         const successfulContainers = filterContainers(
             await this.getAllStudiesInEnclave(),
             {
-                component: 'research-container',
-                'managed-by': 'setup-app',
+                component: CONTAINER_TYPES.RESEARCH_CONTAINER,
+                'managed-by': CONTAINER_TYPES.SETUP_APP,
             },
             ['exited'],
         )
@@ -82,8 +83,8 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
         const containers = filterContainers(
             await this.getAllStudiesInEnclave(),
             {
-                component: 'research-container',
-                'managed-by': 'setup-app',
+                component: CONTAINER_TYPES.RESEARCH_CONTAINER,
+                'managed-by': CONTAINER_TYPES.SETUP_APP,
             },
             ['running', 'created', 'restarting', 'removing', 'paused', 'exited', 'dead'],
         )
@@ -115,8 +116,8 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
         const exitedContainers = filterContainers(
             await this.getAllStudiesInEnclave(),
             {
-                component: 'research-container',
-                'managed-by': 'setup-app',
+                component: CONTAINER_TYPES.RESEARCH_CONTAINER,
+                'managed-by': CONTAINER_TYPES.SETUP_APP,
             },
             ['exited'],
         )

@@ -1,5 +1,5 @@
 import { dockerApiCall } from './api'
-import { DockerApiContainersResponse, DockerApiResponse } from './types'
+import { CONTAINER_TYPES, DockerApiContainersResponse, DockerApiResponse } from './types'
 import { hasReadPermissions } from './utils'
 
 async function pullContainer(imageLocation: string): Promise<DockerApiResponse> {
@@ -22,10 +22,10 @@ function createContainerObject(imageLocation: string, jobId: string, studyTitle:
         Image: imageLocation,
         Labels: {
             app: name,
-            component: 'research-container',
+            component: CONTAINER_TYPES.RESEARCH_CONTAINER,
             'part-of': studyTitle,
             instance: jobId,
-            'managed-by': 'setup-app',
+            'managed-by': CONTAINER_TYPES.SETUP_APP,
         },
         Env: [
             `TRUSTED_OUTPUT_ENDPOINT=${toaEndpointWithjobId}`,

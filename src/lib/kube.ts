@@ -1,7 +1,7 @@
 import fs from 'fs'
 import https from 'https'
 import tls from 'tls'
-import { KubernetesJob } from './types'
+import { CONTAINER_TYPES, KubernetesJob } from './types'
 
 export const DEFAULT_SERVICE_ACCOUNT_PATH = '/var/run/secrets/kubernetes.io/serviceaccount'
 
@@ -44,10 +44,10 @@ function createKubernetesJob(imageLocation: string, jobId: string, studyTitle: s
             namespace: getNamespace(),
             labels: {
                 app: name,
-                component: 'research-container',
+                component: CONTAINER_TYPES.RESEARCH_CONTAINER,
                 'part-of': studyTitle,
                 instance: jobId,
-                'managed-by': 'setup-app',
+                'managed-by': CONTAINER_TYPES.SETUP_APP,
             },
         },
         spec: {
@@ -55,10 +55,10 @@ function createKubernetesJob(imageLocation: string, jobId: string, studyTitle: s
                 metadata: {
                     labels: {
                         app: name,
-                        component: 'research-container',
+                        component: CONTAINER_TYPES.RESEARCH_CONTAINER,
                         'part-of': studyTitle,
                         instance: jobId,
-                        'managed-by': 'setup-app',
+                        'managed-by': CONTAINER_TYPES.SETUP_APP,
                         role: 'toa-access',
                     },
                 },

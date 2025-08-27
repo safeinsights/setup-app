@@ -9,7 +9,7 @@ import {
     getNamespace,
     initHTTPSTrustStore,
 } from './kube'
-import { KubernetesJob } from './types'
+import { CONTAINER_TYPES, KubernetesJob } from './types'
 
 vi.mock('https', () => ({
     request: vi.fn(),
@@ -76,10 +76,10 @@ describe('Get Service Account items', () => {
                 namespace: getNamespace(),
                 labels: {
                     app: `research-container-${jobId}`,
-                    component: 'research-container',
+                    component: CONTAINER_TYPES.RESEARCH_CONTAINER,
                     'part-of': studyTitle.toLowerCase(),
                     instance: jobId,
-                    'managed-by': 'setup-app',
+                    'managed-by': CONTAINER_TYPES.SETUP_APP,
                 },
             },
             spec: {
@@ -87,10 +87,10 @@ describe('Get Service Account items', () => {
                     metadata: {
                         labels: {
                             app: `research-container-${jobId}`,
-                            component: 'research-container',
+                            component: CONTAINER_TYPES.RESEARCH_CONTAINER,
                             'part-of': studyTitle.toLowerCase(),
                             instance: jobId,
-                            'managed-by': 'setup-app',
+                            'managed-by': CONTAINER_TYPES.SETUP_APP,
                             role: 'toa-access',
                         },
                     },

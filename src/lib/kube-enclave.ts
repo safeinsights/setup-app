@@ -2,6 +2,7 @@ import { k8sApiCall, toaUpdateJobStatus } from './api'
 import { Enclave, IEnclave } from './enclave'
 import { createKubernetesJob, filterDeployments } from './kube'
 import {
+    CONTAINER_TYPES,
     KubernetesApiJobsResponse,
     KubernetesApiResponse,
     KubernetesJob,
@@ -22,8 +23,8 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
         const jobsInEnclaveIds = runningJobsInEnclave
             ?.filter(
                 (job) =>
-                    job.metadata?.labels?.['managed-by'] === 'setup-app' &&
-                    job.metadata?.labels?.['component'] === 'research-container',
+                    job.metadata?.labels?.['managed-by'] === CONTAINER_TYPES.SETUP_APP &&
+                    job.metadata?.labels?.['component'] === CONTAINER_TYPES.RESEARCH_CONTAINER,
             )
             .map((i) => i.metadata?.labels?.instance)
         console.log(`Jobs running in enclave: ${jobsInEnclaveIds}`)
@@ -53,8 +54,8 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
         console.log('Kubernetes => Retrieving running research jobs')
         const jobs: KubernetesJob[] = await this.getAllStudiesInEnclave()
         return filterDeployments(jobs, {
-            component: 'research-container',
-            'managed-by': 'setup-app',
+            component: CONTAINER_TYPES.RESEARCH_CONTAINER,
+            'managed-by': CONTAINER_TYPES.SETUP_APP,
             role: 'toa-access',
         })
     }
@@ -84,16 +85,16 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
         )
         jobsInEnclave.forEach(async (job) => {
             if (
-                job.metadata?.labels?.['managed-by'] === 'setup-app' &&
-                job.metadata?.labels?.['component'] === 'research-container'
+                job.metadata?.labels?.['managed-by'] === CONTAINER_TYPES.SETUP_APP &&
+                job.metadata?.labels?.['component'] === CONTAINER_TYPES.RESEARCH_CONTAINER
             ) {
                 const statuses = job.status?.conditions?.filter((c) => c.type === 'Complete' && c.status === 'True')
                 if (statuses && statuses.length > 0) {
                     console.log(`Cleaning up Job ${job.metadata.labels.instance}`)
                     const jobContainers = containers.filter(
                         (c) =>
-                            c.metadata?.labels?.['managed-by'] === 'setup-app' &&
-                            c.metadata?.labels?.['component'] === 'research-container' &&
+                            c.metadata?.labels?.['managed-by'] === CONTAINER_TYPES.SETUP_APP &&
+                            c.metadata?.labels?.['component'] === CONTAINER_TYPES.RESEARCH_CONTAINER &&
                             c.metadata?.labels?.['job-name'] === job.metadata.name,
                     )
                     /* v8 ignore next 6 */
@@ -114,16 +115,16 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
             const jobsInEnclaveIds = (await this.getAllStudiesInEnclave())
                 ?.filter(
                     (job) =>
-                        job.metadata?.labels?.['managed-by'] === 'setup-app' &&
-                        job.metadata?.labels?.['component'] === 'research-container',
+                        job.metadata?.labels?.['managed-by'] === CONTAINER_TYPES.SETUP_APP &&
+                        job.metadata?.labels?.['component'] === CONTAINER_TYPES.RESEARCH_CONTAINER,
                 )
                 .map((i) => i.metadata?.labels?.instance)
             const containers = ((await k8sApiCall(undefined, 'pods', 'GET')) as KubernetesApiJobsResponse).items
                 .flatMap((j) => j as KubernetesPod)
                 .filter(
                     (c) =>
-                        c.metadata?.labels?.['managed-by'] === 'setup-app' &&
-                        c.metadata?.labels?.['component'] === 'research-container' &&
+                        c.metadata?.labels?.['managed-by'] === CONTAINER_TYPES.SETUP_APP &&
+                        c.metadata?.labels?.['component'] === CONTAINER_TYPES.RESEARCH_CONTAINER &&
                         jobsInEnclaveIds.includes(c.metadata?.labels?.['instance']),
                 )
             if (containers && containers.length > 0) {

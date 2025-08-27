@@ -4,6 +4,7 @@ import * as kube from './kube'
 import { createKubernetesJob } from './kube'
 import { KubernetesEnclave } from './kube-enclave'
 import {
+    CONTAINER_TYPES,
     KubernetesApiJobsResponse,
     KubernetesJob,
     KubernetesPod,
@@ -50,8 +51,8 @@ describe('KubernetesEnclave', () => {
                     namespace: 'test',
                     labels: {
                         app: 'rc-1234567890',
-                        component: 'research-container',
-                        'managed-by': 'setup-app',
+                        component: CONTAINER_TYPES.RESEARCH_CONTAINER,
+                        'managed-by': CONTAINER_TYPES.SETUP_APP,
                         role: 'toa-access',
                         instance: '1234567890',
                     },
@@ -223,10 +224,10 @@ describe('KubernetesEnclave', () => {
                 namespace: 'default',
                 labels: {
                     app: 'research-container-123',
-                    component: 'research-container',
+                    component: CONTAINER_TYPES.RESEARCH_CONTAINER,
                     'part-of': 'my-study',
                     instance: '123',
-                    'managed-by': 'setup-app',
+                    'managed-by': CONTAINER_TYPES.SETUP_APP,
                 },
             },
             spec: {
@@ -234,10 +235,10 @@ describe('KubernetesEnclave', () => {
                     metadata: {
                         labels: {
                             app: 'research-container-123',
-                            component: 'research-container',
+                            component: CONTAINER_TYPES.RESEARCH_CONTAINER,
                             'part-of': 'my-study',
                             instance: '123',
-                            'managed-by': 'setup-app',
+                            'managed-by': CONTAINER_TYPES.SETUP_APP,
                             role: 'toa-access',
                         },
                     },
@@ -298,8 +299,8 @@ describe('KubernetesEnclave', () => {
         expect(result).toEqual([])
         expect(getAllStudiesInEnclave).toHaveBeenCalledOnce()
         expect(filterDeployments).toHaveBeenCalledWith([], {
-            component: 'research-container',
-            'managed-by': 'setup-app',
+            component: CONTAINER_TYPES.RESEARCH_CONTAINER,
+            'managed-by': CONTAINER_TYPES.SETUP_APP,
             role: 'toa-access',
         })
     })
@@ -311,8 +312,8 @@ describe('KubernetesEnclave', () => {
                 namespace: 'test',
                 labels: {
                     app: 'rc-1234567890',
-                    component: 'research-container',
-                    'managed-by': 'setup-app',
+                    component: CONTAINER_TYPES.RESEARCH_CONTAINER,
+                    'managed-by': CONTAINER_TYPES.SETUP_APP,
                     role: 'toa-access',
                 },
             },
@@ -348,8 +349,8 @@ describe('KubernetesEnclave', () => {
                 namespace: 'test',
                 labels: {
                     app: 'rc-0987654321',
-                    component: 'research-container',
-                    'managed-by': 'setup-app',
+                    component: CONTAINER_TYPES.RESEARCH_CONTAINER,
+                    'managed-by': CONTAINER_TYPES.SETUP_APP,
                     role: 'toa-access',
                 },
             },
@@ -390,8 +391,8 @@ describe('KubernetesEnclave', () => {
         expect(result).toEqual([running])
         expect(getAllStudiesInEnclave).toHaveBeenCalledOnce()
         expect(filterDeployments).toHaveBeenCalledWith(jobs, {
-            component: 'research-container',
-            'managed-by': 'setup-app',
+            component: CONTAINER_TYPES.RESEARCH_CONTAINER,
+            'managed-by': CONTAINER_TYPES.SETUP_APP,
             role: 'toa-access',
         })
     })
@@ -420,8 +421,8 @@ describe('KubernetesEnclave', () => {
                         namespace: 'test',
                         labels: {
                             app: 'rc-1234567890',
-                            component: 'research-container',
-                            'managed-by': 'setup-app',
+                            component: CONTAINER_TYPES.RESEARCH_CONTAINER,
+                            'managed-by': CONTAINER_TYPES.SETUP_APP,
                             role: 'toa-access',
                         },
                     },
@@ -483,16 +484,16 @@ describe('KubernetesEnclave', () => {
                 name: 'job-1',
                 namespace: 'ns',
                 labels: {
-                    'managed-by': 'setup-app',
-                    component: 'research-container',
+                    'managed-by': CONTAINER_TYPES.SETUP_APP,
+                    component: CONTAINER_TYPES.RESEARCH_CONTAINER,
                     instance: '1234567890',
                 },
             },
             spec: {
                 selector: {
                     matchLabels: {
-                        'managed-by': 'setup-app',
-                        component: 'research-container',
+                        'managed-by': CONTAINER_TYPES.SETUP_APP,
+                        component: CONTAINER_TYPES.RESEARCH_CONTAINER,
                         instance: '1234567890',
                     },
                 },
@@ -533,16 +534,16 @@ describe('KubernetesEnclave', () => {
                 name: 'job-1',
                 namespace: 'ns',
                 labels: {
-                    'managed-by': 'setup-app',
-                    component: 'research-container',
+                    'managed-by': CONTAINER_TYPES.SETUP_APP,
+                    component: CONTAINER_TYPES.RESEARCH_CONTAINER,
                     instance: '1234567890',
                 },
             },
             spec: {
                 selector: {
                     matchLabels: {
-                        'managed-by': 'setup-app',
-                        component: 'research-container',
+                        'managed-by': CONTAINER_TYPES.SETUP_APP,
+                        component: CONTAINER_TYPES.RESEARCH_CONTAINER,
                         instance: '1234567890',
                     },
                 },
@@ -583,16 +584,16 @@ describe('KubernetesEnclave', () => {
                 name: 'job-1',
                 namespace: 'ns',
                 labels: {
-                    'managed-by': 'setup-app',
-                    component: 'research-container',
+                    'managed-by': CONTAINER_TYPES.SETUP_APP,
+                    component: CONTAINER_TYPES.RESEARCH_CONTAINER,
                     instance: '1234567890',
                 },
             },
             spec: {
                 selector: {
                     matchLabels: {
-                        'managed-by': 'setup-app',
-                        component: 'research-container',
+                        'managed-by': CONTAINER_TYPES.SETUP_APP,
+                        component: CONTAINER_TYPES.RESEARCH_CONTAINER,
                         instance: '1234567890',
                     },
                 },
@@ -634,16 +635,16 @@ describe('KubernetesEnclave', () => {
                 name: 'job-1',
                 namespace: 'ns',
                 labels: {
-                    'managed-by': 'setup-app',
-                    component: 'research-container',
+                    'managed-by': CONTAINER_TYPES.SETUP_APP,
+                    component: CONTAINER_TYPES.RESEARCH_CONTAINER,
                     instance: '1234567890',
                 },
             },
             spec: {
                 selector: {
                     matchLabels: {
-                        'managed-by': 'setup-app',
-                        component: 'research-container',
+                        'managed-by': CONTAINER_TYPES.SETUP_APP,
+                        component: CONTAINER_TYPES.RESEARCH_CONTAINER,
                         instance: '1234567890',
                     },
                 },
@@ -668,8 +669,8 @@ describe('KubernetesEnclave', () => {
                 name: 'pod-1',
                 namespace: 'ns',
                 labels: {
-                    'managed-by': 'setup-app',
-                    component: 'research-container',
+                    'managed-by': CONTAINER_TYPES.SETUP_APP,
+                    component: CONTAINER_TYPES.RESEARCH_CONTAINER,
                     instance: '1234567890',
                 },
             },
@@ -713,16 +714,16 @@ describe('KubernetesEnclave', () => {
                 name: 'job-1',
                 namespace: 'ns',
                 labels: {
-                    'managed-by': 'setup-app',
-                    component: 'research-container',
+                    'managed-by': CONTAINER_TYPES.SETUP_APP,
+                    component: CONTAINER_TYPES.RESEARCH_CONTAINER,
                     instance: '1234567890',
                 },
             },
             spec: {
                 selector: {
                     matchLabels: {
-                        'managed-by': 'setup-app',
-                        component: 'research-container',
+                        'managed-by': CONTAINER_TYPES.SETUP_APP,
+                        component: CONTAINER_TYPES.RESEARCH_CONTAINER,
                         instance: '1234567890',
                     },
                 },
@@ -747,8 +748,8 @@ describe('KubernetesEnclave', () => {
                 name: 'pod-1',
                 namespace: 'ns',
                 labels: {
-                    'managed-by': 'setup-app',
-                    component: 'research-container',
+                    'managed-by': CONTAINER_TYPES.SETUP_APP,
+                    component: CONTAINER_TYPES.RESEARCH_CONTAINER,
                     instance: '1234567890',
                 },
             },
