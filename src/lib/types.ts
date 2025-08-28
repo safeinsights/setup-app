@@ -16,6 +16,30 @@ export type TOAGetJobsResponse = {
     jobs: TOAJob[]
 }
 
+export type KubernetesPod = {
+    metadata: {
+        name: string
+        namespace: string
+        labels: {
+            [key: string]: string | number
+        }
+    }
+    status?: {
+        containerStatuses?: [
+            {
+                ready: boolean
+                started: boolean
+                state: {
+                    [key: string]: {
+                        exitCode: number
+                        reason: string
+                    }
+                }
+            },
+        ]
+    }
+}
+
 export type KubernetesJob = {
     metadata: {
         name: string
@@ -30,19 +54,28 @@ export type KubernetesJob = {
                 [key: string]: string | number
             }
         }
+        template: {
+            spec: {
+                containers: [{ name: string }]
+            }
+        }
     }
     status: {
-        active: number
-        startTime: string
+        conditions: [
+            {
+                type: string
+                status: string
+            },
+        ]
     }
 }
 
 export type KubernetesApiJobsResponse = {
     status?: string
-    items: KubernetesJob[]
+    items: KubernetesJob[] | KubernetesPod[]
 }
 
-export type KubernetesApiResponse = KubernetesApiJobsResponse | KubernetesJob
+export type KubernetesApiResponse = KubernetesApiJobsResponse | KubernetesJob | KubernetesPod
 
 export type DockerApiResponse =
     | Error
@@ -112,4 +145,16 @@ function isTOAJob(data: any): data is TOAJob {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function isTOAGetJobsResponse(data: any): data is TOAGetJobsResponse {
     return typeof data === 'object' && data !== null && Array.isArray(data.jobs) && data.jobs.every(isTOAJob)
+}
+
+export enum CONTAINER_TYPES {
+    SETUP_APP = 'setup-app',
+    RESEARCH_CONTAINER = 'research-container',
+}
+
+export enum LABELS {
+    MANAGED_BY = 'managed-by',
+    COMPONENT = 'component',
+    INSTANCE = 'instance',
+    JOB_NAME = 'job-name',
 }

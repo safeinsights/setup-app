@@ -1,4 +1,4 @@
-format: json
+format: table
 exit-code: 1
 debug: true
 severity:
@@ -10,6 +10,15 @@ scan:
         - vuln
         - secret
         - misconfig
+    skip-dirs:
+        - .git
+        - .next
+        - .husky
+        - node_modules
+    skip-files:
+        - .env
+vulnerability:
+    ignore-unfixed: true
 misconfiguration:
     scanners:
         - dockerfile

@@ -9,7 +9,7 @@ import {
     getNamespace,
     initHTTPSTrustStore,
 } from './kube'
-import { KubernetesJob } from './types'
+import { CONTAINER_TYPES, KubernetesJob } from './types'
 
 vi.mock('https', () => ({
     request: vi.fn(),
@@ -76,10 +76,10 @@ describe('Get Service Account items', () => {
                 namespace: getNamespace(),
                 labels: {
                     app: `research-container-${jobId}`,
-                    component: 'research-container',
+                    component: CONTAINER_TYPES.RESEARCH_CONTAINER,
                     'part-of': studyTitle.toLowerCase(),
                     instance: jobId,
-                    'managed-by': 'setup-app',
+                    'managed-by': CONTAINER_TYPES.SETUP_APP,
                 },
             },
             spec: {
@@ -87,10 +87,10 @@ describe('Get Service Account items', () => {
                     metadata: {
                         labels: {
                             app: `research-container-${jobId}`,
-                            component: 'research-container',
+                            component: CONTAINER_TYPES.RESEARCH_CONTAINER,
                             'part-of': studyTitle.toLowerCase(),
                             instance: jobId,
-                            'managed-by': 'setup-app',
+                            'managed-by': CONTAINER_TYPES.SETUP_APP,
                             role: 'toa-access',
                         },
                     },
@@ -100,15 +100,20 @@ describe('Get Service Account items', () => {
                                 name: `research-container-${jobId}`,
                                 image: imageLocation,
                                 ports: [],
-                            },
-                        ],
-                        env: [
-                            {
-                                name: 'TRUSTED_OUTPUT_ENDPOINT',
-                                value: toaEndpointWithJobId,
+                                env: [
+                                    {
+                                        name: 'TRUSTED_OUTPUT_ENDPOINT',
+                                        value: toaEndpointWithJobId,
+                                    },
+                                    {
+                                        name: 'TRUSTED_OUTPUT_BASIC_AUTH',
+                                        value: 'testusername:testpassword',
+                                    },
+                                ],
                             },
                         ],
                         restartPolicy: 'Never',
+                        imagePullSecrets: [{ name: 'si-docker-config' }],
                     },
                 },
             },
@@ -132,10 +137,23 @@ describe('Get Service Account items', () => {
                             jobId: 'XYZ789',
                         },
                     },
+                    template: {
+                        spec: {
+                            containers: [
+                                {
+                                    name: 'ABC123',
+                                },
+                            ],
+                        },
+                    },
                 },
                 status: {
-                    active: 1,
-                    startTime: 'startTime',
+                    conditions: [
+                        {
+                            type: 'Completed',
+                            status: 'False',
+                        },
+                    ],
                 },
             },
             {
@@ -154,10 +172,23 @@ describe('Get Service Account items', () => {
                             jobId: 'IJK123',
                         },
                     },
+                    template: {
+                        spec: {
+                            containers: [
+                                {
+                                    name: 'DEF456',
+                                },
+                            ],
+                        },
+                    },
                 },
                 status: {
-                    active: 0,
-                    startTime: 'startTime',
+                    conditions: [
+                        {
+                            type: 'Completed',
+                            status: 'True',
+                        },
+                    ],
                 },
             },
         ]

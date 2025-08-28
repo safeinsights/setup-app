@@ -3,6 +3,7 @@ import * as api from './api'
 import * as docker from './docker'
 import { DockerEnclave } from './docker-enclave'
 import {
+    CONTAINER_TYPES,
     DockerApiContainerResponse,
     DockerApiContainersResponse,
     ManagementAppGetReadyStudiesResponse,
@@ -49,8 +50,8 @@ describe('DockerEnclave', () => {
                 Command: 'test/container-1',
                 Labels: {
                     instance: '1234567890',
-                    component: 'research-container',
-                    'managed-by': 'setup-app',
+                    component: CONTAINER_TYPES.RESEARCH_CONTAINER,
+                    'managed-by': CONTAINER_TYPES.SETUP_APP,
                 },
                 State: 'running',
                 Status: 'running',
@@ -63,8 +64,8 @@ describe('DockerEnclave', () => {
                 Command: 'test/container-2',
                 Labels: {
                     instance: '0987654321',
-                    component: 'research-container',
-                    'managed-by': 'setup-app',
+                    component: CONTAINER_TYPES.RESEARCH_CONTAINER,
+                    'managed-by': CONTAINER_TYPES.SETUP_APP,
                 },
                 State: 'running',
                 Status: 'running',
@@ -102,8 +103,8 @@ describe('DockerEnclave', () => {
                 Command: 'test/container-1',
                 Labels: {
                     instance: '1234567890',
-                    component: 'research-container',
-                    'managed-by': 'setup-app',
+                    component: CONTAINER_TYPES.RESEARCH_CONTAINER,
+                    'managed-by': CONTAINER_TYPES.SETUP_APP,
                 },
                 State: 'completed',
                 Status: 'completed',
@@ -116,8 +117,8 @@ describe('DockerEnclave', () => {
                 Command: 'test/container-2',
                 Labels: {
                     instance: '0987654321',
-                    component: 'research-container',
-                    'managed-by': 'setup-app',
+                    component: CONTAINER_TYPES.RESEARCH_CONTAINER,
+                    'managed-by': CONTAINER_TYPES.SETUP_APP,
                 },
                 State: 'completed',
                 Status: 'completed',
@@ -163,13 +164,15 @@ describe('DockerEnclave', () => {
             .mockResolvedValueOnce(statuses[0])
             .mockResolvedValueOnce(statuses[1])
         vi.spyOn(enclave, 'getAllStudiesInEnclave').mockResolvedValue(jobs)
+        const removeContainerSpy = vi.spyOn(enclave, 'removeContainer').mockImplementation(vi.fn())
         vi.mocked(docker.filterContainers).mockReturnValue(jobs)
         await enclave.cleanup()
-        expect(dockerApiCall).toHaveBeenCalledTimes(4)
-        expect(dockerApiCall).toHaveBeenCalledWith('GET', 'containers/0987654321/json')
+        expect(dockerApiCall).toHaveBeenCalledTimes(2)
         expect(dockerApiCall).toHaveBeenCalledWith('GET', 'containers/1234567890/json')
-        expect(dockerApiCall).toHaveBeenCalledWith('DELETE', 'containers/1234567890')
-        expect(dockerApiCall).toHaveBeenCalledWith('DELETE', 'containers/0987654321')
+        expect(dockerApiCall).toHaveBeenCalledWith('GET', 'containers/0987654321/json')
+        expect(removeContainerSpy).toHaveBeenCalledTimes(2)
+        expect(removeContainerSpy).toBeCalledWith('1234567890')
+        expect(removeContainerSpy).toBeCalledWith('0987654321')
     })
 
     it('removeContainer: should call dockerApiCall with the correct arguments', async () => {
@@ -207,8 +210,8 @@ describe('DockerEnclave', () => {
                 Command: 'test/container-1',
                 Labels: {
                     instance: '1234567890',
-                    component: 'research-container',
-                    'managed-by': 'setup-app',
+                    component: CONTAINER_TYPES.RESEARCH_CONTAINER,
+                    'managed-by': CONTAINER_TYPES.SETUP_APP,
                 },
                 State: 'completed',
                 Status: 'completed',
@@ -221,8 +224,8 @@ describe('DockerEnclave', () => {
                 Command: 'test/container-2',
                 Labels: {
                     instance: '0987654321',
-                    component: 'research-container',
-                    'managed-by': 'setup-app',
+                    component: CONTAINER_TYPES.RESEARCH_CONTAINER,
+                    'managed-by': CONTAINER_TYPES.SETUP_APP,
                 },
                 State: 'completed',
                 Status: 'completed',
@@ -248,8 +251,8 @@ describe('DockerEnclave', () => {
         expect(filterContainers).toHaveBeenCalledWith(
             [],
             {
-                component: 'research-container',
-                'managed-by': 'setup-app',
+                component: CONTAINER_TYPES.RESEARCH_CONTAINER,
+                'managed-by': CONTAINER_TYPES.SETUP_APP,
             },
             ['running', 'created', 'restarting', 'removing', 'paused', 'exited', 'dead'],
         )
@@ -264,8 +267,8 @@ describe('DockerEnclave', () => {
             Command: 'test/container-1',
             Labels: {
                 instance: '1234567890',
-                component: 'research-container',
-                'managed-by': 'setup-app',
+                component: CONTAINER_TYPES.RESEARCH_CONTAINER,
+                'managed-by': CONTAINER_TYPES.SETUP_APP,
             },
             State: 'running',
             Status: 'running',
@@ -278,8 +281,8 @@ describe('DockerEnclave', () => {
             Command: 'test/container-2',
             Labels: {
                 instance: '0987654321',
-                component: 'research-container',
-                'managed-by': 'setup-app',
+                component: CONTAINER_TYPES.RESEARCH_CONTAINER,
+                'managed-by': CONTAINER_TYPES.SETUP_APP,
             },
             State: 'completed',
             Status: 'completed',
@@ -296,8 +299,8 @@ describe('DockerEnclave', () => {
         expect(filterContainers).toHaveBeenCalledWith(
             jobs,
             {
-                component: 'research-container',
-                'managed-by': 'setup-app',
+                component: CONTAINER_TYPES.RESEARCH_CONTAINER,
+                'managed-by': CONTAINER_TYPES.SETUP_APP,
             },
             ['running', 'created', 'restarting', 'removing', 'paused', 'exited', 'dead'],
         )
@@ -329,10 +332,10 @@ describe('DockerEnclave', () => {
             Image: 'my-image:latest',
             Labels: {
                 app: 'rc-123',
-                component: 'research-container',
+                component: CONTAINER_TYPES.RESEARCH_CONTAINER,
                 'part-of': 'My Study',
                 instance: '123',
-                'managed-by': 'setup-app',
+                'managed-by': CONTAINER_TYPES.SETUP_APP,
             },
             Env: [`TRUSTED_OUTPUT_ENDPOINT=http://example.com/job/123`],
         }
@@ -395,8 +398,8 @@ describe('DockerEnclave', () => {
             Command: 'test/container-1',
             Labels: {
                 instance: '1234567890',
-                component: 'research-container',
-                'managed-by': 'setup-app',
+                component: CONTAINER_TYPES.RESEARCH_CONTAINER,
+                'managed-by': CONTAINER_TYPES.SETUP_APP,
             },
             State: 'exited',
             Status: 'exited',

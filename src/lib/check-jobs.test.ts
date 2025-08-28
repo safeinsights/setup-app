@@ -22,7 +22,7 @@ describe('checkForErroredJobs', () => {
     it('should call kubernetes error check when deployment environment is Kubernetes', async () => {
         process.env.DEPLOYMENT_ENVIRONMENT = 'KUBERNETES'
         const checkForKubernetesErroredJobsMock = vi.spyOn(KubernetesEnclave.prototype, 'checkForErroredJobs')
-        await expect(checkForErroredJobs()).rejects.toThrow('Method not implemented.')
+        await expect(checkForErroredJobs()).rejects.toThrow('Namespace file not found!')
         expect(checkForKubernetesErroredJobsMock).toHaveBeenCalled()
     })
     it('should throw an error when deployment environment is unsupported', async () => {

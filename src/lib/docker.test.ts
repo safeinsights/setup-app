@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import * as api from './api'
 import { createContainerObject, filterContainers, pullContainer } from './docker'
-import { DockerApiContainersResponse } from './types'
+import { CONTAINER_TYPES, DockerApiContainersResponse } from './types'
 vi.mock('./api')
 
 describe('docker', () => {
@@ -40,10 +40,10 @@ describe('docker', () => {
             Image: imageLocation,
             Labels: {
                 app: `research-container-${jobId}`,
-                component: 'research-container',
+                component: CONTAINER_TYPES.RESEARCH_CONTAINER,
                 'part-of': studyTitle.toLowerCase(),
                 instance: jobId,
-                'managed-by': 'setup-app',
+                'managed-by': CONTAINER_TYPES.SETUP_APP,
             },
             Env: [
                 `TRUSTED_OUTPUT_ENDPOINT=${toaEndpointWithJobId}`,
