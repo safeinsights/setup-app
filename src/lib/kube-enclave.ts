@@ -100,10 +100,10 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
                     )
                     /* v8 ignore next 6 */
                     if (jobContainers && jobContainers.length > 0) {
-                        jobContainers.forEach(async (c) => {
+                        for (const c of jobContainers) {
                             console.log(`Deleting container: ${JSON.stringify(c.metadata.name)}`)
                             await k8sApiCall(undefined, `pods/${c.metadata.name}`, 'DELETE')
-                        })
+                        }
                     }
                     await k8sApiCall('batch', `jobs/${job.metadata.name}`, `DELETE`)
                 }
@@ -129,7 +129,7 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
                         jobsInEnclaveIds.includes(c.metadata?.labels?.[LABELS.INSTANCE]),
                 )
             if (containers && containers.length > 0) {
-                containers.forEach(async (c) => {
+                for (const c of containers) {
                     if (
                         c.status?.containerStatuses?.some(
                             (d) => 'terminated' in d.state && d.state['terminated'].exitCode !== 0,
@@ -142,7 +142,7 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
                             message: errorMsg,
                         })
                     }
-                })
+                }
             }
         } catch (error: unknown) {
             const errMsg = `An error occurred while cleaning up environment: ${error}`
