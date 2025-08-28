@@ -84,7 +84,7 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
         const containers = ((await k8sApiCall(undefined, 'pods', 'GET')) as KubernetesApiJobsResponse).items.flatMap(
             (j) => j as KubernetesPod,
         )
-        jobsInEnclave.forEach(async (job) => {
+        for (const job of jobsInEnclave) {
             if (
                 job.metadata?.labels?.[LABELS.MANAGED_BY] === CONTAINER_TYPES.SETUP_APP &&
                 job.metadata?.labels?.[LABELS.COMPONENT] === CONTAINER_TYPES.RESEARCH_CONTAINER
@@ -108,7 +108,7 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
                     await k8sApiCall('batch', `jobs/${job.metadata.name}`, `DELETE`)
                 }
             }
-        })
+        }
     }
     async checkForErroredJobs(): Promise<void> {
         console.log('Checking environment for errored jobs')

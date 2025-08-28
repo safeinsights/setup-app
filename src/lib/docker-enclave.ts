@@ -39,7 +39,7 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
             },
             ['exited'],
         )
-        successfulContainers.forEach(async (container) => {
+        for (const container of successfulContainers) {
             const containerExitResult = (await dockerApiCall(
                 'GET',
                 `containers/${container.Id}/json`,
@@ -52,7 +52,7 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
                     `Container ${container.Id} did not exit successfully. Please check the logs for more details. Will be cleaned up during the error jobs fetch.`,
                 )
             }
-        })
+        }
     }
 
     async removeContainer(id: string): Promise<void> {
@@ -121,7 +121,7 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
             },
             ['exited'],
         )
-        exitedContainers.forEach(async (container) => {
+        for (const container of exitedContainers) {
             const containerExitResult: DockerApiContainerResponse = (await dockerApiCall(
                 'GET',
                 `containers/${container.Id}/json`,
@@ -134,7 +134,7 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
                     message: errorMsg,
                 })
             }
-        })
+        }
     }
 }
 
