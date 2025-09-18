@@ -2,6 +2,7 @@ import fs from 'fs'
 import https from 'https'
 import tls from 'tls'
 import { CONTAINER_TYPES, KubernetesJob } from './types'
+import { sanitize } from './utils'
 
 export const DEFAULT_SERVICE_ACCOUNT_PATH = '/var/run/secrets/kubernetes.io/serviceaccount'
 
@@ -34,7 +35,7 @@ function initHTTPSTrustStore(): void {
 
 function createKubernetesJob(imageLocation: string, jobId: string, studyTitle: string, toaEndpointWithJobId: string) {
     const name = `research-container-${jobId}`
-    studyTitle = studyTitle.toLowerCase()
+    studyTitle = sanitize(studyTitle.toLowerCase())
     console.log(`Creating Kubernetes job: ${name}`)
     const deployment = {
         apiVersion: 'batch/v1',

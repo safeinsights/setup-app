@@ -77,7 +77,7 @@ describe('Get Service Account items', () => {
                 labels: {
                     app: `research-container-${jobId}`,
                     component: CONTAINER_TYPES.RESEARCH_CONTAINER,
-                    'part-of': studyTitle.toLowerCase(),
+                    'part-of': 'my_study_title',
                     instance: jobId,
                     'managed-by': CONTAINER_TYPES.SETUP_APP,
                 },
@@ -88,7 +88,7 @@ describe('Get Service Account items', () => {
                         labels: {
                             app: `research-container-${jobId}`,
                             component: CONTAINER_TYPES.RESEARCH_CONTAINER,
-                            'part-of': studyTitle.toLowerCase(),
+                            'part-of': 'my_study_title',
                             instance: jobId,
                             'managed-by': CONTAINER_TYPES.SETUP_APP,
                             role: 'toa-access',

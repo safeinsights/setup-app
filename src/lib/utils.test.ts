@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest'
-import { filterManagementAppJobs, filterOrphanTaskDefinitions, ensureValueWithError } from '../lib/utils'
 import { ResourceTagMapping } from '@aws-sdk/client-resource-groups-tagging-api'
+import { describe, expect, it } from 'vitest'
+import { ensureValueWithError, filterManagementAppJobs, filterOrphanTaskDefinitions, sanitize } from '../lib/utils'
 import { JOB_ID_TAG_KEY } from './aws'
 
 describe('filterManagementAppJobs', () => {
@@ -104,5 +104,37 @@ describe('ensureValueWithError', () => {
         expect(() => ensureValueWithError(null, 'Custom message')).toThrowError('Custom message')
         expect(() => ensureValueWithError(undefined)).toThrowError('undefined value')
         expect(() => ensureValueWithError(null)).toThrowError('null value')
+    })
+})
+
+describe('sanitize()', () => {
+    it('returns the same string when no special chars are present', () => {
+        const input = 'HelloWorld_123'
+        expect(sanitize(input)).toBe(input)
+    })
+
+    it('replaces spaces with underscores', () => {
+        expect(sanitize('Hello World')).toBe('Hello_World')
+    })
+
+    it('replaces punctuation and symbols with underscores', () => {
+        expect(sanitize('foo@bar.com')).toBe('foo_bar_com')
+        expect(sanitize('C++ > Java')).toBe('C_Java')
+    })
+
+    it('collapses multiple consecutive underscores into one', () => {
+        const input = 'a  b!!c'
+        const expected = 'a_b_c'
+        expect(sanitize(input)).toBe(expected)
+    })
+
+    it('handles empty strings gracefully', () => {
+        expect(sanitize('')).toBe('')
+    })
+
+    it('works with Unicode and emojis', () => {
+        const input = '😀 hello 🌍!'
+        const expected = '_hello_'
+        expect(sanitize(input)).toBe(expected)
     })
 })
