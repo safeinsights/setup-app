@@ -1,6 +1,6 @@
 import { dockerApiCall } from './api'
 import { CONTAINER_TYPES, DockerApiContainersResponse, DockerApiResponse } from './types'
-import { hasReadPermissions } from './utils'
+import { hasReadPermissions, sanitize } from './utils'
 
 async function pullContainer(imageLocation: string): Promise<DockerApiResponse> {
     const path = `images/create?fromImage=${imageLocation}`
@@ -16,7 +16,7 @@ async function pullContainer(imageLocation: string): Promise<DockerApiResponse> 
 
 function createContainerObject(imageLocation: string, jobId: string, studyTitle: string, toaEndpointWithjobId: string) {
     const name = `research-container-${jobId}`
-    studyTitle = studyTitle.toLowerCase()
+    studyTitle = sanitize(studyTitle.toLowerCase())
     console.log(`Creating Docker container job: ${name}`)
     const container = {
         Image: imageLocation,

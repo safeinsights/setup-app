@@ -1,7 +1,7 @@
-import { ManagementAppGetReadyStudiesResponse, TOAGetJobsResponse } from './types'
 import { ResourceTagMapping } from '@aws-sdk/client-resource-groups-tagging-api'
-import { JOB_ID_TAG_KEY } from './aws'
 import fs from 'fs'
+import { JOB_ID_TAG_KEY } from './aws'
+import { ManagementAppGetReadyStudiesResponse, TOAGetJobsResponse } from './types'
 
 const getJobIdFromResourceTagMapping = (resource: ResourceTagMapping): string | undefined => {
     return resource.Tags?.find((tag) => tag.Key === JOB_ID_TAG_KEY)?.Value
@@ -74,3 +74,11 @@ export const hasReadPermissions = (
     return hasPermissions
 }
 /* v8 ignore end */
+
+export const sanitize = (input: string): string => {
+    // \w is [A-Za-z0-9_], so anything NOT in that set is a “special” char.
+    // The `g` flag ensures we replace every occurrence.
+    const underscored = input.replace(/[^\w]/g, '_')
+    // collapse multiple underscores into a single one
+    return underscored.replace(/_+/g, '_')
+}
