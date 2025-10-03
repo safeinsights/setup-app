@@ -1,4 +1,4 @@
-import { vi, describe, it, expect } from 'vitest'
+import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { checkForAWSErroredJobs } from './aws-check-jobs'
 import * as api from './api'
 import * as aws from './aws'
@@ -8,6 +8,16 @@ vi.mock('./api')
 vi.mock('./aws')
 
 describe('checkForErroredJobs()', () => {
+    beforeEach(() => {
+        vi.mocked(api.managementAppGetReadyStudiesRequest).mockResolvedValue({ jobs: [] })
+        vi.mocked(aws.getAllTaskDefinitionsWithJobId).mockResolvedValue([
+            {
+                ResourceARN: 'run-finished',
+                Tags: [{ Key: 'jobId', Value: 'run-finished' }],
+            },
+        ])
+    })
+
     it('exits early if there are no tasks with jobId tag', async () => {
         vi.mocked(aws.getAllTasksWithJobId).mockResolvedValue([])
 
@@ -15,6 +25,8 @@ describe('checkForErroredJobs()', () => {
         await checkForAWSErroredJobs()
 
         expect(mockDescribeECSTasks).not.toHaveBeenCalled()
+        const deleteECSTaskDefinitionsCalls = vi.mocked(aws.deleteECSTaskDefinitions).mock.calls
+        expect(deleteECSTaskDefinitionsCalls[0][1]).toEqual(['run-finished'])
     })
     it('makes call to TOA for task that fails to start', async () => {
         vi.mocked(aws.getAllTasksWithJobId).mockResolvedValue([
@@ -51,6 +63,7 @@ describe('checkForErroredJobs()', () => {
             status: 'JOB-ERRORED',
             message: 'Task failed to start',
         })
+        expect(vi.mocked(aws.deleteECSTaskDefinitions)).toHaveBeenCalledOnce()
     })
     it('makes call to TOA for task that exits with non-zero exit code', async () => {
         vi.mocked(aws.getAllTasksWithJobId).mockResolvedValue([
@@ -93,6 +106,7 @@ describe('checkForErroredJobs()', () => {
             status: 'JOB-ERRORED',
             message: 'Task container stopped with non-zero exit code',
         })
+        expect(vi.mocked(aws.deleteECSTaskDefinitions)).toHaveBeenCalledOnce()
     })
     it('does not make call to TOA for task that exits with zero exit code', async () => {
         vi.mocked(aws.getAllTasksWithJobId).mockResolvedValue([
@@ -126,6 +140,7 @@ describe('checkForErroredJobs()', () => {
         expect(mockDescribeECSTasks).toHaveBeenCalledOnce()
         expect(mockDescribeECSTasks).toHaveBeenCalledWith(expect.any(ECSClient), 'MOCK_ECS_CLUSTER', ['arn1', 'arn2'])
         expect(mockToaUpdateJobStatus).not.toHaveBeenCalled()
+        expect(vi.mocked(aws.deleteECSTaskDefinitions)).toHaveBeenCalledOnce()
     })
     it('avoids duplicating calls to TOA for the same jobId', async () => {
         vi.mocked(aws.getAllTasksWithJobId).mockResolvedValue([
@@ -161,6 +176,7 @@ describe('checkForErroredJobs()', () => {
         await checkForAWSErroredJobs()
 
         expect(mockToaUpdateJobStatus).not.toHaveBeenCalled()
+        expect(vi.mocked(aws.deleteECSTaskDefinitions)).toHaveBeenCalledOnce()
     })
     it('behaves gracefully when describeECSTasks returns undefined tasks', async () => {
         vi.mocked(aws.getAllTasksWithJobId).mockResolvedValue([
@@ -185,6 +201,7 @@ describe('checkForErroredJobs()', () => {
         expect(mockDescribeECSTasks).toHaveBeenCalledOnce()
         expect(mockDescribeECSTasks).toHaveBeenCalledWith(expect.any(ECSClient), 'MOCK_ECS_CLUSTER', ['arn1', 'arn2'])
         expect(mockToaUpdateJobStatus).not.toHaveBeenCalled()
+        expect(vi.mocked(aws.deleteECSTaskDefinitions)).toHaveBeenCalledOnce()
     })
     it('behaves gracefully if stopped task has no container data', async () => {
         vi.mocked(aws.getAllTasksWithJobId).mockResolvedValue([
@@ -218,5 +235,6 @@ describe('checkForErroredJobs()', () => {
         expect(mockDescribeECSTasks).toHaveBeenCalledOnce()
         expect(mockDescribeECSTasks).toHaveBeenCalledWith(expect.any(ECSClient), 'MOCK_ECS_CLUSTER', ['arn1', 'arn2'])
         expect(mockToaUpdateJobStatus).not.toHaveBeenCalled()
+        expect(vi.mocked(aws.deleteECSTaskDefinitions)).toHaveBeenCalledOnce()
     })
 })

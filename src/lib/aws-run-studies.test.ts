@@ -27,7 +27,6 @@ describe('runStudies()', () => {
         const jobId_inAWS = 'running-in-AWS-env'
         const jobId1 = 'to-be-run-1'
         const jobId2 = 'to-be-run-2'
-        const jobId_toGarbageCollect = 'run-finished'
 
         // mock response from management app
         const mockManagementAppResponse = mockManagementAppResponseGenerator([jobId1, jobId_inTOA, jobId_inAWS, jobId2])
@@ -49,10 +48,6 @@ describe('runStudies()', () => {
             {
                 ResourceARN: jobId_inAWS,
                 Tags: [{ Key: JOB_ID_TAG_KEY, Value: jobId_inAWS }],
-            },
-            {
-                ResourceARN: jobId_toGarbageCollect,
-                Tags: [{ Key: JOB_ID_TAG_KEY, Value: jobId_toGarbageCollect }],
             },
         ])
 
@@ -80,10 +75,6 @@ describe('runStudies()', () => {
     it('makes calls to update the AWS environment (launch studies & garbage collect) as well as TOA', async () => {
         const mockToaUpdateJobStatus = vi.mocked(api.toaUpdateJobStatus)
         await runAWSStudies({ ignoreAWSJobs: false })
-
-        // Make sure calls to delete task definitions were made
-        const deleteECSTaskDefinitionsCalls = vi.mocked(aws.deleteECSTaskDefinitions).mock.calls
-        expect(deleteECSTaskDefinitionsCalls[0][1]).toEqual(['run-finished'])
 
         // Make sure calls to run tasks were made
         const runECSFargateTaskCalls = vi.mocked(aws.runECSFargateTask).mock.calls
