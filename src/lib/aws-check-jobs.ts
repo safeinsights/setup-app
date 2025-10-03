@@ -7,18 +7,20 @@ import {
 import {
     deleteECSTaskDefinitions,
     describeECSTasks,
+    getAllTaskDefinitionsWithJobId,
     getAllTasksWithJobId,
     getLogsForTask,
     JOB_ID_TAG_KEY,
 } from '../lib/aws'
 import { ensureValueWithError, filterOrphanTaskDefinitions } from '../lib/utils'
 import { ECSClient, TaskStopCode } from '@aws-sdk/client-ecs'
-import { ResourceGroupsTaggingAPIClient, ResourceTagMapping } from '@aws-sdk/client-resource-groups-tagging-api'
+import { ResourceGroupsTaggingAPIClient } from '@aws-sdk/client-resource-groups-tagging-api'
 import 'dotenv/config'
 
-async function cleanupTaskDefs(taskDefsWithJobId: ResourceTagMapping[], ecsClient: ECSClient) {
+async function cleanupTaskDefs(ecsClient: ECSClient, resourceTagClient: ResourceGroupsTaggingAPIClient) {
     // Garbage collect orphan task definitions
     const bmaResults = await managementAppGetReadyStudiesRequest()
+    const taskDefsWithJobId = await getAllTaskDefinitionsWithJobId(resourceTagClient)
     const orphanTaskDefinitions = filterOrphanTaskDefinitions(bmaResults, taskDefsWithJobId)
     console.log(`Found ${orphanTaskDefinitions.length} orphan task definitions to delete`)
     await deleteECSTaskDefinitions(ecsClient, orphanTaskDefinitions)
@@ -46,7 +48,7 @@ export async function checkForAWSErroredJobs(): Promise<void> {
 
     if (taskArns.length == 0) {
         // There are no tasks to look into
-        cleanupTaskDefs(tasks, ecsClient)
+        await cleanupTaskDefs(ecsClient, taggingClient)
         return
     }
 
@@ -91,5 +93,5 @@ export async function checkForAWSErroredJobs(): Promise<void> {
     }
 
     // Tidy AWS environment
-    cleanupTaskDefs(tasks, ecsClient)
+    await cleanupTaskDefs(ecsClient, taggingClient)
 }
