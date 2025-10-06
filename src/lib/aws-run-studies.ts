@@ -1,15 +1,14 @@
 import { ECSClient, RunTaskCommandOutput } from '@aws-sdk/client-ecs'
-import { ResourceGroupsTaggingAPIClient, ResourceTagMapping } from '@aws-sdk/client-resource-groups-tagging-api'
+import { ResourceGroupsTaggingAPIClient } from '@aws-sdk/client-resource-groups-tagging-api'
 import {
     getECSTaskDefinition,
     registerECSTaskDefinition,
     runECSFargateTask,
     JOB_ID_TAG_KEY,
     getAllTaskDefinitionsWithJobId,
-    deleteECSTaskDefinitions,
     getAllTasksWithJobId,
 } from './aws'
-import { ensureValueWithError, filterManagementAppJobs, filterOrphanTaskDefinitions } from './utils'
+import { ensureValueWithError, filterManagementAppJobs } from './utils'
 import { managementAppGetReadyStudiesRequest, toaGetJobsRequest, toaUpdateJobStatus } from './api'
 import 'dotenv/config'
 import { ManagementAppGetReadyStudiesResponse } from './types'
@@ -60,17 +59,6 @@ async function launchStudy(
         [securityGroup],
         taskTags,
     )
-}
-
-async function cleanupTaskDefs(
-    bmaResults: ManagementAppGetReadyStudiesResponse,
-    taskDefsWithJobId: ResourceTagMapping[],
-    ecsClient: ECSClient,
-) {
-    // Garbage collect orphan task definitions
-    const orphanTaskDefinitions = filterOrphanTaskDefinitions(bmaResults, taskDefsWithJobId)
-    console.log(`Found ${orphanTaskDefinitions.length} orphan task definitions to delete`)
-    await deleteECSTaskDefinitions(ecsClient, orphanTaskDefinitions)
 }
 
 export async function runAWSStudies(options: { ignoreAWSJobs: boolean }): Promise<void> {
@@ -140,7 +128,4 @@ export async function runAWSStudies(options: { ignoreAWSJobs: boolean }): Promis
 
         await toaUpdateJobStatus(job.jobId, { status: 'JOB-PROVISIONING' })
     }
-
-    // Tidy AWS environment
-    cleanupTaskDefs(bmaReadysResults, existingAwsTaskDefs, ecsClient)
 }

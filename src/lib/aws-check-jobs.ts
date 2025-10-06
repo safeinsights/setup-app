@@ -1,9 +1,30 @@
-import { managementAppGetJobStatus, toaSendLogs, toaUpdateJobStatus } from '../lib/api'
-import { describeECSTasks, getAllTasksWithJobId, getLogsForTask, JOB_ID_TAG_KEY } from '../lib/aws'
-import { ensureValueWithError } from '../lib/utils'
+import {
+    managementAppGetJobStatus,
+    managementAppGetReadyStudiesRequest,
+    toaSendLogs,
+    toaUpdateJobStatus,
+} from '../lib/api'
+import {
+    deleteECSTaskDefinitions,
+    describeECSTasks,
+    getAllTaskDefinitionsWithJobId,
+    getAllTasksWithJobId,
+    getLogsForTask,
+    JOB_ID_TAG_KEY,
+} from '../lib/aws'
+import { ensureValueWithError, filterOrphanTaskDefinitions } from '../lib/utils'
 import { ECSClient, TaskStopCode } from '@aws-sdk/client-ecs'
 import { ResourceGroupsTaggingAPIClient } from '@aws-sdk/client-resource-groups-tagging-api'
 import 'dotenv/config'
+
+async function cleanupTaskDefs(ecsClient: ECSClient, resourceTagClient: ResourceGroupsTaggingAPIClient) {
+    // Garbage collect orphan task definitions
+    const bmaResults = await managementAppGetReadyStudiesRequest()
+    const taskDefsWithJobId = await getAllTaskDefinitionsWithJobId(resourceTagClient)
+    const orphanTaskDefinitions = filterOrphanTaskDefinitions(bmaResults, taskDefsWithJobId)
+    console.log(`Found ${orphanTaskDefinitions.length} orphan task definitions to delete`)
+    await deleteECSTaskDefinitions(ecsClient, orphanTaskDefinitions)
+}
 
 export async function checkForAWSErroredJobs(): Promise<void> {
     /**
@@ -27,11 +48,11 @@ export async function checkForAWSErroredJobs(): Promise<void> {
 
     if (taskArns.length == 0) {
         // There are no tasks to look into
+        await cleanupTaskDefs(ecsClient, taggingClient)
         return
     }
 
     const data = await describeECSTasks(ecsClient, cluster, taskArns)
-
     for (const job of data.tasks ?? []) {
         const maybeJobId = job.tags?.find((tag) => tag.key === JOB_ID_TAG_KEY)?.value
         const jobId = ensureValueWithError(maybeJobId, 'Could not find jobId in task tags')
@@ -70,4 +91,7 @@ export async function checkForAWSErroredJobs(): Promise<void> {
             }
         }
     }
+
+    // Tidy AWS environment
+    await cleanupTaskDefs(ecsClient, taggingClient)
 }
