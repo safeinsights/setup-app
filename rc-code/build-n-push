@@ -1,0 +1,12 @@
+#!/bin/bash
+
+TAG="${1:-$(date +"%Y-%m-%d-%H-%M-%S")}"
+
+docker buildx build \
+    --file Dockerfile \
+    --platform=linux/amd64 \
+    --progress=plain \
+    -t harbor.safeinsights.org/openstax/code-builds/dev:$TAG \
+    .
+
+docker push harbor.safeinsights.org/openstax/code-builds/dev:$TAG
