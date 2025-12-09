@@ -112,11 +112,9 @@ describe('toaGetJobsRequest', () => {
 
         const result = await toaGetJobsRequest()
 
-        const mockToken = Buffer.from('testusername:testpassword').toString('base64')
         expect(global.fetch).toHaveBeenCalledWith('https://toa:67890/api/jobs', {
             method: 'GET',
             headers: {
-                Authorization: `Basic ${mockToken}`,
                 'Content-Type': 'application/json',
             },
         })
@@ -124,7 +122,6 @@ describe('toaGetJobsRequest', () => {
     })
 
     it('should error if token not found', async () => {
-        process.env.TOA_BASIC_AUTH = ''
         await expect(toaGetJobsRequest()).rejects.toThrow('TOA token failed to generate')
     })
 
@@ -154,11 +151,9 @@ describe('toaUpdateJobStatus', () => {
 
         const result = await toaUpdateJobStatus('jobId1234', { status: 'JOB-ERRORED', message: 'Error message' })
 
-        const mockToken = Buffer.from('testusername:testpassword').toString('base64')
         expect(global.fetch).toHaveBeenCalledWith('https://toa:67890/api/job/jobId1234', {
             method: 'PUT',
             headers: {
-                Authorization: `Basic ${mockToken}`,
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({ status: 'JOB-ERRORED', message: 'Error message' }),
@@ -168,7 +163,6 @@ describe('toaUpdateJobStatus', () => {
     })
 
     it('should error if token not found', async () => {
-        process.env.TOA_BASIC_AUTH = ''
         await expect(toaUpdateJobStatus('jobId1234', { status: 'JOB-ERRORED' })).rejects.toThrow(
             'TOA token failed to generate',
         )
@@ -191,12 +185,8 @@ describe('toaSendLogs', () => {
         mockFormData.append('logs', JSON.stringify(mockLogs))
 
         const result = await toaSendLogs('jobId456', mockLogs)
-        const mockToken = Buffer.from('testusername:testpassword').toString('base64')
         expect(global.fetch).toHaveBeenCalledWith('https://toa:67890/api/job/jobId456/upload', {
             method: 'POST',
-            headers: {
-                Authorization: `Basic ${mockToken}`,
-            },
             body: mockFormData,
         })
 

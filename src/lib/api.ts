@@ -73,25 +73,13 @@ export const managementAppGetJobStatus = async (jobId: string): Promise<{ status
     return await response.json()
 }
 
-// Functions for interacting with the Trusted Output App
-const generateTOAToken = (): string => {
-    /* v8 ignore next */
-    const token = Buffer.from(process.env.TOA_BASIC_AUTH ?? '').toString('base64')
-    if (token.length === 0) {
-        throw new Error('TOA token failed to generate')
-    }
-    return token
-}
-
 export const toaGetJobsRequest = async (): Promise<TOAGetJobsResponse> => {
     const endpoint = process.env.TOA_BASE_URL + '/api/jobs'
-    const token = generateTOAToken()
 
     console.log(`TOA: Fetching jobs from ${endpoint} ...`)
     const response = await fetch(endpoint, {
         method: 'GET',
         headers: {
-            Authorization: `Basic ${token}`,
             'Content-Type': 'application/json',
         },
     })
@@ -114,13 +102,11 @@ export const toaUpdateJobStatus = async (
     data: { status: 'JOB-PROVISIONING' } | { status: 'JOB-ERRORED'; message?: string },
 ): Promise<{ success: boolean }> => {
     const endpoint = `${process.env.TOA_BASE_URL}/api/job/${jobId}`
-    const token = generateTOAToken()
 
     console.log(`TOA: Updating job ${jobId} status with ${JSON.stringify(data)} ...`)
     const response = await fetch(endpoint, {
         method: 'PUT',
         headers: {
-            Authorization: `Basic ${token}`,
             'Content-Type': 'application/json',
         },
         body: JSON.stringify(data),
@@ -137,7 +123,6 @@ export const toaUpdateJobStatus = async (
 
 export const toaSendLogs = async (jobId: string, logs: LogEntry[]) => {
     const endpoint = `${process.env.TOA_BASE_URL}/api/job/${jobId}/upload`
-    const token = generateTOAToken()
 
     const logForm = new FormData()
     logForm.append('logs', JSON.stringify(logs))
@@ -145,9 +130,6 @@ export const toaSendLogs = async (jobId: string, logs: LogEntry[]) => {
     console.log(`TOA: Sending logs for job ${jobId} ...`)
     const response = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-            Authorization: `Basic ${token}`,
-        },
         body: logForm,
     })
 

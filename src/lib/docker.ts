@@ -28,8 +28,7 @@ function createContainerObject(imageLocation: string, jobId: string, studyTitle:
             'managed-by': CONTAINER_TYPES.SETUP_APP,
         },
         Env: [
-            `TRUSTED_OUTPUT_ENDPOINT=${toaEndpointWithjobId}`,
-            `TRUSTED_OUTPUT_BASIC_AUTH=${process.env.TOA_BASIC_AUTH}`,
+            `TRUSTED_OUTPUT_ENDPOINT=${toaEndpointWithjobId}`
         ],
     }
     return container

@@ -103,12 +103,8 @@ describe('Get Service Account items', () => {
                                 env: [
                                     {
                                         name: 'TRUSTED_OUTPUT_ENDPOINT',
-                                        value: toaEndpointWithJobId,
-                                    },
-                                    {
-                                        name: 'TRUSTED_OUTPUT_BASIC_AUTH',
-                                        value: 'testusername:testpassword',
-                                    },
+                                        value: toaEndpointWithJobId
+                                    }
                                 ],
                             },
                         ],

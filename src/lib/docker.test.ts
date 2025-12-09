@@ -46,8 +46,7 @@ describe('docker', () => {
                 'managed-by': CONTAINER_TYPES.SETUP_APP,
             },
             Env: [
-                `TRUSTED_OUTPUT_ENDPOINT=${toaEndpointWithJobId}`,
-                'TRUSTED_OUTPUT_BASIC_AUTH=testusername:testpassword',
+                `TRUSTED_OUTPUT_ENDPOINT=${toaEndpointWithJobId}`
             ],
         })
     })
