@@ -27,9 +27,7 @@ function createContainerObject(imageLocation: string, jobId: string, studyTitle:
             instance: jobId,
             'managed-by': CONTAINER_TYPES.SETUP_APP,
         },
-        Env: [
-            `TRUSTED_OUTPUT_ENDPOINT=${toaEndpointWithjobId}`
-        ],
+        Env: [`TRUSTED_OUTPUT_ENDPOINT=${toaEndpointWithjobId}`],
     }
     return container
 }

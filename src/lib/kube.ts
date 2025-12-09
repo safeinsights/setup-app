@@ -73,7 +73,7 @@ function createKubernetesJob(imageLocation: string, jobId: string, studyTitle: s
                                 {
                                     name: 'TRUSTED_OUTPUT_ENDPOINT',
                                     value: toaEndpointWithJobId,
-                                }
+                                },
                             ],
                         },
                     ],

@@ -45,9 +45,7 @@ describe('docker', () => {
                 instance: jobId,
                 'managed-by': CONTAINER_TYPES.SETUP_APP,
             },
-            Env: [
-                `TRUSTED_OUTPUT_ENDPOINT=${toaEndpointWithJobId}`
-            ],
+            Env: [`TRUSTED_OUTPUT_ENDPOINT=${toaEndpointWithJobId}`],
         })
     })
     it('filterContainers: filters containers by state and labels', () => {
