@@ -3,7 +3,6 @@
 *.log
 tmp/
 
-.next/
 test-results/
 *.tern-port
 node_modules/

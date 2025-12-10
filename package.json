@@ -4,9 +4,6 @@
     "description": "Setup App",
     "main": "index.js",
     "scripts": {
-        "dev": "next dev",
-        "build": "next build",
-        "start": "next start",
         "lint": "prettier --check . && eslint .",
         "lint:fix": "prettier --write . && eslint . --fix",
         "typecheck": "tsc --noEmit",
@@ -17,31 +14,27 @@
     "author": "Nathan Stitt",
     "license": "AGPL-3.0-or-later",
     "devDependencies": {
-        "@playwright/test": "^1.47",
-        "@testing-library/react": "^16.0",
-        "@types/jsonwebtoken": "^9.0.7",
-        "@types/react": "18.3",
-        "@vitejs/plugin-react": "^4.3.2",
-        "@vitest/coverage-v8": "^3.2.4",
+        "@playwright/test": "^1.57",
+        "@types/jsonwebtoken": "^9.0.10",
+        "@vitest/coverage-v8": "^4.0.15",
         "aws-sdk-client-mock": "^4.1.0",
         "dotenv": "*",
         "eslint": "*",
-        "eslint-config-next": "*",
         "eslint-config-prettier": "*",
-        "eslint-plugin-unused-imports": "^4.1.4",
+        "eslint-plugin-unused-imports": "^4.3.0",
         "happy-dom": "*",
         "npm-run-all": "*",
         "prettier": "*",
-        "vite-tsconfig-paths": "^5.0.1",
+        "vite-tsconfig-paths": "^5.1.4",
         "vitest": "*"
     },
     "dependencies": {
-        "@aws-sdk/client-cloudwatch-logs": "^3.828.0",
-        "@aws-sdk/client-ecs": "^3.828.0",
-        "@aws-sdk/client-resource-groups-tagging-api": "^3.828.0",
+        "@aws-sdk/client-cloudwatch-logs": "^3.948.0",
+        "@aws-sdk/client-ecs": "^3.948.0",
+        "@aws-sdk/client-resource-groups-tagging-api": "^3.948.0",
         "clsx": "*",
-        "jsonwebtoken": "^9.0.2",
-        "tsx": "^4.20.3",
-        "typescript-eslint": "^8.21.0"
+        "jsonwebtoken": "^9.0.3",
+        "tsx": "^4.21.0",
+        "typescript-eslint": "^8.49.0"
     }
 }
