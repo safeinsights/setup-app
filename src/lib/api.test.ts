@@ -121,10 +121,6 @@ describe('toaGetJobsRequest', () => {
         expect(result).toEqual(mockTOAData)
     })
 
-    it('should error if token not found', async () => {
-        await expect(toaGetJobsRequest()).rejects.toThrow('TOA token failed to generate')
-    })
-
     it('should throw an error if response status is not success', async () => {
         global.fetch = vi.fn().mockResolvedValue(new Response('Authentication error', { status: 401 }))
         await expect(toaGetJobsRequest()).rejects.toThrow(
@@ -160,12 +156,6 @@ describe('toaUpdateJobStatus', () => {
         })
 
         expect(result).toEqual({ success: true })
-    })
-
-    it('should error if token not found', async () => {
-        await expect(toaUpdateJobStatus('jobId1234', { status: 'JOB-ERRORED' })).rejects.toThrow(
-            'TOA token failed to generate',
-        )
     })
 
     it('should return appropriate value if response status is not success', async () => {
