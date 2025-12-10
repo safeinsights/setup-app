@@ -1,6 +1,6 @@
 {
     "name": "setup-app",
-    "version": "0.0.1",
+    "version": "1.0.0",
     "description": "Setup App",
     "main": "index.js",
     "scripts": {
@@ -14,9 +14,8 @@
     "author": "Nathan Stitt",
     "license": "AGPL-3.0-or-later",
     "devDependencies": {
-        "@playwright/test": "^1.57",
         "@types/jsonwebtoken": "^9.0.10",
-        "@vitest/coverage-v8": "^4.0.15",
+        "@vitest/coverage-v8": "^3.2.4",
         "aws-sdk-client-mock": "^4.1.0",
         "dotenv": "*",
         "eslint": "*",

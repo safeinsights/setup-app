@@ -13,5 +13,4 @@ yarn-error.log*
 .npm
 .eslintcache
 coverage/
-playwright-report/
 .env
