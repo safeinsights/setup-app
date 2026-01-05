@@ -12,7 +12,6 @@ scan:
         - misconfig
     skip-dirs:
         - .git
-        - .next
         - .husky
         - node_modules
     skip-files:
