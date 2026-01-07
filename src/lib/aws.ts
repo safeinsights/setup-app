@@ -249,6 +249,7 @@ export async function getLogsForTask(taskId: string, taskDefArn: string): Promis
     console.log(`Found log configuration`, logConfiguration)
 
     const logGroupName = ensureValueWithError(logConfiguration?.options?.['awslogs-group'])
+    const logStreamPrefix = ensureValueWithError(logConfiguration?.options?.['awslogs-stream-prefix'])
 
     // Get the log events for the task
     const events: LogEntry[] = []
@@ -257,7 +258,7 @@ export async function getLogsForTask(taskId: string, taskDefArn: string): Promis
         { client: logsClient },
         {
             logGroupIdentifier: logGroupName,
-            logStreamNames: [`ResearchContainer/ResearchContainer/${taskId}`],
+            logStreamNames: [`${logStreamPrefix}/ResearchContainer/${taskId}`],
         },
     )
     for await (const page of paginatedLogEvents) {

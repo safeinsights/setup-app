@@ -305,6 +305,7 @@ describe('getLogsForTask', () => {
                                 logDriver: 'awslogs',
                                 options: {
                                     'awslogs-group': 'test-log-group',
+                                    'awslogs-stream-prefix': 'test-log-prefix',
                                 },
                             },
                         },
@@ -316,7 +317,7 @@ describe('getLogsForTask', () => {
         loggingMockClient
             .on(FilterLogEventsCommand, {
                 logGroupIdentifier: 'test-log-group',
-                logStreamNames: [`ResearchContainer/ResearchContainer/taskId`],
+                logStreamNames: [`test-log-prefix/ResearchContainer/taskId`],
             })
             .resolves({
                 events: [testLogEvent],
