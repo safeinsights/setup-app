@@ -10,6 +10,7 @@ import {
     TaskDefinitionStatus,
     DescribeTasksCommand,
     DescribeTasksCommandInput,
+    LogDriver,
 } from '@aws-sdk/client-ecs'
 import {
     getECSTaskDefinition,
@@ -48,7 +49,12 @@ describe('registerECSTaskDefinition', () => {
     it('should send RegisterTaskDefinitionCommand and return response', async () => {
         const testTags = [{ key: 'testtagkey', value: 'testtagvalue' }]
         const testTaskDefinition = {
-            containerDefinitions: [{ environment: [{ name: 'foo', value: 'bar' }] }],
+            containerDefinitions: [
+                {
+                    environment: [{ name: 'foo', value: 'bar' }],
+                    logConfiguration: { logDriver: LogDriver.AWSLOGS, options: { 'awslogs-stream-prefix': 'default' } },
+                },
+            ],
             taskRoleArn: 'testTaskRoleArn',
             executionRoleArn: 'testexecutionRoleArn',
             networkMode: undefined,
@@ -65,6 +71,12 @@ describe('registerECSTaskDefinition', () => {
                         { name: 'foo', value: 'bar' },
                         { name: 'TRUSTED_OUTPUT_ENDPOINT', value: 'http://toa:port/api/job/jobid' },
                     ],
+                    logConfiguration: {
+                        logDriver: LogDriver.AWSLOGS,
+                        options: {
+                            'awslogs-stream-prefix': 'job-specific-log-prefix',
+                        },
+                    },
                 },
             ],
             taskRoleArn: 'testTaskRoleArn',
@@ -83,6 +95,7 @@ describe('registerECSTaskDefinition', () => {
             'testfamilyname',
             'http://toa:port/api/job/jobid',
             'testImageLocation',
+            'job-specific-log-prefix',
             testTags,
         )
         expect(res).toStrictEqual({})
@@ -292,6 +305,7 @@ describe('getLogsForTask', () => {
                                 logDriver: 'awslogs',
                                 options: {
                                     'awslogs-group': 'test-log-group',
+                                    'awslogs-stream-prefix': 'test-log-prefix',
                                 },
                             },
                         },
@@ -303,7 +317,7 @@ describe('getLogsForTask', () => {
         loggingMockClient
             .on(FilterLogEventsCommand, {
                 logGroupIdentifier: 'test-log-group',
-                logStreamNames: [`ResearchContainer/ResearchContainer/taskId`],
+                logStreamNames: [`test-log-prefix/ResearchContainer/taskId`],
             })
             .resolves({
                 events: [testLogEvent],
