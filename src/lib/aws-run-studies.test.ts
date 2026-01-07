@@ -61,7 +61,15 @@ describe('runStudies()', () => {
         })
 
         vi.mocked(aws.registerECSTaskDefinition).mockImplementation(
-            async (_client, _baseTaskDefinition, familyName: string, _toaEndpointWithJobId, _imageLocation, _tags) => {
+            async (
+                _client,
+                _baseTaskDefinition,
+                familyName: string,
+                _toaEndpointWithJobId,
+                _imageLocation,
+                _logStreamPrefix,
+                _tags,
+            ) => {
                 return {
                     $metadata: {},
                     taskDefinition: {

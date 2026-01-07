@@ -40,6 +40,7 @@ async function launchStudy(
         newTaskDefinitionFamily,
         toaEndpointWithJobId,
         imageLocation,
+        jobId, // Use job ID as the stream prefix
         taskTags,
     )
     registerTaskDefResponse.taskDefinition = ensureValueWithError(

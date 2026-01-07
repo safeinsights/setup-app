@@ -54,6 +54,7 @@ export async function registerECSTaskDefinition(
     familyName: string,
     toaEndpointWithJobId: string,
     imageLocation: string,
+    logStreamPrefix: string,
     tags: Tag[],
 ): Promise<RegisterTaskDefinitionCommandOutput> {
     // Create a derived task definition using the base
@@ -61,6 +62,13 @@ export async function registerECSTaskDefinition(
 
     const containerDefinition = baseTaskDefinition.containerDefinitions?.map((container) => {
         const environment = ensureValueWithError(container.environment, `No environment found on ${container}`)
+        const logConfiguration = ensureValueWithError(
+            container.logConfiguration,
+            `No log configuration found on ${container}`,
+        )
+
+        logConfiguration.options ??= {}
+        logConfiguration.options['awslogs-stream-prefix'] = logStreamPrefix
 
         environment.push({
             name: 'TRUSTED_OUTPUT_ENDPOINT',
@@ -69,6 +77,7 @@ export async function registerECSTaskDefinition(
         return {
             ...container,
             environment,
+            logConfiguration,
             image: imageLocation,
         }
     })
