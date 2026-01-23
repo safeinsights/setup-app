@@ -92,7 +92,14 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
         return containers
     }
     async launchStudy(job: ManagementAppJob, toaEndpointWithJobId: string): Promise<void> {
-        const container = createContainerObject(job.containerLocation, job.jobId, job.title, toaEndpointWithJobId)
+        const researchContainerNetwork = process.env.RESEARCH_CONTAINER_NETWORK
+        const container = createContainerObject(
+            job.containerLocation,
+            job.jobId,
+            job.title,
+            toaEndpointWithJobId,
+            researchContainerNetwork,
+        )
         console.log(`Deploying Container ==> ${JSON.stringify(container)}`)
         try {
             const result = await pullContainer(job.containerLocation)
