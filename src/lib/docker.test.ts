@@ -48,6 +48,31 @@ describe('docker', () => {
             Env: [`TRUSTED_OUTPUT_ENDPOINT=${toaEndpointWithJobId}`],
         })
     })
+
+    it('createContainerObject: should include HostConfig with NetworkMode when network is provided', () => {
+        const imageLocation = 'my-image'
+        const jobId = '1234567890'
+        const studyTitle = 'My Study Title'
+        const toaEndpointWithJobId = 'https://example.com/toa?job_id=1234567890'
+        const network = 'my-custom-network'
+
+        const container = createContainerObject(imageLocation, jobId, studyTitle, toaEndpointWithJobId, network)
+
+        expect(container).toEqual({
+            Image: imageLocation,
+            Labels: {
+                app: `research-container-${jobId}`,
+                component: CONTAINER_TYPES.RESEARCH_CONTAINER,
+                'part-of': 'my_study_title',
+                instance: jobId,
+                'managed-by': CONTAINER_TYPES.SETUP_APP,
+            },
+            Env: [`TRUSTED_OUTPUT_ENDPOINT=${toaEndpointWithJobId}`],
+            HostConfig: {
+                NetworkMode: network,
+            },
+        })
+    })
     it('filterContainers: filters containers by state and labels', () => {
         const containers: DockerApiContainersResponse[] = [
             {

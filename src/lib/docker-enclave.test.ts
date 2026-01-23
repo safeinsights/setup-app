@@ -321,6 +321,7 @@ describe('DockerEnclave', () => {
             '123',
             'My Study',
             'http://example.com/job/123',
+            undefined,
         )
         expect(docker.pullContainer).toHaveBeenCalledWith('my-image:latest')
     })
@@ -354,6 +355,7 @@ describe('DockerEnclave', () => {
             '123',
             'My Study',
             'http://example.com/job/123',
+            undefined,
         )
         expect(docker.pullContainer).toHaveBeenCalledWith('my-image:latest')
         expect(api.dockerApiCall).nthCalledWith(1, 'POST', `containers/create?name=rc-123`, container)
