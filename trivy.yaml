@@ -20,6 +20,6 @@ misconfiguration:
     scanners:
         - dockerfile
     skip-check-update: true
-    checks-bundle-repository: ""
+    checks-bundle-repository: ''
 pkg:
     include-dev-deps: true
