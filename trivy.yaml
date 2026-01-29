@@ -1,10 +1,10 @@
-format: table
-exit-code: 1
+format: json
+exit-code: 0
 debug: false
-# severity:
-#     - MEDIUM
-#     - HIGH
-#     - CRITICAL
+severity:
+    - MEDIUM
+    - HIGH
+    - CRITICAL
 scan:
     scanners:
         - vuln
@@ -18,3 +18,5 @@ scan:
 misconfiguration:
     scanners:
         - dockerfile
+pkg:
+    include-dev-deps: true
