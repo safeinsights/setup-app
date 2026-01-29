@@ -1,6 +1,6 @@
 format: table
 exit-code: 1
-debug: true
+debug: false
 severity:
     - MEDIUM
     - HIGH
