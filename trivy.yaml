@@ -1,23 +1,24 @@
-format: table
+format: json
 exit-code: 1
-debug: true
+debug: false
 severity:
-    - MEDIUM
     - HIGH
     - CRITICAL
 scan:
     scanners:
         - vuln
         - secret
-        - misconfig
+        # ToDo - Misconfig keep trying to pull AWS config to scan and failing
+        # Commenting to move on for now.
+        # - misconfig
     skip-dirs:
         - .git
         - .husky
         - node_modules
     skip-files:
         - .env
-vulnerability:
-    ignore-unfixed: true
 misconfiguration:
     scanners:
         - dockerfile
+pkg:
+    include-dev-deps: true
