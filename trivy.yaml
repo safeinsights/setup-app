@@ -2,7 +2,6 @@ format: json
 exit-code: 1
 debug: false
 severity:
-    - MEDIUM
     - HIGH
     - CRITICAL
 scan:
