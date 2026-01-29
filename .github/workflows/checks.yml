@@ -23,9 +23,6 @@ jobs:
                   scan-type: 'fs'
                   scan-ref: '.'
                   trivy-config: trivy.yaml
-                  skip-setup-trivy: 'true'
-              env:
-                  TRIVY_SKIP_CHECK_UPDATE: 'true'
             - name: Run SonarQube SAST Scan
               uses: SonarSource/sonarqube-scan-action@v6
               env:
