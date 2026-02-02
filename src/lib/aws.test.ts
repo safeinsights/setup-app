@@ -70,6 +70,7 @@ describe('registerECSTaskDefinition', () => {
                     environment: [
                         { name: 'foo', value: 'bar' },
                         { name: 'TRUSTED_OUTPUT_ENDPOINT', value: 'http://toa:port/api/job/jobid' },
+                        { name: 'RESEARCHER_ID', value: 'testresearcherid' },
                     ],
                     logConfiguration: {
                         logDriver: LogDriver.AWSLOGS,
