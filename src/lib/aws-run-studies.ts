@@ -27,7 +27,10 @@ async function launchStudy(
     researcherId: string,
 ): Promise<RunTaskCommandOutput> {
     console.log(`Creating task definition for study ${studyTitle} and jobId ${jobId}`)
-    const taskTags = [{ key: JOB_ID_TAG_KEY, value: jobId }, { key: RESEARCHER_ID_TAG_KEY, value: researcherId }]
+    const taskTags = [
+        { key: JOB_ID_TAG_KEY, value: jobId },
+        { key: RESEARCHER_ID_TAG_KEY, value: researcherId },
+    ]
     const baseTaskDefinitionData = await getECSTaskDefinition(client, baseTaskDefinitionFamily)
     baseTaskDefinitionData.taskDefinition = ensureValueWithError(
         baseTaskDefinitionData.taskDefinition,
