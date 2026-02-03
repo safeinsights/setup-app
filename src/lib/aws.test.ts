@@ -97,6 +97,7 @@ describe('registerECSTaskDefinition', () => {
             'http://toa:port/api/job/jobid',
             'testImageLocation',
             'job-specific-log-prefix',
+            'testresearcherid',
             testTags,
         )
         expect(res).toStrictEqual({})

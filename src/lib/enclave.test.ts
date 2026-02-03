@@ -24,11 +24,13 @@ describe('Enclave', () => {
                     jobId: 'jobId1',
                     title: 'title1',
                     containerLocation: 'repo1:tag1',
+                    researcherId: 'testresearcherid',
                 },
                 {
                     jobId: 'jobId2',
                     title: 'title2',
                     containerLocation: 'repo1:tag2',
+                    researcherId: 'testresearcherid',
                 },
             ],
         }
@@ -38,7 +40,7 @@ describe('Enclave', () => {
         }
 
         const mockRunningJobsInEnclave: ManagementAppJob[] = [
-            { jobId: '2', title: 'title2', containerLocation: 'repo1:tag2' },
+            { jobId: '2', title: 'title2', containerLocation: 'repo1:tag2', researcherId: 'testresearcherid' },
         ]
 
         vi.mocked(api.managementAppGetReadyStudiesRequest).mockResolvedValue(mockBmaReadysResults)
@@ -50,6 +52,7 @@ describe('Enclave', () => {
                     jobId: 'jobId1',
                     title: 'title1',
                     containerLocation: 'repo1:tag1',
+                    researcherId: 'testresearcherid',
                 },
             ],
         }
