@@ -28,9 +28,9 @@
         "vitest": "*"
     },
     "dependencies": {
-        "@aws-sdk/client-cloudwatch-logs": "^3.948.0",
-        "@aws-sdk/client-ecs": "^3.948.0",
-        "@aws-sdk/client-resource-groups-tagging-api": "^3.948.0",
+        "@aws-sdk/client-cloudwatch-logs": "^3.981.0",
+        "@aws-sdk/client-ecs": "^3.981.0",
+        "@aws-sdk/client-resource-groups-tagging-api": "^3.981.0",
         "clsx": "*",
         "jsonwebtoken": "^9.0.3",
         "tsx": "^4.21.0",
