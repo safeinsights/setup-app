@@ -13,6 +13,7 @@ const mockManagementAppResponseGenerator = (jobIds: string[]): ManagementAppGetR
     for (const jobId of jobIds) {
         jobs.push({
             jobId: jobId,
+            researcherId: 'mockResearcherId',
             title: 'mockTitle',
             containerLocation: 'mockContainerLocation',
         })

@@ -11,11 +11,13 @@ describe('filterManagementAppJobs', () => {
                     jobId: 'not-in-TOA',
                     containerLocation: '',
                     title: '',
+                    researcherId: 'testresearcherid',
                 },
                 {
                     jobId: 'finished-job',
                     containerLocation: '',
                     title: '',
+                    researcherId: 'testresearcherid',
                 },
             ],
         }
@@ -26,6 +28,7 @@ describe('filterManagementAppJobs', () => {
                     jobId: 'not-in-TOA',
                     containerLocation: '',
                     title: '',
+                    researcherId: 'testresearcherid',
                 },
             ],
         })
@@ -37,11 +40,13 @@ describe('filterManagementAppJobs', () => {
                     jobId: 'not-in-AWS',
                     containerLocation: '',
                     title: '',
+                    researcherId: 'testresearcherid',
                 },
                 {
                     jobId: 'existing-job',
                     containerLocation: '',
                     title: '',
+                    researcherId: 'testresearcherid',
                 },
             ],
         }
@@ -52,6 +57,7 @@ describe('filterManagementAppJobs', () => {
                     jobId: 'not-in-AWS',
                     containerLocation: '',
                     title: '',
+                    researcherId: 'testresearcherid',
                 },
             ],
         })
@@ -66,11 +72,13 @@ describe('filterOrphanTaskDefinitions', () => {
                     jobId: 'not-yet-job',
                     containerLocation: '',
                     title: '',
+                    researcherId: 'testresearcherid',
                 },
                 {
                     jobId: 'previously-run-but-still-pending',
                     containerLocation: '',
                     title: '',
+                    researcherId: 'testresearcherid',
                 },
             ],
         }
@@ -80,6 +88,7 @@ describe('filterOrphanTaskDefinitions', () => {
                 jobId: 'not-yet-run',
                 containerLocation: '',
                 title: '',
+                researcherId: 'testresearcherid',
             },
             {
                 ResourceARN: 'arn1',

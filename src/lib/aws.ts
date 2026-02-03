@@ -28,6 +28,7 @@ import { ensureValueWithError } from './utils'
 
 export const JOB_ID_TAG_KEY = 'jobId'
 export const TITLE_TAG_KEY = 'title'
+export const RESEARCHER_ID_TAG_KEY = 'researcherId'
 
 export type LogEntry = {
     timestamp: number
@@ -55,6 +56,7 @@ export async function registerECSTaskDefinition(
     toaEndpointWithJobId: string,
     imageLocation: string,
     logStreamPrefix: string,
+    researcherId: string,
     tags: Tag[],
 ): Promise<RegisterTaskDefinitionCommandOutput> {
     // Create a derived task definition using the base
@@ -73,6 +75,10 @@ export async function registerECSTaskDefinition(
         environment.push({
             name: 'TRUSTED_OUTPUT_ENDPOINT',
             value: toaEndpointWithJobId,
+        })
+        environment.push({
+            name: 'RESEARCHER_ID',
+            value: researcherId,
         })
         return {
             ...container,

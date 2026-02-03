@@ -70,6 +70,7 @@ describe('registerECSTaskDefinition', () => {
                     environment: [
                         { name: 'foo', value: 'bar' },
                         { name: 'TRUSTED_OUTPUT_ENDPOINT', value: 'http://toa:port/api/job/jobid' },
+                        { name: 'RESEARCHER_ID', value: 'testresearcherid' },
                     ],
                     logConfiguration: {
                         logDriver: LogDriver.AWSLOGS,
@@ -96,6 +97,7 @@ describe('registerECSTaskDefinition', () => {
             'http://toa:port/api/job/jobid',
             'testImageLocation',
             'job-specific-log-prefix',
+            'testresearcherid',
             testTags,
         )
         expect(res).toStrictEqual({})

@@ -2,6 +2,7 @@ export type ManagementAppJob = {
     jobId: string
     title: string
     containerLocation: string
+    researcherId: string
 }
 
 export type ManagementAppGetReadyStudiesResponse = {

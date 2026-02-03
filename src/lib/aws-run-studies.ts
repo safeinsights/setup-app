@@ -5,6 +5,7 @@ import {
     registerECSTaskDefinition,
     runECSFargateTask,
     JOB_ID_TAG_KEY,
+    RESEARCHER_ID_TAG_KEY,
     getAllTaskDefinitionsWithJobId,
     getAllTasksWithJobId,
 } from './aws'
@@ -23,9 +24,13 @@ async function launchStudy(
     jobId: string,
     imageLocation: string,
     studyTitle: string,
+    researcherId: string,
 ): Promise<RunTaskCommandOutput> {
     console.log(`Creating task definition for study ${studyTitle} and jobId ${jobId}`)
-    const taskTags = [{ key: JOB_ID_TAG_KEY, value: jobId }]
+    const taskTags = [
+        { key: JOB_ID_TAG_KEY, value: jobId },
+        { key: RESEARCHER_ID_TAG_KEY, value: researcherId },
+    ]
     const baseTaskDefinitionData = await getECSTaskDefinition(client, baseTaskDefinitionFamily)
     baseTaskDefinitionData.taskDefinition = ensureValueWithError(
         baseTaskDefinitionData.taskDefinition,
@@ -41,6 +46,7 @@ async function launchStudy(
         toaEndpointWithJobId,
         imageLocation,
         jobId, // Use job ID as the stream prefix
+        researcherId,
         taskTags,
     )
     registerTaskDefResponse.taskDefinition = ensureValueWithError(
@@ -125,6 +131,7 @@ export async function runAWSStudies(options: { ignoreAWSJobs: boolean }): Promis
             job.jobId,
             job.containerLocation,
             job.title,
+            job.researcherId,
         )
 
         await toaUpdateJobStatus(job.jobId, { status: 'JOB-PROVISIONING' })

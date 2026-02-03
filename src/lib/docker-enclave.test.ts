@@ -21,11 +21,13 @@ describe('DockerEnclave', () => {
                     jobId: '1234567890',
                     title: 'Test Job 1',
                     containerLocation: 'test/container-1',
+                    researcherId: 'testresearcherid',
                 },
                 {
                     jobId: '0987654321',
                     title: 'Test Job 2',
                     containerLocation: 'test/container-2',
+                    researcherId: 'testresearcherid',
                 },
             ],
         }
@@ -81,11 +83,13 @@ describe('DockerEnclave', () => {
                     jobId: '1234567890',
                     title: 'Test Job 1',
                     containerLocation: 'test/container-1',
+                    researcherId: 'testresearcherid',
                 },
                 {
                     jobId: '0987654321',
                     title: 'Test Job 2',
                     containerLocation: 'test/container-2',
+                    researcherId: 'testresearcherid',
                 },
             ],
         })
@@ -313,6 +317,7 @@ describe('DockerEnclave', () => {
             containerLocation: 'my-image:latest',
             jobId: '123',
             title: 'My Study',
+            researcherId: 'testresearcherid',
             toaEndpointWithJobId: 'http://example.com/job/123',
         }
         await enclave.launchStudy(job, job.toaEndpointWithJobId)
@@ -347,6 +352,7 @@ describe('DockerEnclave', () => {
             containerLocation: 'my-image:latest',
             jobId: '123',
             title: 'My Study',
+            researcherId: 'testresearcherid',
             toaEndpointWithJobId: 'http://example.com/job/123',
         }
         await enclave.launchStudy(job, job.toaEndpointWithJobId)
@@ -367,6 +373,7 @@ describe('DockerEnclave', () => {
             containerLocation: 'my-image:latest',
             jobId: '123',
             title: 'My Study',
+            researcherId: 'testresearcherid',
             toaEndpointWithJobId: 'http://example.com/job/123',
         }
         const response = {
@@ -383,6 +390,7 @@ describe('DockerEnclave', () => {
             containerLocation: 'my-image:latest',
             jobId: '123',
             title: 'My Study',
+            researcherId: 'testresearcherid',
             toaEndpointWithJobId: 'http://example.com/job/123',
         }
         const error = new Error('Docker API Call Error: Failed to deploy My Study with run id 123. Cause: {}')
