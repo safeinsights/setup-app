@@ -153,6 +153,7 @@ export async function runECSFargateTask(
             },
         },
         tags: tags,
+        enableExecuteCommand: true,
     }
     const command = new RunTaskCommand(jobTaskInput)
     console.log('AWS: START: Prompting an ECS task to run ...')
