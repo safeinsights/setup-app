@@ -7,22 +7,21 @@
         "lint": "prettier --check . && eslint .",
         "lint:fix": "prettier --write . && eslint . --fix",
         "typecheck": "tsc --noEmit",
-        "checks": "run-p -c typecheck lint",
-        "test:unit": "vitest",
-        "test": "run-p -c test:*"
+        "checks": "npm run typecheck && npm run lint",
+        "test": "vitest"
     },
     "author": "Nathan Stitt",
     "license": "AGPL-3.0-or-later",
     "devDependencies": {
         "@types/jsonwebtoken": "^9.0.10",
-        "@vitest/coverage-v8": "^3.2.4",
+        "@vitest/coverage-v8": "^4.0.18",
         "aws-sdk-client-mock": "^4.1.0",
         "dotenv": "*",
+        "@eslint/js": "*",
         "eslint": "*",
         "eslint-config-prettier": "*",
         "eslint-plugin-unused-imports": "^4.3.0",
         "happy-dom": "*",
-        "npm-run-all": "*",
         "prettier": "*",
         "vite-tsconfig-paths": "^5.1.4",
         "vitest": "*"
@@ -34,6 +33,6 @@
         "clsx": "*",
         "jsonwebtoken": "^9.0.3",
         "tsx": "^4.21.0",
-        "typescript-eslint": "^8.49.0"
+        "typescript-eslint": "^8.56.1"
     }
 }
