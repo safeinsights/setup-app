@@ -157,11 +157,12 @@ export async function runECSFargateTask(
     const command = new RunTaskCommand(jobTaskInput)
     console.log('AWS: START: Prompting an ECS task to run ...')
     const result = await client.send(command)
-    /* v8 ignore next 3 */
+    /* v8 ignore start */
     console.log(
         `AWS:   END: RunTaskCommand finished for tasks`,
         result.tasks?.map((task) => task.taskArn),
     )
+    /* v8 ignore stop */
     return result
 }
 
