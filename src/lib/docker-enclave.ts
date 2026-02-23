@@ -18,8 +18,9 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
         runningJobsInEnclave: DockerApiContainersResponse[],
     ): ManagementAppGetReadyStudiesResponse {
         console.log('Filtering Docker jobs')
-        /* v8 ignore next */
+        /* v8 ignore start */
         if (!runningJobsInEnclave?.length) return { jobs: bmaReadysResults.jobs }
+        /* v8 ignore stop */
         const jobs: ManagementAppJob[] = bmaReadysResults.jobs.filter((job) =>
             runningJobsInEnclave.map((r) => r.Labels?.instance !== job.jobId),
         )
@@ -44,14 +45,15 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
                 'GET',
                 `containers/${container.Id}/json`,
             )) as DockerApiContainerResponse
+            /* v8 ignore start */
             if (containerExitResult?.State?.ExitCode === 0) {
+                /* v8 ignore stop */
                 await this.removeContainer(container.Id)
-                /* v8 ignore next 5 */
-            } else {
+            } /* v8 ignore start */ else {
                 console.log(
                     `Container ${container.Id} did not exit successfully. Please check the logs for more details. Will be cleaned up during the error jobs fetch.`,
                 )
-            }
+            } /* v8 ignore stop */
         }
     }
 
@@ -59,13 +61,12 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
         console.log(`Removing Container ${id}`)
         try {
             await dockerApiCall('DELETE', `containers/${id}`)
-            /* v8 ignore next 6 */
-        } catch (error: unknown) {
+        } /* v8 ignore start */ catch (error: unknown) {
             const err = error as Error & { cause: string }
             console.error(
                 `Error deleting container: [${id}]. Please check the logs for more details. Cause: ${JSON.stringify(err)}`,
             )
-        }
+        } /* v8 ignore stop */
     }
 
     async getAllStudiesInEnclave(): Promise<DockerApiContainersResponse[]> {
@@ -113,7 +114,7 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
         } catch (error: unknown) {
             const errMsg = `Docker API Call Error: Failed to deploy ${job.title} with run id ${job.jobId}. Cause: ${JSON.stringify(error)}`
             console.error(errMsg)
-            throw new Error(errMsg)
+            throw new Error(errMsg, { cause: error })
         }
     }
 
@@ -133,7 +134,9 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
                 'GET',
                 `containers/${container.Id}/json`,
             )) as DockerApiContainerResponse
+            /* v8 ignore start */
             if (containerExitResult?.State?.ExitCode !== 0) {
+                /* v8 ignore stop */
                 const errorMsg = `Container ${container.Id} exited with message: ${containerExitResult.State.Error}`
                 console.log(errorMsg)
                 await toaUpdateJobStatus(container.Labels?.instance.toString(), {

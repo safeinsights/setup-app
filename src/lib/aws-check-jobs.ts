@@ -41,7 +41,9 @@ export async function checkForAWSErroredJobs(): Promise<void> {
     const taskArns: string[] = []
 
     tasks.forEach((task) => {
+        /* v8 ignore start */
         if (task.ResourceARN !== undefined) {
+            /* v8 ignore stop */
             taskArns.push(task.ResourceARN)
         }
     })

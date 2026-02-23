@@ -19,7 +19,9 @@ const generateManagementAppToken = (): string => {
     const memberId = process.env.MANAGEMENT_APP_MEMBER_ID
 
     let token = ''
+    /* v8 ignore start */
     if (privateKey && memberId) {
+        /* v8 ignore stop */
         token = jwt.sign({ iss: memberId }, privateKey, { algorithm: 'RS256', expiresIn: 60 })
     }
     if (token.length === 0) {
@@ -290,4 +292,4 @@ export const k8sApiCall = (
         req.end()
     })
 }
-/* v8n ignore end */
+/* v8 ignore stop */

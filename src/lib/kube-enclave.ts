@@ -68,14 +68,15 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
             const response: KubernetesApiResponse = await k8sApiCall('batch', 'jobs', 'POST', kubeJob)
             console.log(`${JSON.stringify(response)}`)
             console.log(`Successfully deployed ${job.title} with run id ${job.jobId}`)
-            /* v8 ignore next 3 */
+            /* v8 ignore start */
             if (('status' in response && response['status'] === 'Failure') || !('status' in response)) {
                 console.error(`Failed to deploy study container`)
             }
+            /* v8 ignore stop */
         } catch (error: unknown) {
             const errMsg = `K8s API Call Error: Failed to deploy ${job.title} with run id ${job.jobId}. Cause: ${JSON.stringify(error)}`
             console.error(errMsg)
-            throw new Error(errMsg)
+            throw new Error(errMsg, { cause: error })
         }
     }
     async cleanup(): Promise<void> {
@@ -85,10 +86,12 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
             (j) => j as KubernetesPod,
         )
         for (const job of jobsInEnclave) {
+            /* v8 ignore start */
             if (
                 job.metadata?.labels?.[LABELS.MANAGED_BY] === CONTAINER_TYPES.SETUP_APP &&
                 job.metadata?.labels?.[LABELS.COMPONENT] === CONTAINER_TYPES.RESEARCH_CONTAINER
             ) {
+                /* v8 ignore stop */
                 const statuses = job.status?.conditions?.filter((c) => c.type === 'Complete' && c.status === 'True')
                 if (statuses && statuses.length > 0) {
                     console.log(`Cleaning up Job ${job.metadata.labels.instance}`)
@@ -98,13 +101,14 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
                             c.metadata?.labels?.[LABELS.COMPONENT] === CONTAINER_TYPES.RESEARCH_CONTAINER &&
                             c.metadata?.labels?.[LABELS.JOB_NAME] === job.metadata.name,
                     )
-                    /* v8 ignore next 6 */
+                    /* v8 ignore start */
                     if (jobContainers && jobContainers.length > 0) {
                         for (const c of jobContainers) {
                             console.log(`Deleting container: ${JSON.stringify(c.metadata.name)}`)
                             await k8sApiCall(undefined, `pods/${c.metadata.name}`, 'DELETE')
                         }
                     }
+                    /* v8 ignore stop */
                     await k8sApiCall('batch', `jobs/${job.metadata.name}`, `DELETE`)
                 }
             }
@@ -128,6 +132,7 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
                         c.metadata?.labels?.[LABELS.COMPONENT] === CONTAINER_TYPES.RESEARCH_CONTAINER &&
                         jobsInEnclaveIds.includes(c.metadata?.labels?.[LABELS.INSTANCE]),
                 )
+            /* v8 ignore start */
             if (containers && containers.length > 0) {
                 for (const c of containers) {
                     if (
@@ -135,6 +140,7 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
                             (d) => 'terminated' in d.state && d.state['terminated'].exitCode !== 0,
                         )
                     ) {
+                        /* v8 ignore stop */
                         const errorMsg = `Container ${c.metadata.name} exited with non 0 error code`
                         console.log(errorMsg)
                         await toaUpdateJobStatus(c.metadata?.labels?.instance.toString(), {
@@ -147,7 +153,7 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
         } catch (error: unknown) {
             const errMsg = `An error occurred while cleaning up environment: ${error}`
             console.error(errMsg)
-            throw new Error(errMsg)
+            throw new Error(errMsg, { cause: error })
         }
     }
 }

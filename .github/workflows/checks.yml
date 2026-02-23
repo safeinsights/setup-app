@@ -37,5 +37,5 @@ jobs:
             #       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
             - name: Typecheck
               run: npm run typecheck
-            - name: Unit Test
-              run: npm run test:unit
+            - name: Tests
+              run: npm run test

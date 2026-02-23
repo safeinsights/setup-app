@@ -10,7 +10,7 @@ async function pullContainer(imageLocation: string): Promise<DockerApiResponse> 
     } catch (error: unknown) {
         const errMsg = `Docker API Call Error: Failed to pull container ${imageLocation}. Cause: ${JSON.stringify(error)}`
         console.error(errMsg)
-        throw new Error(errMsg)
+        throw new Error(errMsg, { cause: error })
     }
 }
 
