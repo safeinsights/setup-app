@@ -113,7 +113,7 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
         } catch (error: unknown) {
             const errMsg = `Docker API Call Error: Failed to deploy ${job.title} with run id ${job.jobId}. Cause: ${JSON.stringify(error)}`
             console.error(errMsg)
-            throw new Error(errMsg)
+            throw new Error(errMsg, { cause: error })
         }
     }
 

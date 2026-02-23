@@ -75,7 +75,7 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
         } catch (error: unknown) {
             const errMsg = `K8s API Call Error: Failed to deploy ${job.title} with run id ${job.jobId}. Cause: ${JSON.stringify(error)}`
             console.error(errMsg)
-            throw new Error(errMsg)
+            throw new Error(errMsg, { cause: error })
         }
     }
     async cleanup(): Promise<void> {
@@ -147,7 +147,7 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
         } catch (error: unknown) {
             const errMsg = `An error occurred while cleaning up environment: ${error}`
             console.error(errMsg)
-            throw new Error(errMsg)
+            throw new Error(errMsg, { cause: error })
         }
     }
 }
