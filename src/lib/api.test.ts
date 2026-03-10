@@ -175,7 +175,7 @@ describe('toaSendLogs', () => {
         mockFormData.append('logs', JSON.stringify(mockLogs))
 
         const result = await toaSendLogs('jobId456', mockLogs)
-        expect(global.fetch).toHaveBeenCalledWith('https://toa:67890/api/job/jobId456/upload', {
+        expect(global.fetch).toHaveBeenCalledWith('https://toa:67890/api/job/jobId456/logs', {
             method: 'POST',
             body: mockFormData,
         })
