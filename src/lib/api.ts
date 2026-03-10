@@ -124,7 +124,7 @@ export const toaUpdateJobStatus = async (
 }
 
 export const toaSendLogs = async (jobId: string, logs: LogEntry[]) => {
-    const endpoint = `${process.env.TOA_BASE_URL}/api/job/${jobId}/upload`
+    const endpoint = `${process.env.TOA_BASE_URL}/api/job/${jobId}/logs`
 
     const logForm = new FormData()
     logForm.append('logs', JSON.stringify(logs))
