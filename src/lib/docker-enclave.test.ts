@@ -7,7 +7,6 @@ import {
     DockerApiContainerResponse,
     DockerApiContainersResponse,
     ManagementAppGetReadyStudiesResponse,
-    TOAGetJobsResponse,
 } from './types'
 
 vi.mock('./docker')
@@ -28,17 +27,6 @@ describe('DockerEnclave', () => {
                     title: 'Test Job 2',
                     containerLocation: 'test/container-2',
                     researcherId: 'testresearcherid',
-                },
-            ],
-        }
-
-        const toaGetJobsResult: TOAGetJobsResponse = {
-            jobs: [
-                {
-                    jobId: '1234567890',
-                },
-                {
-                    jobId: '0987654321',
                 },
             ],
         }
@@ -75,7 +63,7 @@ describe('DockerEnclave', () => {
         ]
 
         const dockerEnclave = new DockerEnclave()
-        const filteredJobs = dockerEnclave.filterJobsInEnclave(bmaReadysResults, toaGetJobsResult, runningJobsInEnclave)
+        const filteredJobs = dockerEnclave.filterJobsInEnclave(bmaReadysResults, runningJobsInEnclave)
 
         expect(filteredJobs).toEqual({
             jobs: [

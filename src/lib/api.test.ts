@@ -1,11 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import {
-    managementAppGetReadyStudiesRequest,
-    managementAppGetJobStatus,
-    toaGetJobsRequest,
-    toaSendLogs,
-    toaUpdateJobStatus,
-} from './api'
+import { managementAppGetReadyStudiesRequest, managementAppGetJobStatus, toaSendLogs, toaUpdateJobStatus } from './api'
 import jwt from 'jsonwebtoken'
 
 describe('managementAppGetReadyStudiesRequest', () => {
@@ -103,44 +97,6 @@ describe('managementAppGetJobStatus', () => {
     })
 })
 
-describe('toaGetJobsRequest', () => {
-    it('should make a GET request', async () => {
-        const mockTOAData = {
-            jobs: [{ jobId: '1234' }],
-        }
-        global.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify(mockTOAData)))
-
-        const result = await toaGetJobsRequest()
-
-        expect(global.fetch).toHaveBeenCalledWith('https://toa:67890/api/jobs', {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-        })
-        expect(result).toEqual(mockTOAData)
-    })
-
-    it('should throw an error if response status is not success', async () => {
-        global.fetch = vi.fn().mockResolvedValue(new Response('Authentication error', { status: 401 }))
-        await expect(toaGetJobsRequest()).rejects.toThrow(
-            'Received an unexpected 401 from trusted output app: Authentication error',
-        )
-    })
-
-    it('should throw an error if response structure is unexpected', async () => {
-        const mockTOAData = {
-            // Job has unexpected type for jobId
-            jobs: [{ jobId: 11 }],
-        }
-        global.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify(mockTOAData)))
-
-        await expect(toaGetJobsRequest()).rejects.toThrow(
-            'Trusted output app response does not match expected structure',
-        )
-    })
-})
-
 describe('toaUpdateJobStatus', () => {
     it('should make a PUT request', async () => {
         global.fetch = vi.fn().mockResolvedValue(new Response())
@@ -175,7 +131,7 @@ describe('toaSendLogs', () => {
         mockFormData.append('logs', JSON.stringify(mockLogs))
 
         const result = await toaSendLogs('jobId456', mockLogs)
-        expect(global.fetch).toHaveBeenCalledWith('https://toa:67890/api/job/jobId456/upload', {
+        expect(global.fetch).toHaveBeenCalledWith('https://toa:67890/api/job/jobId456/logs', {
             method: 'POST',
             body: mockFormData,
         })

@@ -7,9 +7,7 @@ import {
     DockerApiResponse,
     KubernetesApiResponse,
     ManagementAppGetReadyStudiesResponse,
-    TOAGetJobsResponse,
     isManagementAppGetReadyStudiesResponse,
-    isTOAGetJobsResponse,
 } from './types'
 import { hasReadPermissions } from './utils'
 
@@ -75,30 +73,6 @@ export const managementAppGetJobStatus = async (jobId: string): Promise<{ status
     return await response.json()
 }
 
-export const toaGetJobsRequest = async (): Promise<TOAGetJobsResponse> => {
-    const endpoint = process.env.TOA_BASE_URL + '/api/jobs'
-
-    console.log(`TOA: Fetching jobs from ${endpoint} ...`)
-    const response = await fetch(endpoint, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-    })
-
-    if (!response.ok) {
-        throw new Error(`Received an unexpected ${response.status} from trusted output app: ${await response.text()}`)
-    }
-
-    const data = await response.json()
-    if (!isTOAGetJobsResponse(data)) {
-        throw new Error('Trusted output app response does not match expected structure')
-    }
-    console.log('TOA: Data received!')
-
-    return data
-}
-
 export const toaUpdateJobStatus = async (
     jobId: string,
     data: { status: 'JOB-PROVISIONING' } | { status: 'JOB-ERRORED'; message?: string },
@@ -124,7 +98,7 @@ export const toaUpdateJobStatus = async (
 }
 
 export const toaSendLogs = async (jobId: string, logs: LogEntry[]) => {
-    const endpoint = `${process.env.TOA_BASE_URL}/api/job/${jobId}/upload`
+    const endpoint = `${process.env.TOA_BASE_URL}/api/job/${jobId}/logs`
 
     const logForm = new FormData()
     logForm.append('logs', JSON.stringify(logs))

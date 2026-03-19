@@ -10,7 +10,6 @@ import {
     KubernetesPod,
     ManagementAppGetReadyStudiesResponse,
     ManagementAppJob,
-    TOAGetJobsResponse,
 } from './types'
 
 vi.mock('./kube')
@@ -31,17 +30,6 @@ describe('KubernetesEnclave', () => {
                     title: 'Test Job 2',
                     containerLocation: 'test/container-2',
                     researcherId: 'testresearcherid',
-                },
-            ],
-        }
-
-        const toaGetJobsResult: TOAGetJobsResponse = {
-            jobs: [
-                {
-                    jobId: '1234567890',
-                },
-                {
-                    jobId: '0987654321',
                 },
             ],
         }
@@ -88,11 +76,7 @@ describe('KubernetesEnclave', () => {
         ]
 
         const kubernetesEnclave = new KubernetesEnclave()
-        const filteredJobs = kubernetesEnclave.filterJobsInEnclave(
-            bmaReadysResults,
-            toaGetJobsResult,
-            runningJobsInEnclave,
-        )
+        const filteredJobs = kubernetesEnclave.filterJobsInEnclave(bmaReadysResults, runningJobsInEnclave)
 
         expect(filteredJobs).toEqual({
             jobs: [
@@ -124,25 +108,10 @@ describe('KubernetesEnclave', () => {
             ],
         }
 
-        const toaGetJobsResult: TOAGetJobsResponse = {
-            jobs: [
-                {
-                    jobId: '1234567890',
-                },
-                {
-                    jobId: '0987654321',
-                },
-            ],
-        }
-
         const runningJobsInEnclave: KubernetesJob[] = []
 
         const kubernetesEnclave = new KubernetesEnclave()
-        const filteredJobs = kubernetesEnclave.filterJobsInEnclave(
-            bmaReadysResults,
-            toaGetJobsResult,
-            runningJobsInEnclave,
-        )
+        const filteredJobs = kubernetesEnclave.filterJobsInEnclave(bmaReadysResults, runningJobsInEnclave)
 
         expect(filteredJobs).toEqual({
             jobs: [
@@ -180,25 +149,10 @@ describe('KubernetesEnclave', () => {
             ],
         }
 
-        const toaGetJobsResult: TOAGetJobsResponse = {
-            jobs: [
-                {
-                    jobId: '1234567890',
-                },
-                {
-                    jobId: '0987654321',
-                },
-            ],
-        }
-
         const runningJobsInEnclave: KubernetesJob[] = []
 
         const kubernetesEnclave = new KubernetesEnclave()
-        const filteredJobs = kubernetesEnclave.filterJobsInEnclave(
-            bmaReadysResults,
-            toaGetJobsResult,
-            runningJobsInEnclave,
-        )
+        const filteredJobs = kubernetesEnclave.filterJobsInEnclave(bmaReadysResults, runningJobsInEnclave)
 
         expect(filteredJobs).toEqual({
             jobs: [
