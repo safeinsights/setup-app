@@ -7,9 +7,7 @@ import {
     DockerApiResponse,
     KubernetesApiResponse,
     ManagementAppGetReadyStudiesResponse,
-    TOAGetJobsResponse,
     isManagementAppGetReadyStudiesResponse,
-    isTOAGetJobsResponse,
 } from './types'
 import { hasReadPermissions } from './utils'
 
@@ -73,30 +71,6 @@ export const managementAppGetJobStatus = async (jobId: string): Promise<{ status
     console.log(`BMA: Job status for jobId ${jobId} received!`)
 
     return await response.json()
-}
-
-export const toaGetJobsRequest = async (): Promise<TOAGetJobsResponse> => {
-    const endpoint = process.env.TOA_BASE_URL + '/api/jobs'
-
-    console.log(`TOA: Fetching jobs from ${endpoint} ...`)
-    const response = await fetch(endpoint, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-    })
-
-    if (!response.ok) {
-        throw new Error(`Received an unexpected ${response.status} from trusted output app: ${await response.text()}`)
-    }
-
-    const data = await response.json()
-    if (!isTOAGetJobsResponse(data)) {
-        throw new Error('Trusted output app response does not match expected structure')
-    }
-    console.log('TOA: Data received!')
-
-    return data
 }
 
 export const toaUpdateJobStatus = async (

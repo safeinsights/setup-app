@@ -10,7 +10,7 @@ import {
     getAllTasksWithJobId,
 } from './aws'
 import { ensureValueWithError, filterManagementAppJobs } from './utils'
-import { managementAppGetReadyStudiesRequest, toaGetJobsRequest, toaUpdateJobStatus } from './api'
+import { managementAppGetReadyStudiesRequest, toaUpdateJobStatus } from './api'
 import 'dotenv/config'
 import { ManagementAppGetReadyStudiesResponse } from './types'
 
@@ -85,10 +85,6 @@ export async function runAWSStudies(options: { ignoreAWSJobs: boolean }): Promis
     console.log(
         `Found ${bmaReadysResults.jobs.length} jobs in management app. Job ids: ${bmaReadysResults.jobs.map((job) => job.jobId)}`,
     )
-    const toaGetJobsResult = await toaGetJobsRequest()
-    console.log(
-        `Found ${toaGetJobsResult.jobs.length} jobs with results in TOA. Job ids: ${toaGetJobsResult.jobs.map((job) => job.jobId)}`,
-    )
 
     // Possibly used in filtering; used in garbage collection
     const existingAwsTaskDefs = await getAllTaskDefinitionsWithJobId(taggingClient)
@@ -98,18 +94,13 @@ export async function runAWSStudies(options: { ignoreAWSJobs: boolean }): Promis
 
     if (options.ignoreAWSJobs) {
         // Don't query AWS, filter without it
-        filteredResult = filterManagementAppJobs(bmaReadysResults, toaGetJobsResult)
+        filteredResult = filterManagementAppJobs(bmaReadysResults)
     } else {
         // Take AWS into account when filtering
         const existingAwsTasks = await getAllTasksWithJobId(taggingClient)
         console.log(`Found ${existingAwsTasks.length} tasks with jobId in the AWS environment`)
 
-        filteredResult = filterManagementAppJobs(
-            bmaReadysResults,
-            toaGetJobsResult,
-            existingAwsTasks,
-            existingAwsTaskDefs,
-        )
+        filteredResult = filterManagementAppJobs(bmaReadysResults, existingAwsTasks, existingAwsTaskDefs)
     }
 
     console.log(

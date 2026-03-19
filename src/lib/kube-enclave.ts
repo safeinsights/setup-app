@@ -10,13 +10,11 @@ import {
     LABELS,
     ManagementAppGetReadyStudiesResponse,
     ManagementAppJob,
-    TOAGetJobsResponse,
 } from './types'
 
 class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<KubernetesJob> {
     filterJobsInEnclave(
         bmaReadysResults: ManagementAppGetReadyStudiesResponse,
-        toaGetJobsResult: TOAGetJobsResponse,
         runningJobsInEnclave: KubernetesJob[],
     ): ManagementAppGetReadyStudiesResponse {
         console.log('Filtering Kubernetes jobs...')

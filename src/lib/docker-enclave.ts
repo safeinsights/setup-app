@@ -8,13 +8,11 @@ import {
     DockerApiResponse,
     ManagementAppGetReadyStudiesResponse,
     ManagementAppJob,
-    TOAGetJobsResponse,
 } from './types'
 
 class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnclave<DockerApiContainersResponse> {
     filterJobsInEnclave(
         bmaReadysResults: ManagementAppGetReadyStudiesResponse,
-        toaGetJobsResult: TOAGetJobsResponse,
         runningJobsInEnclave: DockerApiContainersResponse[],
     ): ManagementAppGetReadyStudiesResponse {
         console.log('Filtering Docker jobs')

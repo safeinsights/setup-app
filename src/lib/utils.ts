@@ -1,7 +1,7 @@
 import { ResourceTagMapping } from '@aws-sdk/client-resource-groups-tagging-api'
 import fs from 'fs'
 import { JOB_ID_TAG_KEY } from './aws'
-import { ManagementAppGetReadyStudiesResponse, TOAGetJobsResponse } from './types'
+import { ManagementAppGetReadyStudiesResponse } from './types'
 
 const getJobIdFromResourceTagMapping = (resource: ResourceTagMapping): string | undefined => {
     return resource.Tags?.find((tag) => tag.Key === JOB_ID_TAG_KEY)?.Value
@@ -9,11 +9,9 @@ const getJobIdFromResourceTagMapping = (resource: ResourceTagMapping): string | 
 
 export const filterManagementAppJobs = (
     managementAppResponse: ManagementAppGetReadyStudiesResponse,
-    toaResponse: TOAGetJobsResponse,
     existingAwsTasks?: ResourceTagMapping[],
     existingAwsTaskDefs?: ResourceTagMapping[],
 ): ManagementAppGetReadyStudiesResponse => {
-    const toaJobIdArray: string[] = toaResponse.jobs.map((job) => job.jobId) // flatten toaResponse
     const taskJobIdArray: string[] =
         existingAwsTasks?.map((resource) => ensureValueWithError(getJobIdFromResourceTagMapping(resource))) || []
     const taskDefJobIdArray: string[] =
@@ -21,11 +19,7 @@ export const filterManagementAppJobs = (
 
     return {
         jobs: managementAppResponse.jobs.filter((job) => {
-            return (
-                !toaJobIdArray.includes(job.jobId) &&
-                !taskJobIdArray.includes(job.jobId) &&
-                !taskDefJobIdArray.includes(job.jobId)
-            )
+            return !taskJobIdArray.includes(job.jobId) && !taskDefJobIdArray.includes(job.jobId)
         }),
     }
 }

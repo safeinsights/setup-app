@@ -4,34 +4,24 @@ import { ensureValueWithError, filterManagementAppJobs, filterOrphanTaskDefiniti
 import { JOB_ID_TAG_KEY } from './aws'
 
 describe('filterManagementAppJobs', () => {
-    it('filters out jobs in the TOA', () => {
+    it('returns all jobs when no AWS filters provided', () => {
         const mockManagementAppResponse = {
             jobs: [
                 {
-                    jobId: 'not-in-TOA',
+                    jobId: 'job-1',
                     containerLocation: '',
                     title: '',
                     researcherId: 'testresearcherid',
                 },
                 {
-                    jobId: 'finished-job',
+                    jobId: 'job-2',
                     containerLocation: '',
                     title: '',
                     researcherId: 'testresearcherid',
                 },
             ],
         }
-        const mockTOAResponse = { jobs: [{ jobId: 'finished-job' }] }
-        expect(filterManagementAppJobs(mockManagementAppResponse, mockTOAResponse)).toStrictEqual({
-            jobs: [
-                {
-                    jobId: 'not-in-TOA',
-                    containerLocation: '',
-                    title: '',
-                    researcherId: 'testresearcherid',
-                },
-            ],
-        })
+        expect(filterManagementAppJobs(mockManagementAppResponse)).toStrictEqual(mockManagementAppResponse)
     })
     it('filters out jobs from AWS', () => {
         const mockManagementAppResponse = {
@@ -51,7 +41,7 @@ describe('filterManagementAppJobs', () => {
             ],
         }
         const mockJobsFromAws: ResourceTagMapping[] = [{ Tags: [{ Key: JOB_ID_TAG_KEY, Value: 'existing-job' }] }]
-        expect(filterManagementAppJobs(mockManagementAppResponse, { jobs: [] }, mockJobsFromAws)).toStrictEqual({
+        expect(filterManagementAppJobs(mockManagementAppResponse, mockJobsFromAws)).toStrictEqual({
             jobs: [
                 {
                     jobId: 'not-in-AWS',

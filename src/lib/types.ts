@@ -9,14 +9,6 @@ export type ManagementAppGetReadyStudiesResponse = {
     jobs: ManagementAppJob[]
 }
 
-type TOAJob = {
-    jobId: string
-}
-
-export type TOAGetJobsResponse = {
-    jobs: TOAJob[]
-}
-
 export type KubernetesPod = {
     metadata: {
         name: string
@@ -136,16 +128,6 @@ function isManagementAppJob(data: any): data is ManagementAppJob {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function isManagementAppGetReadyStudiesResponse(data: any): data is ManagementAppGetReadyStudiesResponse {
     return typeof data === 'object' && data !== null && Array.isArray(data.jobs) && data.jobs.every(isManagementAppJob)
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function isTOAJob(data: any): data is TOAJob {
-    return typeof data === 'object' && data !== null && typeof data.jobId === 'string'
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function isTOAGetJobsResponse(data: any): data is TOAGetJobsResponse {
-    return typeof data === 'object' && data !== null && Array.isArray(data.jobs) && data.jobs.every(isTOAJob)
 }
 
 export enum CONTAINER_TYPES {
