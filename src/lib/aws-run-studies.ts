@@ -14,7 +14,7 @@ import { managementAppGetReadyStudiesRequest, toaUpdateJobStatus } from './api'
 import 'dotenv/config'
 import { ManagementAppGetReadyStudiesResponse } from './types'
 
-async function launchStudy(
+export async function launchStudy(
     client: ECSClient,
     cluster: string,
     baseTaskDefinitionFamily: string,
