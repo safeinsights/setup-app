@@ -7,7 +7,6 @@ import {
     DockerApiContainerResponse,
     DockerApiContainersResponse,
     ManagementAppGetReadyStudiesResponse,
-    TOAGetJobsResponse,
 } from './types'
 
 vi.mock('./docker')
@@ -21,22 +20,13 @@ describe('DockerEnclave', () => {
                     jobId: '1234567890',
                     title: 'Test Job 1',
                     containerLocation: 'test/container-1',
+                    researcherId: 'testresearcherid',
                 },
                 {
                     jobId: '0987654321',
                     title: 'Test Job 2',
                     containerLocation: 'test/container-2',
-                },
-            ],
-        }
-
-        const toaGetJobsResult: TOAGetJobsResponse = {
-            jobs: [
-                {
-                    jobId: '1234567890',
-                },
-                {
-                    jobId: '0987654321',
+                    researcherId: 'testresearcherid',
                 },
             ],
         }
@@ -73,7 +63,7 @@ describe('DockerEnclave', () => {
         ]
 
         const dockerEnclave = new DockerEnclave()
-        const filteredJobs = dockerEnclave.filterJobsInEnclave(bmaReadysResults, toaGetJobsResult, runningJobsInEnclave)
+        const filteredJobs = dockerEnclave.filterJobsInEnclave(bmaReadysResults, runningJobsInEnclave)
 
         expect(filteredJobs).toEqual({
             jobs: [
@@ -81,11 +71,13 @@ describe('DockerEnclave', () => {
                     jobId: '1234567890',
                     title: 'Test Job 1',
                     containerLocation: 'test/container-1',
+                    researcherId: 'testresearcherid',
                 },
                 {
                     jobId: '0987654321',
                     title: 'Test Job 2',
                     containerLocation: 'test/container-2',
+                    researcherId: 'testresearcherid',
                 },
             ],
         })
@@ -313,6 +305,7 @@ describe('DockerEnclave', () => {
             containerLocation: 'my-image:latest',
             jobId: '123',
             title: 'My Study',
+            researcherId: 'testresearcherid',
             toaEndpointWithJobId: 'http://example.com/job/123',
         }
         await enclave.launchStudy(job, job.toaEndpointWithJobId)
@@ -321,6 +314,7 @@ describe('DockerEnclave', () => {
             '123',
             'My Study',
             'http://example.com/job/123',
+            undefined,
         )
         expect(docker.pullContainer).toHaveBeenCalledWith('my-image:latest')
     })
@@ -346,6 +340,7 @@ describe('DockerEnclave', () => {
             containerLocation: 'my-image:latest',
             jobId: '123',
             title: 'My Study',
+            researcherId: 'testresearcherid',
             toaEndpointWithJobId: 'http://example.com/job/123',
         }
         await enclave.launchStudy(job, job.toaEndpointWithJobId)
@@ -354,6 +349,7 @@ describe('DockerEnclave', () => {
             '123',
             'My Study',
             'http://example.com/job/123',
+            undefined,
         )
         expect(docker.pullContainer).toHaveBeenCalledWith('my-image:latest')
         expect(api.dockerApiCall).nthCalledWith(1, 'POST', `containers/create?name=rc-123`, container)
@@ -365,6 +361,7 @@ describe('DockerEnclave', () => {
             containerLocation: 'my-image:latest',
             jobId: '123',
             title: 'My Study',
+            researcherId: 'testresearcherid',
             toaEndpointWithJobId: 'http://example.com/job/123',
         }
         const response = {
@@ -381,6 +378,7 @@ describe('DockerEnclave', () => {
             containerLocation: 'my-image:latest',
             jobId: '123',
             title: 'My Study',
+            researcherId: 'testresearcherid',
             toaEndpointWithJobId: 'http://example.com/job/123',
         }
         const error = new Error('Docker API Call Error: Failed to deploy My Study with run id 123. Cause: {}')

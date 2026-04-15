@@ -3,7 +3,6 @@
 *.log
 tmp/
 
-.next/
 test-results/
 *.tern-port
 node_modules/
@@ -14,5 +13,4 @@ yarn-error.log*
 .npm
 .eslintcache
 coverage/
-playwright-report/
 .env

@@ -7,9 +7,7 @@ import {
     DockerApiResponse,
     KubernetesApiResponse,
     ManagementAppGetReadyStudiesResponse,
-    TOAGetJobsResponse,
     isManagementAppGetReadyStudiesResponse,
-    isTOAGetJobsResponse,
 } from './types'
 import { hasReadPermissions } from './utils'
 
@@ -19,7 +17,9 @@ const generateManagementAppToken = (): string => {
     const memberId = process.env.MANAGEMENT_APP_MEMBER_ID
 
     let token = ''
+    /* v8 ignore start */
     if (privateKey && memberId) {
+        /* v8 ignore stop */
         token = jwt.sign({ iss: memberId }, privateKey, { algorithm: 'RS256', expiresIn: 60 })
     }
     if (token.length === 0) {
@@ -73,54 +73,16 @@ export const managementAppGetJobStatus = async (jobId: string): Promise<{ status
     return await response.json()
 }
 
-// Functions for interacting with the Trusted Output App
-const generateTOAToken = (): string => {
-    /* v8 ignore next */
-    const token = Buffer.from(process.env.TOA_BASIC_AUTH ?? '').toString('base64')
-    if (token.length === 0) {
-        throw new Error('TOA token failed to generate')
-    }
-    return token
-}
-
-export const toaGetJobsRequest = async (): Promise<TOAGetJobsResponse> => {
-    const endpoint = process.env.TOA_BASE_URL + '/api/jobs'
-    const token = generateTOAToken()
-
-    console.log(`TOA: Fetching jobs from ${endpoint} ...`)
-    const response = await fetch(endpoint, {
-        method: 'GET',
-        headers: {
-            Authorization: `Basic ${token}`,
-            'Content-Type': 'application/json',
-        },
-    })
-
-    if (!response.ok) {
-        throw new Error(`Received an unexpected ${response.status} from trusted output app: ${await response.text()}`)
-    }
-
-    const data = await response.json()
-    if (!isTOAGetJobsResponse(data)) {
-        throw new Error('Trusted output app response does not match expected structure')
-    }
-    console.log('TOA: Data received!')
-
-    return data
-}
-
 export const toaUpdateJobStatus = async (
     jobId: string,
     data: { status: 'JOB-PROVISIONING' } | { status: 'JOB-ERRORED'; message?: string },
 ): Promise<{ success: boolean }> => {
     const endpoint = `${process.env.TOA_BASE_URL}/api/job/${jobId}`
-    const token = generateTOAToken()
 
     console.log(`TOA: Updating job ${jobId} status with ${JSON.stringify(data)} ...`)
     const response = await fetch(endpoint, {
         method: 'PUT',
         headers: {
-            Authorization: `Basic ${token}`,
             'Content-Type': 'application/json',
         },
         body: JSON.stringify(data),
@@ -136,8 +98,7 @@ export const toaUpdateJobStatus = async (
 }
 
 export const toaSendLogs = async (jobId: string, logs: LogEntry[]) => {
-    const endpoint = `${process.env.TOA_BASE_URL}/api/job/${jobId}/upload`
-    const token = generateTOAToken()
+    const endpoint = `${process.env.TOA_BASE_URL}/api/job/${jobId}/logs`
 
     const logForm = new FormData()
     logForm.append('logs', JSON.stringify(logs))
@@ -145,9 +106,6 @@ export const toaSendLogs = async (jobId: string, logs: LogEntry[]) => {
     console.log(`TOA: Sending logs for job ${jobId} ...`)
     const response = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-            Authorization: `Basic ${token}`,
-        },
         body: logForm,
     })
 
@@ -308,4 +266,4 @@ export const k8sApiCall = (
         req.end()
     })
 }
-/* v8n ignore end */
+/* v8 ignore stop */

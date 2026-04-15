@@ -10,15 +10,26 @@ async function pullContainer(imageLocation: string): Promise<DockerApiResponse> 
     } catch (error: unknown) {
         const errMsg = `Docker API Call Error: Failed to pull container ${imageLocation}. Cause: ${JSON.stringify(error)}`
         console.error(errMsg)
-        throw new Error(errMsg)
+        throw new Error(errMsg, { cause: error })
     }
 }
 
-function createContainerObject(imageLocation: string, jobId: string, studyTitle: string, toaEndpointWithjobId: string) {
+function createContainerObject(
+    imageLocation: string,
+    jobId: string,
+    studyTitle: string,
+    toaEndpointWithjobId: string,
+    network?: string,
+) {
     const name = `research-container-${jobId}`
     studyTitle = sanitize(studyTitle.toLowerCase())
     console.log(`Creating Docker container job: ${name}`)
-    const container = {
+    const container: {
+        Image: string
+        Labels: { [key: string]: string }
+        Env: string[]
+        HostConfig?: { NetworkMode: string }
+    } = {
         Image: imageLocation,
         Labels: {
             app: name,
@@ -27,11 +38,15 @@ function createContainerObject(imageLocation: string, jobId: string, studyTitle:
             instance: jobId,
             'managed-by': CONTAINER_TYPES.SETUP_APP,
         },
-        Env: [
-            `TRUSTED_OUTPUT_ENDPOINT=${toaEndpointWithjobId}`,
-            `TRUSTED_OUTPUT_BASIC_AUTH=${process.env.TOA_BASIC_AUTH}`,
-        ],
+        Env: [`TRUSTED_OUTPUT_ENDPOINT=${toaEndpointWithjobId}`],
     }
+
+    if (network) {
+        container.HostConfig = {
+            NetworkMode: network,
+        }
+    }
+
     return container
 }
 

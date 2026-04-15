@@ -1,5 +1,5 @@
-import { managementAppGetReadyStudiesRequest, toaGetJobsRequest, toaUpdateJobStatus } from './api'
-import { ManagementAppGetReadyStudiesResponse, ManagementAppJob, TOAGetJobsResponse } from './types'
+import { managementAppGetReadyStudiesRequest, toaUpdateJobStatus } from './api'
+import { ManagementAppGetReadyStudiesResponse, ManagementAppJob } from './types'
 
 export interface IEnclave<T> {
     runStudies(): Promise<void>
@@ -12,7 +12,6 @@ export interface IEnclave<T> {
 
     filterJobsInEnclave(
         bmaReadysResults: ManagementAppGetReadyStudiesResponse,
-        toaGetJobsResult: TOAGetJobsResponse,
         runningJobsInEnclave: Array<T>,
     ): ManagementAppGetReadyStudiesResponse
 
@@ -31,15 +30,9 @@ export class Enclave<T> implements IEnclave<T> {
             console.log(job)
         })
 
-        const toaGetJobsResult = await toaGetJobsRequest()
-        console.log(
-            `Found ${toaGetJobsResult.jobs.length} jobs with results in TOA. Job ids: ${toaGetJobsResult.jobs.map((job) => job.jobId)}`,
-        )
-
         const jobsInEnclave: Array<T> = await this.getDeployedStudies()
         const filteredResult: ManagementAppGetReadyStudiesResponse = this.filterJobsInEnclave(
             bmaReadysResults,
-            toaGetJobsResult,
             jobsInEnclave,
         )
 
@@ -68,7 +61,6 @@ export class Enclave<T> implements IEnclave<T> {
     /* v8 ignore start */
     filterJobsInEnclave(
         _bmaReadysResults: ManagementAppGetReadyStudiesResponse,
-        _toaGetJobsResult: TOAGetJobsResponse,
         _runningJobsInEnclave: T[],
     ): ManagementAppGetReadyStudiesResponse {
         throw new Error('Method not implemented.')

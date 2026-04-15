@@ -5,11 +5,12 @@ import {
     registerECSTaskDefinition,
     runECSFargateTask,
     JOB_ID_TAG_KEY,
+    RESEARCHER_ID_TAG_KEY,
     getAllTaskDefinitionsWithJobId,
     getAllTasksWithJobId,
 } from './aws'
 import { ensureValueWithError, filterManagementAppJobs } from './utils'
-import { managementAppGetReadyStudiesRequest, toaGetJobsRequest, toaUpdateJobStatus } from './api'
+import { managementAppGetReadyStudiesRequest, toaUpdateJobStatus } from './api'
 import 'dotenv/config'
 import { ManagementAppGetReadyStudiesResponse } from './types'
 
@@ -23,9 +24,13 @@ async function launchStudy(
     jobId: string,
     imageLocation: string,
     studyTitle: string,
+    researcherId: string,
 ): Promise<RunTaskCommandOutput> {
     console.log(`Creating task definition for study ${studyTitle} and jobId ${jobId}`)
-    const taskTags = [{ key: JOB_ID_TAG_KEY, value: jobId }]
+    const taskTags = [
+        { key: JOB_ID_TAG_KEY, value: jobId },
+        { key: RESEARCHER_ID_TAG_KEY, value: researcherId },
+    ]
     const baseTaskDefinitionData = await getECSTaskDefinition(client, baseTaskDefinitionFamily)
     baseTaskDefinitionData.taskDefinition = ensureValueWithError(
         baseTaskDefinitionData.taskDefinition,
@@ -40,6 +45,8 @@ async function launchStudy(
         newTaskDefinitionFamily,
         toaEndpointWithJobId,
         imageLocation,
+        jobId, // Use job ID as the stream prefix
+        researcherId,
         taskTags,
     )
     registerTaskDefResponse.taskDefinition = ensureValueWithError(
@@ -78,10 +85,6 @@ export async function runAWSStudies(options: { ignoreAWSJobs: boolean }): Promis
     console.log(
         `Found ${bmaReadysResults.jobs.length} jobs in management app. Job ids: ${bmaReadysResults.jobs.map((job) => job.jobId)}`,
     )
-    const toaGetJobsResult = await toaGetJobsRequest()
-    console.log(
-        `Found ${toaGetJobsResult.jobs.length} jobs with results in TOA. Job ids: ${toaGetJobsResult.jobs.map((job) => job.jobId)}`,
-    )
 
     // Possibly used in filtering; used in garbage collection
     const existingAwsTaskDefs = await getAllTaskDefinitionsWithJobId(taggingClient)
@@ -91,18 +94,13 @@ export async function runAWSStudies(options: { ignoreAWSJobs: boolean }): Promis
 
     if (options.ignoreAWSJobs) {
         // Don't query AWS, filter without it
-        filteredResult = filterManagementAppJobs(bmaReadysResults, toaGetJobsResult)
+        filteredResult = filterManagementAppJobs(bmaReadysResults)
     } else {
         // Take AWS into account when filtering
         const existingAwsTasks = await getAllTasksWithJobId(taggingClient)
         console.log(`Found ${existingAwsTasks.length} tasks with jobId in the AWS environment`)
 
-        filteredResult = filterManagementAppJobs(
-            bmaReadysResults,
-            toaGetJobsResult,
-            existingAwsTasks,
-            existingAwsTaskDefs,
-        )
+        filteredResult = filterManagementAppJobs(bmaReadysResults, existingAwsTasks, existingAwsTaskDefs)
     }
 
     console.log(
@@ -124,6 +122,7 @@ export async function runAWSStudies(options: { ignoreAWSJobs: boolean }): Promis
             job.jobId,
             job.containerLocation,
             job.title,
+            job.researcherId,
         )
 
         await toaUpdateJobStatus(job.jobId, { status: 'JOB-PROVISIONING' })

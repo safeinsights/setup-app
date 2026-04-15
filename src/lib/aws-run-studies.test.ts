@@ -3,7 +3,7 @@ import * as api from './api'
 import * as aws from './aws'
 import { JOB_ID_TAG_KEY } from './aws'
 import { runAWSStudies } from './aws-run-studies'
-import { ManagementAppGetReadyStudiesResponse, TOAGetJobsResponse } from './types'
+import { ManagementAppGetReadyStudiesResponse } from './types'
 
 vi.mock('./api')
 vi.mock('./aws')
@@ -13,6 +13,7 @@ const mockManagementAppResponseGenerator = (jobIds: string[]): ManagementAppGetR
     for (const jobId of jobIds) {
         jobs.push({
             jobId: jobId,
+            researcherId: 'mockResearcherId',
             title: 'mockTitle',
             containerLocation: 'mockContainerLocation',
         })
@@ -23,24 +24,15 @@ const mockManagementAppResponseGenerator = (jobIds: string[]): ManagementAppGetR
 // Tests
 describe('runStudies()', () => {
     beforeEach(() => {
-        const jobId_inTOA = 'job-in-TOA'
         const jobId_inAWS = 'running-in-AWS-env'
         const jobId1 = 'to-be-run-1'
         const jobId2 = 'to-be-run-2'
 
         // mock response from management app
-        const mockManagementAppResponse = mockManagementAppResponseGenerator([jobId1, jobId_inTOA, jobId_inAWS, jobId2])
-        // from TOA
-        const mockTOAResponse: TOAGetJobsResponse = {
-            // resolve from toaGetJobsRequest
-            jobs: [{ jobId: jobId_inTOA }],
-        }
+        const mockManagementAppResponse = mockManagementAppResponseGenerator([jobId1, jobId_inAWS, jobId2])
 
         const mockManagementAppApiCall = vi.mocked(api.managementAppGetReadyStudiesRequest)
         mockManagementAppApiCall.mockResolvedValue(mockManagementAppResponse)
-
-        const mockTOAApiCall = vi.mocked(api.toaGetJobsRequest)
-        mockTOAApiCall.mockResolvedValue(mockTOAResponse)
 
         // Mock AWS API
         vi.mocked(aws.getAllTasksWithJobId).mockResolvedValue([])
@@ -61,7 +53,15 @@ describe('runStudies()', () => {
         })
 
         vi.mocked(aws.registerECSTaskDefinition).mockImplementation(
-            async (_client, _baseTaskDefinition, familyName: string, _toaEndpointWithJobId, _imageLocation, _tags) => {
+            async (
+                _client,
+                _baseTaskDefinition,
+                familyName: string,
+                _toaEndpointWithJobId,
+                _imageLocation,
+                _logStreamPrefix,
+                _tags,
+            ) => {
                 return {
                     $metadata: {},
                     taskDefinition: {

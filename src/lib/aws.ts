@@ -28,6 +28,7 @@ import { ensureValueWithError } from './utils'
 
 export const JOB_ID_TAG_KEY = 'jobId'
 export const TITLE_TAG_KEY = 'title'
+export const RESEARCHER_ID_TAG_KEY = 'researcherId'
 
 export type LogEntry = {
     timestamp: number
@@ -54,6 +55,8 @@ export async function registerECSTaskDefinition(
     familyName: string,
     toaEndpointWithJobId: string,
     imageLocation: string,
+    logStreamPrefix: string,
+    researcherId: string,
     tags: Tag[],
 ): Promise<RegisterTaskDefinitionCommandOutput> {
     // Create a derived task definition using the base
@@ -61,14 +64,26 @@ export async function registerECSTaskDefinition(
 
     const containerDefinition = baseTaskDefinition.containerDefinitions?.map((container) => {
         const environment = ensureValueWithError(container.environment, `No environment found on ${container}`)
+        const logConfiguration = ensureValueWithError(
+            container.logConfiguration,
+            `No log configuration found on ${container}`,
+        )
+
+        logConfiguration.options ??= {}
+        logConfiguration.options['awslogs-stream-prefix'] = logStreamPrefix
 
         environment.push({
             name: 'TRUSTED_OUTPUT_ENDPOINT',
             value: toaEndpointWithJobId,
         })
+        environment.push({
+            name: 'RESEARCHER_ID',
+            value: researcherId,
+        })
         return {
             ...container,
             environment,
+            logConfiguration,
             image: imageLocation,
         }
     })
@@ -142,11 +157,12 @@ export async function runECSFargateTask(
     const command = new RunTaskCommand(jobTaskInput)
     console.log('AWS: START: Prompting an ECS task to run ...')
     const result = await client.send(command)
-    /* v8 ignore next 3 */
+    /* v8 ignore start */
     console.log(
         `AWS:   END: RunTaskCommand finished for tasks`,
         result.tasks?.map((task) => task.taskArn),
     )
+    /* v8 ignore stop */
     return result
 }
 
@@ -240,6 +256,7 @@ export async function getLogsForTask(taskId: string, taskDefArn: string): Promis
     console.log(`Found log configuration`, logConfiguration)
 
     const logGroupName = ensureValueWithError(logConfiguration?.options?.['awslogs-group'])
+    const logStreamPrefix = ensureValueWithError(logConfiguration?.options?.['awslogs-stream-prefix'])
 
     // Get the log events for the task
     const events: LogEntry[] = []
@@ -248,7 +265,7 @@ export async function getLogsForTask(taskId: string, taskDefArn: string): Promis
         { client: logsClient },
         {
             logGroupIdentifier: logGroupName,
-            logStreamNames: [`ResearchContainer/ResearchContainer/${taskId}`],
+            logStreamNames: [`${logStreamPrefix}/ResearchContainer/${taskId}`],
         },
     )
     for await (const page of paginatedLogEvents) {

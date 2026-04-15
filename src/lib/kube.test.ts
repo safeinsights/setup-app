@@ -105,10 +105,6 @@ describe('Get Service Account items', () => {
                                         name: 'TRUSTED_OUTPUT_ENDPOINT',
                                         value: toaEndpointWithJobId,
                                     },
-                                    {
-                                        name: 'TRUSTED_OUTPUT_BASIC_AUTH',
-                                        value: 'testusername:testpassword',
-                                    },
                                 ],
                             },
                         ],

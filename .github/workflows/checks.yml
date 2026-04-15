@@ -18,18 +18,24 @@ jobs:
             - name: Lint
               run: npm run lint
             - name: Run Trivy vulnerability scanner in fs mode
-              uses: aquasecurity/trivy-action@0.28.0
+              uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
               with:
                   scan-type: 'fs'
                   scan-ref: '.'
                   trivy-config: trivy.yaml
+            - name: Run SonarQube SAST Scan
+              uses: SonarSource/sonarqube-scan-action@v6
+              env:
+                  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+                  SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+            # If you wish to fail your job when the Quality Gate is red, uncomment the
+            # following lines. This would typically be used to fail a deployment.
+            # - name: Check SonarQube SAST Sca
+            #   uses: SonarSource/sonarqube-quality-gate-action@v1
+            #   timeout-minutes: 5
+            #   env:
+            #       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
             - name: Typecheck
               run: npm run typecheck
-            - name: Unit Test
-              run: npm run test:unit
-            - uses: actions/upload-artifact@v4
-              if: failure()
-              with:
-                  name: playwright-report
-                  path: playwright-report
-                  retention-days: 30
+            - name: Tests
+              run: npm run test

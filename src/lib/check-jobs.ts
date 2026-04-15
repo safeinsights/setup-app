@@ -3,7 +3,9 @@ import { DockerEnclave } from './docker-enclave'
 import { KubernetesEnclave } from './kube-enclave'
 
 export const checkForErroredJobs = async (): Promise<void> => {
-    const deploymentEnvironment = process.env.DEPLOYMENT_ENVIRONMENT ?? 'AWS' /* v8 ignore next */
+    /* v8 ignore start */
+    const deploymentEnvironment = process.env.DEPLOYMENT_ENVIRONMENT ?? 'AWS'
+    /* v8 ignore stop */
     if (deploymentEnvironment === 'AWS') {
         await checkForAWSErroredJobs()
     } else if (deploymentEnvironment === 'KUBERNETES') {

@@ -2,7 +2,9 @@ import { runAWSStudies } from './aws-run-studies'
 import { KubernetesEnclave } from './kube-enclave'
 import { DockerEnclave } from './docker-enclave'
 export async function runStudies(options: { ignoreAWSJobs: boolean }): Promise<void> {
-    const deploymentEnvironment = process.env.DEPLOYMENT_ENVIRONMENT ?? 'AWS' /* v8 ignore next */
+    /* v8 ignore start */
+    const deploymentEnvironment = process.env.DEPLOYMENT_ENVIRONMENT ?? 'AWS'
+    /* v8 ignore stop */
     if (deploymentEnvironment === 'AWS') {
         await runAWSStudies(options)
     } else if (deploymentEnvironment === 'KUBERNETES') {
