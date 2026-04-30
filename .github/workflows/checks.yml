@@ -4,17 +4,29 @@ on:
         branches: [main, master]
     pull_request:
         branches: [main, master]
+
+permissions:
+    contents: read
+
 jobs:
     all:
         timeout-minutes: 60
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
+            - name: Check for bidirectional unicode characters
+              run: |
+                  if git grep -P -I -l '[\x{202A}-\x{202E}\x{2066}-\x{2069}]'; then
+                      echo '::error::Bidirectional unicode characters detected (CVE-2021-42574 Trojan Source)'
+                      exit 1
+                  fi
             - uses: actions/setup-node@v4
               with:
                   node-version: lts/*
             - name: Install dependencies
               run: npm i
+            - name: Verify npm package signatures
+              run: npm audit signatures
             - name: Lint
               run: npm run lint
             - name: Run Trivy vulnerability scanner in fs mode
@@ -23,6 +35,14 @@ jobs:
                   scan-type: 'fs'
                   scan-ref: '.'
                   trivy-config: trivy.yaml
+            - name: Run Trivy license scanner
+              uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
+              with:
+                  scan-type: 'fs'
+                  scan-ref: '.'
+                  scanners: 'license'
+                  severity: 'HIGH,CRITICAL'
+                  exit-code: '1'
             - name: Run SonarQube SAST Scan
               uses: SonarSource/sonarqube-scan-action@v6
               env:
