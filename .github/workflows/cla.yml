@@ -28,7 +28,7 @@ jobs:
                   path-to-signatures: 'signatures/version1/cla.json'
                   path-to-document: 'https://github.com/safeinsights/setup-app/blob/main/CLA.md'
                   # branch should not be protected
-                  branch: 'main'
+                  branch: 'cla-signatures'
                   allowlist: bot*,battibatch,chrisbendel,jbwilson8,jpslav,kswanson33,nathanstitt,philschatz,rnathuji,Rod0352,scb6,sparksam, stetradis,therealmarv
 
                   # the followings are the optional inputs - If the optional inputs are not given, then default values will be taken
