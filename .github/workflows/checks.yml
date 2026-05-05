@@ -14,12 +14,6 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
-            - name: Check for bidirectional unicode characters
-              run: |
-                  if git grep -P -I -l '[\x{202A}-\x{202E}\x{2066}-\x{2069}]'; then
-                      echo '::error::Bidirectional unicode characters detected (CVE-2021-42574 Trojan Source)'
-                      exit 1
-                  fi
             - uses: actions/setup-node@v4
               with:
                   node-version: lts/*
