@@ -20,6 +20,7 @@
         "dotenv": "*",
         "eslint": "*",
         "eslint-config-prettier": "*",
+        "eslint-plugin-anti-trojan-source": "^1.1.4",
         "eslint-plugin-unused-imports": "^4.4.1",
         "happy-dom": "*",
         "prettier": "*",
