@@ -30,8 +30,8 @@ $ cp .env.example .env
 Run the script (make sure you have AWS credentials for your target region created):
 
 ```bash
-$ npm install
-$ npx tsx ./src/scripts/manual-run.ts
+$ pnpm install
+$ pnpm exec tsx ./src/scripts/manual-run.ts
 ```
 
 Options:

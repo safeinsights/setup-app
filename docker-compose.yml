@@ -19,7 +19,7 @@ services:
         networks:
             - setup-app
         # For local dev only, assuming devs are just running `docker compose up`
-        command: ['npx', 'tsx', 'src/scripts/poll.ts']
+        command: ['pnpm', 'exec', 'tsx', 'src/scripts/poll.ts']
 
         extra_hosts:
             - 'host.docker.internal:host-gateway'
