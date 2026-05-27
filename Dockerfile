@@ -6,11 +6,12 @@ ENV HOME /home/$USER
 USER $USER
 WORKDIR $HOME/code
 
-COPY --chown=$USER:$USER package.json .
-COPY --chown=$USER:$USER package-lock.json .
+RUN corepack enable
 
-RUN npm install
+COPY --chown=$USER:$USER package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+RUN pnpm install --frozen-lockfile
 
 COPY --chown=$USER:$USER . .
 
-CMD ["npx", "tsx", "src/scripts/poll.ts"]
+CMD ["pnpm", "exec", "tsx", "src/scripts/poll.ts"]

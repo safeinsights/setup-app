@@ -13,16 +13,16 @@ jobs:
         timeout-minutes: 60
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-node@v4
+            - uses: actions/checkout@v6
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v6
               with:
                   node-version: lts/*
+                  cache: 'pnpm'
             - name: Install dependencies
-              run: npm i
-            - name: Verify npm package signatures
-              run: npm audit signatures
+              run: pnpm install --frozen-lockfile
             - name: Lint
-              run: npm run lint
+              run: pnpm run lint
             - name: Run Trivy vulnerability scanner in fs mode
               uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
               with:
@@ -50,6 +50,6 @@ jobs:
             #   env:
             #       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
             - name: Typecheck
-              run: npm run typecheck
+              run: pnpm run typecheck
             - name: Tests
-              run: npm run test
+              run: pnpm run test
