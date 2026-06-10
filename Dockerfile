@@ -1,12 +1,12 @@
 FROM node:22-alpine
 
+RUN corepack enable
+
 ARG USER=node
-ENV HOME /home/$USER
+ENV HOME=/home/$USER
 
 USER $USER
 WORKDIR $HOME/code
-
-RUN corepack enable
 
 COPY --chown=$USER:$USER package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
