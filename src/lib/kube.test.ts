@@ -115,6 +115,40 @@ describe('Get Service Account items', () => {
             },
         })
     })
+
+    it('createKubernetesJob: GCP path stamps serviceAccountName and injects BigQuery env', () => {
+        process.env.RESEARCH_SERVICE_ACCOUNT = 'research-sa'
+        process.env.GCP_PROJECT = 'my-project'
+        process.env.BQ_DATASET = 'enclave_data_dev'
+        process.env.BQ_TABLE = 'events'
+        process.env.GCP_BILLING_PROJECT = 'billing-project'
+
+        const job = createKubernetesJob('my-image', '42', 'Study', 'https://toa/42')
+        const podSpec = job.spec.template.spec as {
+            serviceAccountName?: string
+            containers: Array<{ env: Array<{ name: string; value: string }> }>
+        }
+
+        expect(podSpec.serviceAccountName).toBe('research-sa')
+        const env = podSpec.containers[0].env
+        expect(env).toContainEqual({ name: 'TRUSTED_OUTPUT_ENDPOINT', value: 'https://toa/42' })
+        expect(env).toContainEqual({ name: 'GCP_PROJECT', value: 'my-project' })
+        expect(env).toContainEqual({ name: 'BQ_DATASET', value: 'enclave_data_dev' })
+        expect(env).toContainEqual({ name: 'BQ_TABLE', value: 'events' })
+        expect(env).toContainEqual({ name: 'GCP_BILLING_PROJECT', value: 'billing-project' })
+    })
+
+    it('createKubernetesJob: omits serviceAccountName and BigQuery env on the non-GCP path', () => {
+        const job = createKubernetesJob('my-image', '42', 'Study', 'https://toa/42')
+        const podSpec = job.spec.template.spec as {
+            serviceAccountName?: string
+            containers: Array<{ env: Array<{ name: string; value: string }> }>
+        }
+
+        expect(podSpec.serviceAccountName).toBeUndefined()
+        expect(podSpec.containers[0].env).toEqual([{ name: 'TRUSTED_OUTPUT_ENDPOINT', value: 'https://toa/42' }])
+    })
+
     it('filterDeployments: filters deployments by labels', () => {
         const deployments: KubernetesJob[] = [
             {
