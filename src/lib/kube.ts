@@ -37,6 +37,39 @@ function createKubernetesJob(imageLocation: string, jobId: string, studyTitle: s
     const name = `research-container-${jobId}`
     studyTitle = sanitize(studyTitle.toLowerCase())
     console.log(`Creating Kubernetes job: ${name}`)
+
+    // Research container env: always the TOA endpoint, plus BigQuery config (GCP / Workload
+    // Identity) when setup-app was given it. Unset vars are omitted so non-GCP deployments
+    // produce an identical Job spec.
+    const containerEnv: Array<{ name: string; value: string }> = [
+        { name: 'TRUSTED_OUTPUT_ENDPOINT', value: toaEndpointWithJobId },
+    ]
+    for (const envName of ['GCP_PROJECT', 'BQ_DATASET', 'BQ_TABLE', 'GCP_BILLING_PROJECT']) {
+        const value = process.env[envName]
+        if (value) {
+            containerEnv.push({ name: envName, value })
+        }
+    }
+
+    const podSpec: Record<string, unknown> = {
+        containers: [
+            {
+                name: name,
+                image: imageLocation,
+                ports: [],
+                env: containerEnv,
+            },
+        ],
+        restartPolicy: 'Never',
+        imagePullSecrets: [{ name: process.env.HARBOR_PULL_SECRET }],
+    }
+
+    // GCP: run research Jobs under the dedicated, Workload-Identity-bound ServiceAccount so
+    // (and only so) the research container can read BigQuery. Omitted when unset (AWS path).
+    if (process.env.RESEARCH_SERVICE_ACCOUNT) {
+        podSpec.serviceAccountName = process.env.RESEARCH_SERVICE_ACCOUNT
+    }
+
     const deployment = {
         apiVersion: 'batch/v1',
         kind: 'Job',
@@ -63,23 +96,7 @@ function createKubernetesJob(imageLocation: string, jobId: string, studyTitle: s
                         role: 'toa-access',
                     },
                 },
-                spec: {
-                    containers: [
-                        {
-                            name: name,
-                            image: imageLocation,
-                            ports: [],
-                            env: [
-                                {
-                                    name: 'TRUSTED_OUTPUT_ENDPOINT',
-                                    value: toaEndpointWithJobId,
-                                },
-                            ],
-                        },
-                    ],
-                    restartPolicy: 'Never',
-                    imagePullSecrets: [{ name: process.env.HARBOR_PULL_SECRET }],
-                },
+                spec: podSpec,
             },
         },
     }
