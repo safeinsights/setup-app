@@ -26,7 +26,6 @@
         "eslint-config-prettier": "*",
         "eslint-plugin-anti-trojan-source": "^1.1.4",
         "eslint-plugin-unused-imports": "^4.4.1",
-        "happy-dom": "^20.10.6",
         "prettier": "*",
         "typescript": "^5.9.3",
         "vite": "^8.1.3",
