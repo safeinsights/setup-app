@@ -2,7 +2,6 @@
     "name": "setup-app",
     "version": "1.0.0",
     "description": "Setup App",
-    "main": "index.js",
     "engines": {
         "node": ">=22",
         "pnpm": ">=11"
@@ -36,7 +35,6 @@
         "@aws-sdk/client-cloudwatch-logs": "^3.1010.0",
         "@aws-sdk/client-ecs": "^3.1010.0",
         "@aws-sdk/client-resource-groups-tagging-api": "^3.1010.0",
-        "clsx": "*",
         "jsonwebtoken": "^9.0.3",
         "tsx": "^4.21.0",
         "typescript-eslint": "^8.57.1"
