@@ -86,6 +86,7 @@ export async function runAWSStudies(options: { ignoreAWSJobs: boolean }): Promis
     // Tags our AWS resources so other enclaves in this account leave them alone
     const managementAppTag = toManagementAppTagValue(
         ensureValueWithError(process.env.MANAGEMENT_APP_BASE_URL, 'Env var MANAGEMENT_APP_BASE_URL not found'),
+        ensureValueWithError(process.env.MANAGEMENT_APP_MEMBER_ID, 'Env var MANAGEMENT_APP_MEMBER_ID not found'),
     )
 
     const bmaReadysResults = await managementAppGetReadyStudiesRequest()

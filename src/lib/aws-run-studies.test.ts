@@ -87,16 +87,19 @@ describe('runStudies()', () => {
         const expectedTags = [
             { key: JOB_ID_TAG_KEY, value: 'to-be-run-1' },
             { key: RESEARCHER_ID_TAG_KEY, value: 'mockResearcherId' },
-            { key: MANAGEMENT_APP_TAG_KEY, value: 'https://bma:12345' },
+            { key: MANAGEMENT_APP_TAG_KEY, value: 'https://bma:12345=openstax' },
         ]
         expect(vi.mocked(aws.registerECSTaskDefinition).mock.calls[0]).toContainEqual(expectedTags)
         expect(runECSFargateTaskCalls[0]).toContainEqual(expectedTags)
 
         // Both lookups are scoped to our own management app
-        expect(vi.mocked(aws.getAllTasksWithJobId)).toHaveBeenCalledWith(expect.anything(), 'https://bma:12345')
+        expect(vi.mocked(aws.getAllTasksWithJobId)).toHaveBeenCalledWith(
+            expect.anything(),
+            'https://bma:12345=openstax',
+        )
         expect(vi.mocked(aws.getAllTaskDefinitionsWithJobId)).toHaveBeenCalledWith(
             expect.anything(),
-            'https://bma:12345',
+            'https://bma:12345=openstax',
         )
         expect(mockToaUpdateJobStatus).toHaveBeenCalledTimes(2)
         expect(mockToaUpdateJobStatus).toHaveBeenNthCalledWith(1, 'to-be-run-1', {

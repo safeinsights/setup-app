@@ -42,6 +42,7 @@ export async function checkForAWSErroredJobs(): Promise<void> {
     // Only our own enclave's resources are considered; others may share this account
     const managementAppTag = toManagementAppTagValue(
         ensureValueWithError(process.env.MANAGEMENT_APP_BASE_URL, 'Env var MANAGEMENT_APP_BASE_URL not found'),
+        ensureValueWithError(process.env.MANAGEMENT_APP_MEMBER_ID, 'Env var MANAGEMENT_APP_MEMBER_ID not found'),
     )
 
     const tasks = await getAllTasksWithJobId(taggingClient, managementAppTag)

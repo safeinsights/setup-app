@@ -208,7 +208,7 @@ describe('getAllTaskDefinitionsWithJobId', () => {
                 },
                 {
                     Key: MANAGEMENT_APP_TAG_KEY,
-                    Values: ['https://testbma:1234'],
+                    Values: ['https://testbma:1234=testmember'],
                 },
             ],
             ResourceTypeFilters: ['ecs:task-definition'],
@@ -220,7 +220,10 @@ describe('getAllTaskDefinitionsWithJobId', () => {
         }
         taggingMockClient.on(GetResourcesCommand, expectedCommandInput).resolves(mockResult)
 
-        const res = await getAllTaskDefinitionsWithJobId(new ResourceGroupsTaggingAPIClient(), 'https://testbma:1234')
+        const res = await getAllTaskDefinitionsWithJobId(
+            new ResourceGroupsTaggingAPIClient(),
+            'https://testbma:1234=testmember',
+        )
         expect(res).toStrictEqual([])
     })
     it('works for multi page results', async () => {
@@ -231,7 +234,7 @@ describe('getAllTaskDefinitionsWithJobId', () => {
                 },
                 {
                     Key: MANAGEMENT_APP_TAG_KEY,
-                    Values: ['https://testbma:1234'],
+                    Values: ['https://testbma:1234=testmember'],
                 },
             ],
             ResourceTypeFilters: ['ecs:task-definition'],
@@ -253,7 +256,7 @@ describe('getAllTaskDefinitionsWithJobId', () => {
                 },
                 {
                     Key: MANAGEMENT_APP_TAG_KEY,
-                    Values: ['https://testbma:1234'],
+                    Values: ['https://testbma:1234=testmember'],
                 },
             ],
             ResourceTypeFilters: ['ecs:task-definition'],
@@ -269,7 +272,10 @@ describe('getAllTaskDefinitionsWithJobId', () => {
                 },
             ],
         })
-        const res = await getAllTaskDefinitionsWithJobId(new ResourceGroupsTaggingAPIClient(), 'https://testbma:1234')
+        const res = await getAllTaskDefinitionsWithJobId(
+            new ResourceGroupsTaggingAPIClient(),
+            'https://testbma:1234=testmember',
+        )
         expect(res).toStrictEqual([
             {
                 ResourceARN: 'arn:1',
@@ -292,7 +298,7 @@ describe('getAllTasksWithJobId', () => {
                 },
                 {
                     Key: MANAGEMENT_APP_TAG_KEY,
-                    Values: ['https://testbma:1234'],
+                    Values: ['https://testbma:1234=testmember'],
                 },
             ],
             ResourceTypeFilters: ['ecs:task'],
@@ -304,7 +310,7 @@ describe('getAllTasksWithJobId', () => {
         }
         taggingMockClient.on(GetResourcesCommand, expectedCommandInput).resolves(mockResult)
 
-        const res = await getAllTasksWithJobId(new ResourceGroupsTaggingAPIClient(), 'https://testbma:1234')
+        const res = await getAllTasksWithJobId(new ResourceGroupsTaggingAPIClient(), 'https://testbma:1234=testmember')
         expect(res).toStrictEqual([])
     })
 })

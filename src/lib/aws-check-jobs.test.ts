@@ -34,10 +34,13 @@ describe('checkForErroredJobs()', () => {
 
         await checkForAWSErroredJobs()
 
-        expect(vi.mocked(aws.getAllTasksWithJobId)).toHaveBeenCalledWith(expect.anything(), 'https://bma:12345')
+        expect(vi.mocked(aws.getAllTasksWithJobId)).toHaveBeenCalledWith(
+            expect.anything(),
+            'https://bma:12345=openstax',
+        )
         expect(vi.mocked(aws.getAllTaskDefinitionsWithJobId)).toHaveBeenCalledWith(
             expect.anything(),
-            'https://bma:12345',
+            'https://bma:12345=openstax',
         )
     })
     it('makes call to TOA for task that fails to start', async () => {

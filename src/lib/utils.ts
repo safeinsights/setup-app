@@ -43,10 +43,11 @@ export const filterOrphanTaskDefinitions = (
     return orphanTaskDefinitions
 }
 
-// Derives an AWS tag value from the management app URL.
+// Derives an AWS tag value from the management app URL and member id.
+// The `=` keeps it obvious that this is not a URL, so it is never used to build a request
 // Remove trailing slash and invalid tag characters
-export const toManagementAppTagValue = (baseUrl: string): string => {
-    return baseUrl.replace(/\/+$/, '').replace(/[^\w +=.:/@-]/g, '_')
+export const toManagementAppTagValue = (baseUrl: string, memberId: string): string => {
+    return `${baseUrl.replace(/\/+$/, '')}=${memberId}`.replace(/[^\w +=.:/@-]/g, '_')
 }
 
 // returns given value with type certainty, or errors if value is null or undefined

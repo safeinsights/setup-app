@@ -101,24 +101,34 @@ describe('filterOrphanTaskDefinitions', () => {
 })
 
 describe('toManagementAppTagValue', () => {
-    it('leaves a url without a trailing slash alone', () => {
-        expect(toManagementAppTagValue('https://bma:12345')).toBe('https://bma:12345')
+    it('joins the url and the member id', () => {
+        expect(toManagementAppTagValue('https://bma:12345', 'openstax')).toBe('https://bma:12345=openstax')
     })
 
-    it('strips trailing slashes', () => {
-        expect(toManagementAppTagValue('https://bma:12345/')).toBe('https://bma:12345')
-        expect(toManagementAppTagValue('https://bma:12345///')).toBe('https://bma:12345')
+    it('strips trailing slashes from the url', () => {
+        expect(toManagementAppTagValue('https://bma:12345/', 'openstax')).toBe('https://bma:12345=openstax')
+        expect(toManagementAppTagValue('https://bma:12345///', 'openstax')).toBe('https://bma:12345=openstax')
+    })
+
+    it('distinguishes members sharing a management app', () => {
+        expect(toManagementAppTagValue('https://bma:12345', 'member-1')).not.toBe(
+            toManagementAppTagValue('https://bma:12345', 'member-2'),
+        )
     })
 
     it('keeps characters that AWS allows in a tag value', () => {
-        expect(toManagementAppTagValue('https://bma-1.example.com:12345/a_b@c+d=e')).toBe(
-            'https://bma-1.example.com:12345/a_b@c+d=e',
+        expect(toManagementAppTagValue('https://bma-1.example.com:12345/a_b@c+d', 'member.1')).toBe(
+            'https://bma-1.example.com:12345/a_b@c+d=member.1',
         )
     })
 
     it('replaces characters that AWS disallows in a tag value', () => {
-        expect(toManagementAppTagValue('https://bma:12345/x?a=1&b=2')).toBe('https://bma:12345/x_a=1_b=2')
-        expect(toManagementAppTagValue('https://user%name:p^ss@bma#frag')).toBe('https://user_name:p_ss@bma_frag')
+        expect(toManagementAppTagValue('https://bma:12345/x?a=1&b=2', 'openstax')).toBe(
+            'https://bma:12345/x_a=1_b=2=openstax',
+        )
+        expect(toManagementAppTagValue('https://user%name:p^ss@bma#frag', 'mem*ber')).toBe(
+            'https://user_name:p_ss@bma_frag=mem_ber',
+        )
     })
 })
 
