@@ -28,6 +28,21 @@ describe('checkForErroredJobs()', () => {
         const deleteECSTaskDefinitionsCalls = vi.mocked(aws.deleteECSTaskDefinitions).mock.calls
         expect(deleteECSTaskDefinitionsCalls[0][1]).toEqual(['run-finished'])
     })
+
+    it('only looks at tasks and task definitions from our own management app', async () => {
+        vi.mocked(aws.getAllTasksWithJobId).mockResolvedValue([])
+
+        await checkForAWSErroredJobs()
+
+        expect(vi.mocked(aws.getAllTasksWithJobId)).toHaveBeenCalledWith(
+            expect.anything(),
+            'https://bma:12345=openstax',
+        )
+        expect(vi.mocked(aws.getAllTaskDefinitionsWithJobId)).toHaveBeenCalledWith(
+            expect.anything(),
+            'https://bma:12345=openstax',
+        )
+    })
     it('makes call to TOA for task that fails to start', async () => {
         vi.mocked(aws.getAllTasksWithJobId).mockResolvedValue([
             {

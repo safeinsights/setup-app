@@ -1,6 +1,12 @@
 import { ResourceTagMapping } from '@aws-sdk/client-resource-groups-tagging-api'
 import { describe, expect, it } from 'vitest'
-import { ensureValueWithError, filterManagementAppJobs, filterOrphanTaskDefinitions, sanitize } from '../lib/utils'
+import {
+    ensureValueWithError,
+    filterManagementAppJobs,
+    filterOrphanTaskDefinitions,
+    toManagementAppTagValue,
+    sanitize,
+} from '../lib/utils'
 import { JOB_ID_TAG_KEY } from './aws'
 
 describe('filterManagementAppJobs', () => {
@@ -91,6 +97,38 @@ describe('filterOrphanTaskDefinitions', () => {
         ]
 
         expect(filterOrphanTaskDefinitions(mockManagementAppResponse, mockTaskDefResources)).toStrictEqual(['arn2'])
+    })
+})
+
+describe('toManagementAppTagValue', () => {
+    it('joins the url and the member id', () => {
+        expect(toManagementAppTagValue('https://bma:12345', 'openstax')).toBe('https://bma:12345=openstax')
+    })
+
+    it('strips trailing slashes from the url', () => {
+        expect(toManagementAppTagValue('https://bma:12345/', 'openstax')).toBe('https://bma:12345=openstax')
+        expect(toManagementAppTagValue('https://bma:12345///', 'openstax')).toBe('https://bma:12345=openstax')
+    })
+
+    it('distinguishes members sharing a management app', () => {
+        expect(toManagementAppTagValue('https://bma:12345', 'member-1')).not.toBe(
+            toManagementAppTagValue('https://bma:12345', 'member-2'),
+        )
+    })
+
+    it('keeps characters that AWS allows in a tag value', () => {
+        expect(toManagementAppTagValue('https://bma-1.example.com:12345/a_b@c+d', 'member.1')).toBe(
+            'https://bma-1.example.com:12345/a_b@c+d=member.1',
+        )
+    })
+
+    it('replaces characters that AWS disallows in a tag value', () => {
+        expect(toManagementAppTagValue('https://bma:12345/x?a=1&b=2', 'openstax')).toBe(
+            'https://bma:12345/x_a=1_b=2=openstax',
+        )
+        expect(toManagementAppTagValue('https://user%name:p^ss@bma#frag', 'mem*ber')).toBe(
+            'https://user_name:p_ss@bma_frag=mem_ber',
+        )
     })
 })
 

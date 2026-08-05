@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as api from './api'
 import * as aws from './aws'
-import { JOB_ID_TAG_KEY } from './aws'
+import { JOB_ID_TAG_KEY, MANAGEMENT_APP_TAG_KEY, RESEARCHER_ID_TAG_KEY } from './aws'
 import { runAWSStudies } from './aws-run-studies'
 import { ManagementAppGetReadyStudiesResponse } from './types'
 
@@ -81,6 +81,26 @@ describe('runStudies()', () => {
         expect(runECSFargateTaskCalls.length).toBe(2)
         expect(runECSFargateTaskCalls[0]).toContain('MOCK_BASE_TASK_DEF_FAMILY-to-be-run-1-registered')
         expect(runECSFargateTaskCalls[1]).toContain('MOCK_BASE_TASK_DEF_FAMILY-to-be-run-2-registered')
+
+        // Both the task definition and the task are tagged with our management app,
+        // which is what scopes the AWS lookups to this enclave
+        const expectedTags = [
+            { key: JOB_ID_TAG_KEY, value: 'to-be-run-1' },
+            { key: RESEARCHER_ID_TAG_KEY, value: 'mockResearcherId' },
+            { key: MANAGEMENT_APP_TAG_KEY, value: 'https://bma:12345=openstax' },
+        ]
+        expect(vi.mocked(aws.registerECSTaskDefinition).mock.calls[0]).toContainEqual(expectedTags)
+        expect(runECSFargateTaskCalls[0]).toContainEqual(expectedTags)
+
+        // Both lookups are scoped to our own management app
+        expect(vi.mocked(aws.getAllTasksWithJobId)).toHaveBeenCalledWith(
+            expect.anything(),
+            'https://bma:12345=openstax',
+        )
+        expect(vi.mocked(aws.getAllTaskDefinitionsWithJobId)).toHaveBeenCalledWith(
+            expect.anything(),
+            'https://bma:12345=openstax',
+        )
         expect(mockToaUpdateJobStatus).toHaveBeenCalledTimes(2)
         expect(mockToaUpdateJobStatus).toHaveBeenNthCalledWith(1, 'to-be-run-1', {
             status: 'JOB-PROVISIONING',
