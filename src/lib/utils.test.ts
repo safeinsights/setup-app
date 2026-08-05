@@ -1,6 +1,12 @@
 import { ResourceTagMapping } from '@aws-sdk/client-resource-groups-tagging-api'
 import { describe, expect, it } from 'vitest'
-import { ensureValueWithError, filterManagementAppJobs, filterOrphanTaskDefinitions, sanitize } from '../lib/utils'
+import {
+    ensureValueWithError,
+    filterManagementAppJobs,
+    filterOrphanTaskDefinitions,
+    toManagementAppTagValue,
+    sanitize,
+} from '../lib/utils'
 import { JOB_ID_TAG_KEY } from './aws'
 
 describe('filterManagementAppJobs', () => {
@@ -91,6 +97,28 @@ describe('filterOrphanTaskDefinitions', () => {
         ]
 
         expect(filterOrphanTaskDefinitions(mockManagementAppResponse, mockTaskDefResources)).toStrictEqual(['arn2'])
+    })
+})
+
+describe('toManagementAppTagValue', () => {
+    it('leaves a url without a trailing slash alone', () => {
+        expect(toManagementAppTagValue('https://bma:12345')).toBe('https://bma:12345')
+    })
+
+    it('strips trailing slashes', () => {
+        expect(toManagementAppTagValue('https://bma:12345/')).toBe('https://bma:12345')
+        expect(toManagementAppTagValue('https://bma:12345///')).toBe('https://bma:12345')
+    })
+
+    it('keeps characters that AWS allows in a tag value', () => {
+        expect(toManagementAppTagValue('https://bma-1.example.com:12345/a_b@c+d=e')).toBe(
+            'https://bma-1.example.com:12345/a_b@c+d=e',
+        )
+    })
+
+    it('replaces characters that AWS disallows in a tag value', () => {
+        expect(toManagementAppTagValue('https://bma:12345/x?a=1&b=2')).toBe('https://bma:12345/x_a=1_b=2')
+        expect(toManagementAppTagValue('https://user%name:p^ss@bma#frag')).toBe('https://user_name:p_ss@bma_frag')
     })
 })
 

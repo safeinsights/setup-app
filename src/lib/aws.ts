@@ -29,6 +29,7 @@ import { ensureValueWithError } from './utils'
 export const JOB_ID_TAG_KEY = 'jobId'
 export const TITLE_TAG_KEY = 'title'
 export const RESEARCHER_ID_TAG_KEY = 'researcherId'
+export const MANAGEMENT_APP_TAG_KEY = 'managementApp'
 
 export type LogEntry = {
     timestamp: number
@@ -221,25 +222,38 @@ export async function getTaskResourcesByJobId(
 
 export async function getAllTaskDefinitionsWithJobId(
     client: ResourceGroupsTaggingAPIClient,
+    managementAppTag: string,
+): Promise<ResourceTagMapping[]> {
+    // Filter on managementAppTag since enclaves can be in the same account
+    const tagFilters = [
+        {
+            Key: JOB_ID_TAG_KEY,
+        },
+        {
+            Key: MANAGEMENT_APP_TAG_KEY,
+            Values: [managementAppTag],
+        },
+    ]
+    const resourceTypeFilters = ['ecs:task-definition']
+    const logMessage = `Getting all task definitions with jobId for management app ${managementAppTag} ...`
+    return await getResourceCommandWrapper(tagFilters, resourceTypeFilters, client, logMessage)
+}
+
+export async function getAllTasksWithJobId(
+    client: ResourceGroupsTaggingAPIClient,
+    managementAppTag: string,
 ): Promise<ResourceTagMapping[]> {
     const tagFilters = [
         {
             Key: JOB_ID_TAG_KEY,
         },
-    ]
-    const resourceTypeFilters = ['ecs:task-definition']
-    const logMessage = 'Getting all task definitions with jobId ...'
-    return await getResourceCommandWrapper(tagFilters, resourceTypeFilters, client, logMessage)
-}
-
-export async function getAllTasksWithJobId(client: ResourceGroupsTaggingAPIClient): Promise<ResourceTagMapping[]> {
-    const tagFilters = [
         {
-            Key: JOB_ID_TAG_KEY,
+            Key: MANAGEMENT_APP_TAG_KEY,
+            Values: [managementAppTag],
         },
     ]
     const resourceTypeFilters = ['ecs:task']
-    const logMessage = 'Getting all tasks with jobId ...'
+    const logMessage = `Getting all tasks with jobId for management app ${managementAppTag} ...`
     return await getResourceCommandWrapper(tagFilters, resourceTypeFilters, client, logMessage)
 }
 

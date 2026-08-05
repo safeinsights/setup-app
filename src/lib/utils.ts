@@ -43,6 +43,12 @@ export const filterOrphanTaskDefinitions = (
     return orphanTaskDefinitions
 }
 
+// Derives an AWS tag value from the management app URL.
+// Remove trailing slash and invalid tag characters
+export const toManagementAppTagValue = (baseUrl: string): string => {
+    return baseUrl.replace(/\/+$/, '').replace(/[^\w +=.:/@-]/g, '_')
+}
+
 // returns given value with type certainty, or errors if value is null or undefined
 export const ensureValueWithError = <T>(value: T | null | undefined, message?: string): T => {
     if (value === null || value === undefined) {

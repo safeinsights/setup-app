@@ -6,10 +6,11 @@ import {
     runECSFargateTask,
     JOB_ID_TAG_KEY,
     RESEARCHER_ID_TAG_KEY,
+    MANAGEMENT_APP_TAG_KEY,
     getAllTaskDefinitionsWithJobId,
     getAllTasksWithJobId,
 } from './aws'
-import { ensureValueWithError, filterManagementAppJobs } from './utils'
+import { ensureValueWithError, filterManagementAppJobs, toManagementAppTagValue } from './utils'
 import { managementAppGetReadyStudiesRequest, toaUpdateJobStatus } from './api'
 import 'dotenv/config'
 import { ManagementAppGetReadyStudiesResponse } from './types'
@@ -18,6 +19,7 @@ async function launchStudy(
     client: ECSClient,
     cluster: string,
     baseTaskDefinitionFamily: string,
+    managementAppTag: string,
     subnets: string[],
     securityGroup: string,
     toaEndpointWithJobId: string,
@@ -30,6 +32,7 @@ async function launchStudy(
     const taskTags = [
         { key: JOB_ID_TAG_KEY, value: jobId },
         { key: RESEARCHER_ID_TAG_KEY, value: researcherId },
+        { key: MANAGEMENT_APP_TAG_KEY, value: managementAppTag },
     ]
     const baseTaskDefinitionData = await getECSTaskDefinition(client, baseTaskDefinitionFamily)
     baseTaskDefinitionData.taskDefinition = ensureValueWithError(
@@ -80,6 +83,10 @@ export async function runAWSStudies(options: { ignoreAWSJobs: boolean }): Promis
     )
     const subnets = ensureValueWithError(process.env.VPC_SUBNETS, 'Env var VPC_SUBNETS not found')
     const securityGroup = ensureValueWithError(process.env.SECURITY_GROUP, 'Env var SECURITY_GROUP not found')
+    // Tags our AWS resources so other enclaves in this account leave them alone
+    const managementAppTag = toManagementAppTagValue(
+        ensureValueWithError(process.env.MANAGEMENT_APP_BASE_URL, 'Env var MANAGEMENT_APP_BASE_URL not found'),
+    )
 
     const bmaReadysResults = await managementAppGetReadyStudiesRequest()
     console.log(
@@ -87,7 +94,7 @@ export async function runAWSStudies(options: { ignoreAWSJobs: boolean }): Promis
     )
 
     // Possibly used in filtering; used in garbage collection
-    const existingAwsTaskDefs = await getAllTaskDefinitionsWithJobId(taggingClient)
+    const existingAwsTaskDefs = await getAllTaskDefinitionsWithJobId(taggingClient, managementAppTag)
     console.log(`Found ${existingAwsTaskDefs.length} task definitions with jobId in the AWS environment`)
 
     let filteredResult: ManagementAppGetReadyStudiesResponse
@@ -97,7 +104,7 @@ export async function runAWSStudies(options: { ignoreAWSJobs: boolean }): Promis
         filteredResult = filterManagementAppJobs(bmaReadysResults)
     } else {
         // Take AWS into account when filtering
-        const existingAwsTasks = await getAllTasksWithJobId(taggingClient)
+        const existingAwsTasks = await getAllTasksWithJobId(taggingClient, managementAppTag)
         console.log(`Found ${existingAwsTasks.length} tasks with jobId in the AWS environment`)
 
         filteredResult = filterManagementAppJobs(bmaReadysResults, existingAwsTasks, existingAwsTaskDefs)
@@ -116,6 +123,7 @@ export async function runAWSStudies(options: { ignoreAWSJobs: boolean }): Promis
             ecsClient,
             cluster,
             baseTaskDefinition,
+            managementAppTag,
             subnets.split(','),
             securityGroup,
             toaEndpointWithJobId,

@@ -19,6 +19,7 @@ import {
     registerECSTaskDefinition,
     runECSFargateTask,
     JOB_ID_TAG_KEY,
+    MANAGEMENT_APP_TAG_KEY,
     deleteECSTaskDefinitions,
     getAllTasksWithJobId,
     describeECSTasks,
@@ -199,11 +200,15 @@ describe('getTaskResourcesByJobId', () => {
 })
 
 describe('getAllTaskDefinitionsWithJobId', () => {
-    it('should send GetResourcesCommand and return response', async () => {
+    it('should send GetResourcesCommand scoped to the management app and return response', async () => {
         const expectedCommandInput = {
             TagFilters: [
                 {
                     Key: JOB_ID_TAG_KEY,
+                },
+                {
+                    Key: MANAGEMENT_APP_TAG_KEY,
+                    Values: ['https://testbma:1234'],
                 },
             ],
             ResourceTypeFilters: ['ecs:task-definition'],
@@ -215,7 +220,7 @@ describe('getAllTaskDefinitionsWithJobId', () => {
         }
         taggingMockClient.on(GetResourcesCommand, expectedCommandInput).resolves(mockResult)
 
-        const res = await getAllTaskDefinitionsWithJobId(new ResourceGroupsTaggingAPIClient())
+        const res = await getAllTaskDefinitionsWithJobId(new ResourceGroupsTaggingAPIClient(), 'https://testbma:1234')
         expect(res).toStrictEqual([])
     })
     it('works for multi page results', async () => {
@@ -223,6 +228,10 @@ describe('getAllTaskDefinitionsWithJobId', () => {
             TagFilters: [
                 {
                     Key: JOB_ID_TAG_KEY,
+                },
+                {
+                    Key: MANAGEMENT_APP_TAG_KEY,
+                    Values: ['https://testbma:1234'],
                 },
             ],
             ResourceTypeFilters: ['ecs:task-definition'],
@@ -242,6 +251,10 @@ describe('getAllTaskDefinitionsWithJobId', () => {
                 {
                     Key: JOB_ID_TAG_KEY,
                 },
+                {
+                    Key: MANAGEMENT_APP_TAG_KEY,
+                    Values: ['https://testbma:1234'],
+                },
             ],
             ResourceTypeFilters: ['ecs:task-definition'],
             PaginationToken: '1',
@@ -256,7 +269,7 @@ describe('getAllTaskDefinitionsWithJobId', () => {
                 },
             ],
         })
-        const res = await getAllTaskDefinitionsWithJobId(new ResourceGroupsTaggingAPIClient())
+        const res = await getAllTaskDefinitionsWithJobId(new ResourceGroupsTaggingAPIClient(), 'https://testbma:1234')
         expect(res).toStrictEqual([
             {
                 ResourceARN: 'arn:1',
@@ -271,11 +284,15 @@ describe('getAllTaskDefinitionsWithJobId', () => {
 })
 
 describe('getAllTasksWithJobId', () => {
-    it('should send GetResourcesCommand and return response', async () => {
+    it('should send GetResourcesCommand scoped to the management app and return response', async () => {
         const expectedCommandInput = {
             TagFilters: [
                 {
                     Key: JOB_ID_TAG_KEY,
+                },
+                {
+                    Key: MANAGEMENT_APP_TAG_KEY,
+                    Values: ['https://testbma:1234'],
                 },
             ],
             ResourceTypeFilters: ['ecs:task'],
@@ -287,7 +304,7 @@ describe('getAllTasksWithJobId', () => {
         }
         taggingMockClient.on(GetResourcesCommand, expectedCommandInput).resolves(mockResult)
 
-        const res = await getAllTasksWithJobId(new ResourceGroupsTaggingAPIClient())
+        const res = await getAllTasksWithJobId(new ResourceGroupsTaggingAPIClient(), 'https://testbma:1234')
         expect(res).toStrictEqual([])
     })
 })
