@@ -172,13 +172,27 @@ export async function describeECSTasks(
     cluster: string,
     tasks: string[],
 ): Promise<DescribeTasksCommandOutput> {
-    const command = new DescribeTasksCommand({ cluster, tasks, include: ['TAGS'] })
-
     console.log('AWS: START: Calling ECS DescribeTasks ...')
-    const result = await client.send(command)
+
+    // DescribeTasks accepts at most 100 ARNs per call (hard AWS limit); larger lists
+    // must be chunked or the call throws InvalidParameterException.
+    const maxArnsPerCall = 100
+    const mergedTasks: NonNullable<DescribeTasksCommandOutput['tasks']> = []
+    const mergedFailures: NonNullable<DescribeTasksCommandOutput['failures']> = []
+    let metadata: DescribeTasksCommandOutput['$metadata'] = {}
+
+    for (let i = 0; i < tasks.length; i += maxArnsPerCall) {
+        const chunk = tasks.slice(i, i + maxArnsPerCall)
+        const command = new DescribeTasksCommand({ cluster, tasks: chunk, include: ['TAGS'] })
+        const result = await client.send(command)
+        mergedTasks.push(...(result.tasks ?? []))
+        mergedFailures.push(...(result.failures ?? []))
+        metadata = result.$metadata ?? metadata
+    }
+
     console.log('AWS:   END: DescribeTasks finished')
 
-    return result
+    return { $metadata: metadata, tasks: mergedTasks, failures: mergedFailures }
 }
 
 async function getResourceCommandWrapper(
