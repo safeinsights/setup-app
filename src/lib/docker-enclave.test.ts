@@ -13,73 +13,59 @@ vi.mock('./docker')
 vi.mock('./api')
 
 describe('DockerEnclave', () => {
-    it('filterJobsInEnclave should return jobs that are in the enclave', () => {
-        const bmaReadysResults: ManagementAppGetReadyStudiesResponse = {
-            jobs: [
-                {
-                    jobId: '1234567890',
-                    title: 'Test Job 1',
-                    containerLocation: 'test/container-1',
-                    researcherId: 'testresearcherid',
-                },
-                {
-                    jobId: '0987654321',
-                    title: 'Test Job 2',
-                    containerLocation: 'test/container-2',
-                    researcherId: 'testresearcherid',
-                },
-            ],
+    describe('filterJobsInEnclave', () => {
+        const runningContainer = (jobId: string): DockerApiContainersResponse => ({
+            Id: jobId,
+            Image: 'test',
+            Names: [`research-container-${jobId}`],
+            ImageID: `sha256:${jobId}`,
+            Command: 'test/container',
+            Labels: {
+                instance: jobId,
+                component: CONTAINER_TYPES.RESEARCH_CONTAINER,
+                'managed-by': CONTAINER_TYPES.SETUP_APP,
+            },
+            State: 'running',
+            Status: 'running',
+        })
+
+        const job1 = {
+            jobId: '1234567890',
+            title: 'Test Job 1',
+            containerLocation: 'test/container-1',
+            researcherId: 'testresearcherid',
+        }
+        const job2 = {
+            jobId: '0987654321',
+            title: 'Test Job 2',
+            containerLocation: 'test/container-2',
+            researcherId: 'testresearcherid',
         }
 
-        const runningJobsInEnclave: DockerApiContainersResponse[] = [
-            {
-                Id: '1234567890',
-                Image: 'test',
-                Names: ['research-container-1234567890'],
-                ImageID: 'sha256:1234567890',
-                Command: 'test/container-1',
-                Labels: {
-                    instance: '1234567890',
-                    component: CONTAINER_TYPES.RESEARCH_CONTAINER,
-                    'managed-by': CONTAINER_TYPES.SETUP_APP,
-                },
-                State: 'running',
-                Status: 'running',
-            },
-            {
-                Id: '0987654321',
-                Image: 'test',
-                Names: ['research-container-0987654321'],
-                ImageID: 'sha256:0987654321',
-                Command: 'test/container-2',
-                Labels: {
-                    instance: '0987654321',
-                    component: CONTAINER_TYPES.RESEARCH_CONTAINER,
-                    'managed-by': CONTAINER_TYPES.SETUP_APP,
-                },
-                State: 'running',
-                Status: 'running',
-            },
-        ]
+        it('excludes jobs already running in the enclave', () => {
+            const bmaReadysResults: ManagementAppGetReadyStudiesResponse = { jobs: [job1, job2] }
+            const runningJobsInEnclave = [runningContainer(job1.jobId), runningContainer(job2.jobId)]
 
-        const dockerEnclave = new DockerEnclave()
-        const filteredJobs = dockerEnclave.filterJobsInEnclave(bmaReadysResults, runningJobsInEnclave)
+            const filteredJobs = new DockerEnclave().filterJobsInEnclave(bmaReadysResults, runningJobsInEnclave)
 
-        expect(filteredJobs).toEqual({
-            jobs: [
-                {
-                    jobId: '1234567890',
-                    title: 'Test Job 1',
-                    containerLocation: 'test/container-1',
-                    researcherId: 'testresearcherid',
-                },
-                {
-                    jobId: '0987654321',
-                    title: 'Test Job 2',
-                    containerLocation: 'test/container-2',
-                    researcherId: 'testresearcherid',
-                },
-            ],
+            expect(filteredJobs).toEqual({ jobs: [] })
+        })
+
+        it('returns only jobs not already running', () => {
+            const bmaReadysResults: ManagementAppGetReadyStudiesResponse = { jobs: [job1, job2] }
+            const runningJobsInEnclave = [runningContainer(job1.jobId)]
+
+            const filteredJobs = new DockerEnclave().filterJobsInEnclave(bmaReadysResults, runningJobsInEnclave)
+
+            expect(filteredJobs).toEqual({ jobs: [job2] })
+        })
+
+        it('returns all jobs when none are running', () => {
+            const bmaReadysResults: ManagementAppGetReadyStudiesResponse = { jobs: [job1, job2] }
+
+            const filteredJobs = new DockerEnclave().filterJobsInEnclave(bmaReadysResults, [])
+
+            expect(filteredJobs).toEqual({ jobs: [job1, job2] })
         })
     })
 
