@@ -1,3 +1,4 @@
+import { getServiceAccountDir } from '@/tests/unit.helpers'
 import { describe, expect, it, vi } from 'vitest'
 import * as api from './api'
 import * as kube from './kube'
@@ -256,112 +257,51 @@ describe('KubernetesEnclave', () => {
 
         await expect(enclave.launchStudy(job, job.toaEndpointWithJobId)).rejects.toThrow('K8s API Call Error')
     })
-    it('getRunningStudies should return an empty array if there are no jobs', async () => {
+    it('getDeployedStudies should return an empty array if there are no jobs', async () => {
+        const realKube = await vi.importActual<typeof kube>('./kube')
+        vi.mocked(kube.filterDeployments).mockImplementation(realKube.filterDeployments)
+
         const enclave = new KubernetesEnclave()
         const getAllStudiesInEnclave = vi.spyOn(enclave, 'getAllStudiesInEnclave').mockResolvedValue([])
-        const filterDeployments = vi.mocked(kube.filterDeployments).mockReturnValue([])
 
         const result = await enclave.getDeployedStudies()
 
         expect(result).toEqual([])
         expect(getAllStudiesInEnclave).toHaveBeenCalledOnce()
-        expect(filterDeployments).toHaveBeenCalledWith([], {
-            component: CONTAINER_TYPES.RESEARCH_CONTAINER,
-            'managed-by': CONTAINER_TYPES.SETUP_APP,
-            role: 'toa-access',
-        })
     })
 
-    it('getRunningStudies should return a filtered array of jobs', async () => {
-        const running: KubernetesJob = {
+    it('getDeployedStudies should return a filtered array of jobs', async () => {
+        process.env.K8S_SERVICEACCOUNT_PATH = getServiceAccountDir()
+        const realKube = await vi.importActual<typeof kube>('./kube')
+        vi.mocked(kube.filterDeployments).mockImplementation(realKube.filterDeployments)
+
+        const researchJob = realKube.createKubernetesJob(
+            'test/container-1',
+            '1234567890',
+            'Test Job 1',
+            'https://toa:67890/api/job/1234567890',
+        ) as unknown as KubernetesJob
+
+        const unrelatedJob = {
             metadata: {
-                name: 'rc-1234567890',
-                namespace: 'test',
+                name: 'other-1',
+                namespace: 'mock-namespace',
                 labels: {
-                    app: 'rc-1234567890',
+                    app: 'other-1',
                     component: CONTAINER_TYPES.RESEARCH_CONTAINER,
-                    'managed-by': CONTAINER_TYPES.SETUP_APP,
-                    role: 'toa-access',
                 },
             },
-            spec: {
-                selector: {
-                    matchLabels: {
-                        studyId: 'rc-1234567890',
-                        jobId: '1234567890',
-                    },
-                },
-                template: {
-                    spec: {
-                        containers: [
-                            {
-                                name: 'rc-1234567890',
-                            },
-                        ],
-                    },
-                },
-            },
-            status: {
-                conditions: [
-                    {
-                        type: 'Completed',
-                        status: 'False',
-                    },
-                ],
-            },
-        }
-        const completed: KubernetesJob = {
-            metadata: {
-                name: 'rc-0987654321',
-                namespace: 'test',
-                labels: {
-                    app: 'rc-0987654321',
-                    component: CONTAINER_TYPES.RESEARCH_CONTAINER,
-                    'managed-by': CONTAINER_TYPES.SETUP_APP,
-                    role: 'toa-access',
-                },
-            },
-            spec: {
-                selector: {
-                    matchLabels: {
-                        studyId: 'rc-0987654321',
-                        jobId: '0987654321',
-                    },
-                },
-                template: {
-                    spec: {
-                        containers: [
-                            {
-                                name: 'rc-0987654321',
-                            },
-                        ],
-                    },
-                },
-            },
-            status: {
-                conditions: [
-                    {
-                        type: 'Completed',
-                        status: 'False',
-                    },
-                ],
-            },
-        }
-        const jobs = [completed, running]
+        } as unknown as KubernetesJob
 
         const enclave = new KubernetesEnclave()
-        const getAllStudiesInEnclave = vi.spyOn(enclave, 'getAllStudiesInEnclave').mockResolvedValue(jobs)
-        const filterDeployments = vi.mocked(kube.filterDeployments).mockReturnValue([running])
+        const getAllStudiesInEnclave = vi
+            .spyOn(enclave, 'getAllStudiesInEnclave')
+            .mockResolvedValue([researchJob, unrelatedJob])
 
         const result = await enclave.getDeployedStudies()
 
-        expect(result).toEqual([running])
         expect(getAllStudiesInEnclave).toHaveBeenCalledOnce()
-        expect(filterDeployments).toHaveBeenCalledWith(jobs, {
-            component: CONTAINER_TYPES.RESEARCH_CONTAINER,
-            'managed-by': CONTAINER_TYPES.SETUP_APP,
-            role: 'toa-access',
-        })
+        expect(result).toEqual([researchJob])
     })
     it('getAllStudiesInEnclave: should return an empty array if there are no jobs', async () => {
         const k8sApiCall = vi.mocked(api.k8sApiCall).mockResolvedValue({ items: [] })
