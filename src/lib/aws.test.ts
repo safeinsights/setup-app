@@ -162,7 +162,7 @@ describe('runECSFargateTask', () => {
 })
 
 describe('describeECSTasks', () => {
-    it('should send DescribeTasksCommand and return response', async () => {
+    it('should send DescribeTasksCommand and return merged response', async () => {
         const expectedCommandInput: DescribeTasksCommandInput = {
             cluster: 'testcluster',
             tasks: ['task1', 'task2'],
@@ -171,7 +171,27 @@ describe('describeECSTasks', () => {
         ecsMockClient.on(DescribeTasksCommand, expectedCommandInput).resolves({})
 
         const res = await describeECSTasks(new ECSClient(), 'testcluster', ['task1', 'task2'])
-        expect(res).toStrictEqual({})
+        expect(ecsMockClient.commandCalls(DescribeTasksCommand)).toHaveLength(1)
+        expect(res).toStrictEqual({ $metadata: {}, tasks: [], failures: [] })
+    })
+
+    it('chunks ARNs by 100 so DescribeTasks never exceeds the AWS limit', async () => {
+        // Echo one task back per requested ARN so we can verify nothing is dropped when merging.
+        ecsMockClient.on(DescribeTasksCommand).callsFake((input: DescribeTasksCommandInput) => ({
+            tasks: (input.tasks ?? []).map((taskArn) => ({ taskArn })),
+        }))
+
+        const taskArns = Array.from({ length: 150 }, (_, i) => `task-${i}`)
+        const res = await describeECSTasks(new ECSClient(), 'testcluster', taskArns)
+
+        const calls = ecsMockClient.commandCalls(DescribeTasksCommand)
+        expect(calls).toHaveLength(2)
+        expect(calls[0].args[0].input.tasks).toHaveLength(100)
+        expect(calls[1].args[0].input.tasks).toHaveLength(50)
+
+        // Every requested ARN is described exactly once across the chunks.
+        expect(res.tasks).toHaveLength(150)
+        expect(res.tasks?.map((task) => task.taskArn)).toEqual(taskArns)
     })
 })
 
