@@ -55,7 +55,6 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
         return filterDeployments(jobs, {
             component: CONTAINER_TYPES.RESEARCH_CONTAINER,
             'managed-by': CONTAINER_TYPES.SETUP_APP,
-            role: 'toa-access',
         })
     }
 
