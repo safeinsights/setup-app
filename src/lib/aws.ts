@@ -271,12 +271,15 @@ export async function getAllTasksWithJobId(
     return await getResourceCommandWrapper(tagFilters, resourceTypeFilters, client, logMessage)
 }
 
-export async function getLogsForTask(taskId: string, taskDefArn: string): Promise<LogEntry[]> {
+export async function getLogsForTask(taskId: string, jobId: string): Promise<LogEntry[]> {
     const logsClient = new CloudWatchLogsClient({})
     const ecsClient = new ECSClient()
 
-    // Get full task definition to find the log configuration
-    const taskDefData = await getECSTaskDefinition(ecsClient, taskDefArn)
+    const baseTaskDefinitionFamily = ensureValueWithError(
+        process.env.BASE_TASK_DEFINITION_FAMILY,
+        'Env var BASE_TASK_DEFINITION_FAMILY not found',
+    )
+    const taskDefData = await getECSTaskDefinition(ecsClient, baseTaskDefinitionFamily)
     const logConfiguration = taskDefData.taskDefinition?.containerDefinitions?.find(
         (container) => container.name === 'ResearchContainer',
     )?.logConfiguration
@@ -284,7 +287,7 @@ export async function getLogsForTask(taskId: string, taskDefArn: string): Promis
     console.log(`Found log configuration`, logConfiguration)
 
     const logGroupName = ensureValueWithError(logConfiguration?.options?.['awslogs-group'])
-    const logStreamPrefix = ensureValueWithError(logConfiguration?.options?.['awslogs-stream-prefix'])
+    const logStreamPrefix = jobId
 
     // Get the log events for the task
     const events: LogEntry[] = []
