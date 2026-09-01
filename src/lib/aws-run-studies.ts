@@ -120,6 +120,8 @@ export async function runAWSStudies(options: { ignoreAWSJobs: boolean }): Promis
 
         const toaEndpointWithJobId = `${process.env.TOA_BASE_URL}/api/job/${job.jobId}`
 
+        let launchSuccess: boolean = true
+
         try {
             await launchStudy(
                 ecsClient,
@@ -134,12 +136,16 @@ export async function runAWSStudies(options: { ignoreAWSJobs: boolean }): Promis
                 job.title,
                 job.researcherId,
             )
-
-            await toaUpdateJobStatus(job.jobId, { status: 'JOB-PROVISIONING' })
         } catch (error: unknown) {
             // NOTE: The AWS generated message may be confusing to users, so it is logged for
-            // devs / operators rather than passed through to the TOA
+            // devs / operators but not passed through to the TOA
             console.error(`Error launching study for job ID ${job.jobId}. Cause: ${error}`)
+            launchSuccess = false
+        }
+
+        if (launchSuccess) {
+            await toaUpdateJobStatus(job.jobId, { status: 'JOB-PROVISIONING' })
+        } else {
             await toaUpdateJobStatus(job.jobId, { status: 'JOB-ERRORED', message: 'Failed to launch job' })
         }
     }
