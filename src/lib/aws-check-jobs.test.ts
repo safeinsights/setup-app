@@ -121,6 +121,43 @@ describe('checkForErroredJobs()', () => {
             status: 'JOB-ERRORED',
             message: 'Task container stopped with non-zero exit code',
         })
+        expect(vi.mocked(aws.getLogsForTask)).toHaveBeenCalledWith('testArn', 'jobId1')
+        expect(vi.mocked(aws.deleteECSTaskDefinitions)).toHaveBeenCalledOnce()
+    })
+    it('still reports JOB-ERRORED, and keeps going, when log retrieval fails', async () => {
+        vi.mocked(aws.getAllTasksWithJobId).mockResolvedValue([{ ResourceARN: 'arn1' }, { ResourceARN: 'arn2' }])
+
+        const mockToaUpdateJobStatus = vi.mocked(api.toaUpdateJobStatus)
+        const erroredTask = (jobId: string, taskArn: string) => ({
+            containers: [{ exitCode: 1 }],
+            stopCode: TaskStopCode.ESSENTIAL_CONTAINER_EXITED,
+            tags: [{ key: aws.JOB_ID_TAG_KEY, value: jobId }],
+            taskArn,
+        })
+        vi.mocked(aws.describeECSTasks).mockResolvedValue({
+            tasks: [erroredTask('jobId1', 'testArn1'), erroredTask('jobId2', 'testArn2')],
+            $metadata: {},
+        })
+        vi.mocked(api.managementAppGetJobStatus).mockResolvedValue({ status: 'teststatus' })
+        const testLogs = [{ timestamp: 42, message: 'test log message' }]
+        vi.mocked(aws.getLogsForTask)
+            .mockRejectedValueOnce(new Error('log group not found'))
+            .mockResolvedValue(testLogs)
+
+        await checkForAWSErroredJobs()
+
+        // The failing job is still marked errored, and the second job is unaffected
+        expect(mockToaUpdateJobStatus).toHaveBeenCalledTimes(2)
+        expect(mockToaUpdateJobStatus).toHaveBeenNthCalledWith(1, 'jobId1', {
+            status: 'JOB-ERRORED',
+            message: 'Task container stopped with non-zero exit code',
+        })
+        expect(mockToaUpdateJobStatus).toHaveBeenNthCalledWith(2, 'jobId2', {
+            status: 'JOB-ERRORED',
+            message: 'Task container stopped with non-zero exit code',
+        })
+        expect(vi.mocked(api.toaSendLogs)).toHaveBeenCalledOnce()
+        expect(vi.mocked(api.toaSendLogs)).toHaveBeenCalledWith('jobId2', testLogs)
         expect(vi.mocked(aws.deleteECSTaskDefinitions)).toHaveBeenCalledOnce()
     })
     it('does not make call to TOA for task that exits with zero exit code', async () => {

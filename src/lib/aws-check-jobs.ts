@@ -88,16 +88,18 @@ export async function checkForAWSErroredJobs(): Promise<void> {
                         continue
                     }
 
-                    // Send logs and update job status
-                    const taskId = ensureValueWithError(job.taskArn?.split('/').at(-1))
-                    const logs = await getLogsForTask(taskId, ensureValueWithError(job.taskDefinitionArn))
-
                     await toaUpdateJobStatus(jobId, {
                         status: 'JOB-ERRORED',
                         message: 'Task container stopped with non-zero exit code',
                     })
 
-                    await toaSendLogs(jobId, logs)
+                    try {
+                        const taskId = ensureValueWithError(job.taskArn?.split('/').at(-1))
+                        const logs = await getLogsForTask(taskId, jobId)
+                        await toaSendLogs(jobId, logs)
+                    } catch (error: unknown) {
+                        console.error(`Failed to send logs for job ${jobId}. Cause: ${error}`)
+                    }
                 }
             }
         }

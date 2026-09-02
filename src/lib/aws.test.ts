@@ -339,7 +339,7 @@ describe('getLogsForTask', () => {
     it('should return logs for a given task', async () => {
         ecsMockClient
             .on(DescribeTaskDefinitionCommand, {
-                taskDefinition: 'taskDefArn',
+                taskDefinition: 'MOCK_BASE_TASK_DEF_FAMILY',
             })
             .resolves({
                 taskDefinition: {
@@ -350,7 +350,7 @@ describe('getLogsForTask', () => {
                                 logDriver: 'awslogs',
                                 options: {
                                     'awslogs-group': 'test-log-group',
-                                    'awslogs-stream-prefix': 'test-log-prefix',
+                                    'awslogs-stream-prefix': 'base-prefix-not-used',
                                 },
                             },
                         },
@@ -362,13 +362,13 @@ describe('getLogsForTask', () => {
         loggingMockClient
             .on(FilterLogEventsCommand, {
                 logGroupIdentifier: 'test-log-group',
-                logStreamNames: [`test-log-prefix/ResearchContainer/taskId`],
+                logStreamNames: [`jobId1/ResearchContainer/taskId`],
             })
             .resolves({
                 events: [testLogEvent],
             })
 
-        const res = await getLogsForTask('taskId', 'taskDefArn')
+        const res = await getLogsForTask('taskId', 'jobId1')
 
         expect(res).toStrictEqual([testLogEvent])
     })
