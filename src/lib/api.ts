@@ -5,6 +5,7 @@ import { LogEntry } from './aws'
 import { getKubeAPIServiceAccountToken, getNamespace, initHTTPSTrustStore } from './kube'
 import {
     DockerApiResponse,
+    KubernetesApiError,
     KubernetesApiResponse,
     ManagementAppGetReadyStudiesResponse,
     isManagementAppGetReadyStudiesResponse,
@@ -116,6 +117,32 @@ export const toaSendLogs = async (jobId: string, logs: LogEntry[]) => {
 
     console.log(`TOA: Sending logs for job ${jobId} succeeded!`)
     return { success: true }
+}
+
+export const parseK8sResponse = (statusCode: number, data: string): KubernetesApiResponse => {
+    let body: unknown = undefined
+    if (data.length > 0) {
+        try {
+            body = JSON.parse(data)
+        } catch {
+            throw new Error(`Failed to parse JSON from K8s API (status ${statusCode}): ${data}`)
+        }
+    }
+
+    // A rejected request answers with a Status object. Match on `kind` as well, since a Job carries
+    // its own unrelated `status` field.
+    const isFailureStatus =
+        typeof body === 'object' &&
+        body !== null &&
+        (body as { kind?: unknown }).kind === 'Status' &&
+        (body as { status?: unknown }).status === 'Failure'
+
+    if (statusCode >= 400 || isFailureStatus) {
+        throw new KubernetesApiError(statusCode, body)
+    }
+
+    // A 2xx with no body (a 204, for instance) is a success, not a parse failure
+    return (body ?? {}) as KubernetesApiResponse
 }
 
 /* v8 ignore start */
@@ -247,9 +274,10 @@ export const k8sApiCall = (
 
             response.on('end', () => {
                 try {
-                    resolve(JSON.parse(data))
+                    // Fail closed if node somehow gave us no status
+                    resolve(parseK8sResponse(response.statusCode ?? 500, data))
                 } catch (error: unknown) {
-                    reject(new Error(`Failed to parse JSON: ${JSON.stringify(error)}`))
+                    reject(error)
                 }
             })
         })
