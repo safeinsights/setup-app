@@ -118,10 +118,26 @@ export const toaSendLogs = async (jobId: string, logs: LogEntry[]) => {
     return { success: true }
 }
 
+// images/create is the one endpoint whose credential the daemon forwards to a registry, and the one
+// whose target is supplied by the BMA
+const isImagePull = (path: string): boolean => path.replace(/^\//, '').startsWith('images/create')
+
 // The daemon speaks plain HTTP on the Unix socket, so TLS applies to TCP transport only
-export const resolveDockerTransport = (socketPath: string, protocol: string) => {
+export const resolveDockerTransport = (socketPath: string, protocol: string, path: string) => {
     const useSocket = hasReadWritePermissions(socketPath)
-    return { useSocket, useTls: !useSocket && protocol !== 'http' }
+    const useTls = !useSocket && protocol !== 'http'
+
+    if (!useSocket && !useTls && process.env.DOCKER_API_ALLOW_INSECURE_HTTP !== 'true') {
+        throw new Error(
+            'Refusing to reach the Docker Engine API over plaintext TCP. Mount the socket at DOCKER_SOCKET, ' +
+                'set DOCKER_API_PROTOCOL=https, or set DOCKER_API_ALLOW_INSECURE_HTTP=true to override.',
+        )
+    }
+    if (!useSocket && !useTls) {
+        console.warn('Reaching the Docker Engine API over plaintext TCP; registry credentials will be withheld')
+    }
+
+    return { useSocket, useTls, sendRegistryAuth: isImagePull(path) && (useSocket || useTls) }
 }
 
 /* v8 ignore start */
@@ -154,10 +170,12 @@ export const dockerApiCall = async (
         socketPath: undefined,
         headers: {
             'Content-Type': 'application/json',
-            'X-Registry-Auth': process.env.DOCKER_REGISTRY_AUTH ?? '',
         },
     }
-    const { useSocket, useTls } = resolveDockerTransport(socketPath, protocol)
+    const { useSocket, useTls, sendRegistryAuth } = resolveDockerTransport(socketPath, protocol, path)
+    if (sendRegistryAuth) {
+        options.headers['X-Registry-Auth'] = process.env.DOCKER_REGISTRY_AUTH ?? ''
+    }
     if (useSocket) {
         options.socketPath = socketPath
         console.log(`Using the Docker socket at ${socketPath}`)

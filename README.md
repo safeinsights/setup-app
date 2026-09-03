@@ -67,8 +67,9 @@ To start the Setup app using Docker, the following environment variables must be
 - `DOCKER_API_HOST`: Specifies the host where the Docker Engine API is available. Only used when the socket is unavailable.
 - `DOCKER_API_PORT`: Indicates the port where the Docker Engine API is exposed. Only used when the socket is unavailable.
 - `DOCKER_API_PROTOCOL`: `http` or `https`, defaulting to `https`. Only applies to TCP; socket connections are always plain HTTP, which is what the daemon speaks there.
+- `DOCKER_API_ALLOW_INSECURE_HTTP`: Set to `true` to permit plaintext TCP. Without it, an `http` TCP connection is refused rather than sending traffic in the clear. Registry credentials are withheld on plaintext TCP either way.
 - `DOCKER_API_VERSION`: Specifies the version of the Docker Engine API to use when building URLs for REST requests.
-- `DOCKER_REGISTRY_AUTH`: A base64-encoded value used to authenticate against private registries. More details could be found [here](https://docs.docker.com/reference/api/engine/version/v1.48/#section/Authentication)
+- `DOCKER_REGISTRY_AUTH`: A base64-encoded value used to authenticate against private registries. More details could be found [here](https://docs.docker.com/reference/api/engine/version/v1.48/#section/Authentication). Sent only when pulling an image, since the daemon forwards it to whatever registry the image location resolves to.
 
 #### Reaching the Docker Engine API over TCP (Development)
 
