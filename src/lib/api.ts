@@ -9,7 +9,7 @@ import {
     ManagementAppGetReadyStudiesResponse,
     isManagementAppGetReadyStudiesResponse,
 } from './types'
-import { hasReadPermissions } from './utils'
+import { hasReadWritePermissions } from './utils'
 
 // Functions for interacting with the Management App
 const generateManagementAppToken = (): string => {
@@ -118,6 +118,12 @@ export const toaSendLogs = async (jobId: string, logs: LogEntry[]) => {
     return { success: true }
 }
 
+// The daemon speaks plain HTTP on the Unix socket, so TLS applies to TCP transport only
+export const resolveDockerTransport = (socketPath: string, protocol: string) => {
+    const useSocket = hasReadWritePermissions(socketPath)
+    return { useSocket, useTls: !useSocket && protocol !== 'http' }
+}
+
 /* v8 ignore start */
 export const dockerApiCall = async (
     method: string,
@@ -151,24 +157,19 @@ export const dockerApiCall = async (
             'X-Registry-Auth': process.env.DOCKER_REGISTRY_AUTH ?? '',
         },
     }
-    let msg: string = ''
-    const canReadDockerSock = hasReadPermissions(socketPath, (error: Error | null) => {
-        if (error) {
-            msg = `Error Accessing file ${socketPath}. Cause: ${JSON.stringify(error)}`
-        } else {
-            msg = `The Docker socket was found with sufficient permissions at: ${socketPath}`
-        }
-    })
-    if (canReadDockerSock) {
+    const { useSocket, useTls } = resolveDockerTransport(socketPath, protocol)
+    if (useSocket) {
         options.socketPath = socketPath
+        console.log(`Using the Docker socket at ${socketPath}`)
+    } else {
+        console.log(`Docker socket at ${socketPath} is not readable, falling back to TCP`)
     }
-    console.log(`${msg}`)
     if (method.toUpperCase() === 'POST' && body) {
         console.log(`Sending POST request to Docker API with body: ${JSON.stringify(body)}`)
         options.headers['Content-Length'] = Buffer.byteLength(JSON.stringify(body)).toString()
     }
     return new Promise((resolve, reject) => {
-        const req = (protocol === 'http' ? http : https).request(options, (response) => {
+        const req = (useTls ? https : http).request(options, (response) => {
             let data = ''
 
             response.on('data', (chunk) => {

@@ -1,6 +1,16 @@
 import { describe, it, expect, vi } from 'vitest'
-import { managementAppGetReadyStudiesRequest, managementAppGetJobStatus, toaSendLogs, toaUpdateJobStatus } from './api'
+import path from 'path'
+import {
+    managementAppGetReadyStudiesRequest,
+    managementAppGetJobStatus,
+    resolveDockerTransport,
+    toaSendLogs,
+    toaUpdateJobStatus,
+} from './api'
 import jwt from 'jsonwebtoken'
+
+const READABLE_SOCKET = path.join(__dirname, '../../tests/docker/test.sock')
+const MISSING_SOCKET = '/nonexistent/docker.sock'
 
 describe('managementAppGetReadyStudiesRequest', () => {
     it('should generate a token and make a GET request', async () => {
@@ -147,5 +157,19 @@ describe('toaSendLogs', () => {
         const result = await toaSendLogs('jobId456', mockLogs)
 
         expect(result).toEqual({ success: false })
+    })
+})
+
+describe('resolveDockerTransport', () => {
+    it('uses the socket when it is readable, without TLS', () => {
+        expect(resolveDockerTransport(READABLE_SOCKET, 'https')).toEqual({ useSocket: true, useTls: false })
+    })
+
+    it('falls back to TLS over TCP when the socket is not readable', () => {
+        expect(resolveDockerTransport(MISSING_SOCKET, 'https')).toEqual({ useSocket: false, useTls: true })
+    })
+
+    it('falls back to plaintext TCP when configured for http', () => {
+        expect(resolveDockerTransport(MISSING_SOCKET, 'http')).toEqual({ useSocket: false, useTls: false })
     })
 })

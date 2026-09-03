@@ -63,15 +63,18 @@ The Setup App can be deployed in a Docker environment using the [docker-compose.
 To start the Setup app using Docker, the following environment variables must be set:
 
 - `DEPLOYMENT_ENVIRONMENT`: Set to `DOCKER` to indicate that the deployment is running in a Docker environment.
-- `DOCKER_SOCKET`: Points to the path where the `docker.sock` file is mounted. This socket is used to build REST API requests to the Docker Engine.
-- `DOCKER_API_HOST`: Specifies the host where the Docker Engine API is available.
-- `DOCKER_API_PORT`: Indicates the port where the Docker Engine API is exposed.
+- `DOCKER_SOCKET`: Points to the path where the `docker.sock` file is mounted. This socket is used to build REST API requests to the Docker Engine. When the process can read and write it, it is used in preference to TCP, and the `DOCKER_API_*` settings below are ignored. Note that a mounted socket is not necessarily usable: the container runs as `node`, so the socket's ownership on the host has to permit that.
+- `DOCKER_API_HOST`: Specifies the host where the Docker Engine API is available. Only used when the socket is unavailable.
+- `DOCKER_API_PORT`: Indicates the port where the Docker Engine API is exposed. Only used when the socket is unavailable.
+- `DOCKER_API_PROTOCOL`: `http` or `https`, defaulting to `https`. Only applies to TCP; socket connections are always plain HTTP, which is what the daemon speaks there.
 - `DOCKER_API_VERSION`: Specifies the version of the Docker Engine API to use when building URLs for REST requests.
 - `DOCKER_REGISTRY_AUTH`: A base64-encoded value used to authenticate against private registries. More details could be found [here](https://docs.docker.com/reference/api/engine/version/v1.48/#section/Authentication)
 
-#### Enabling the Docker Engine API (Development)
+#### Reaching the Docker Engine API over TCP (Development)
 
-To access the Docker Engine API, you need to enable it. The process varies depending on your environment:
+Mounting the socket at `DOCKER_SOCKET` is the preferred way to reach the daemon, and is what `docker-compose.yml` does. The following is only needed on hosts where the socket cannot be mounted or read.
+
+Note that an unauthenticated Docker Engine API on a TCP port grants root-equivalent access to the host, so it should never be exposed beyond localhost.
 
 **Mac OS:**
 
