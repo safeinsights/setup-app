@@ -110,6 +110,42 @@ describe('runStudies()', () => {
         })
     })
 
+    it('reports a failed job and continues launching the rest of the cycle', async () => {
+        const mockToaUpdateJobStatus = vi.mocked(api.toaUpdateJobStatus)
+
+        // Fail the middle job only, so we cover both a preceding and a following job
+        vi.mocked(aws.registerECSTaskDefinition).mockImplementation(
+            async (_client, _baseTaskDefinition, familyName: string) => {
+                if (familyName.includes('running-in-AWS-env')) {
+                    throw new Error('AWS throttled RegisterTaskDefinition')
+                }
+                return {
+                    $metadata: {},
+                    taskDefinition: {
+                        family: `${familyName}-registered`,
+                    },
+                }
+            },
+        )
+
+        await expect(runAWSStudies({ ignoreAWSJobs: true })).resolves.toBeUndefined()
+
+        // The jobs either side of the failure still launched
+        const runECSFargateTaskCalls = vi.mocked(aws.runECSFargateTask).mock.calls
+        expect(runECSFargateTaskCalls.length).toBe(2)
+        expect(runECSFargateTaskCalls[0]).toContain('MOCK_BASE_TASK_DEF_FAMILY-to-be-run-1-registered')
+        expect(runECSFargateTaskCalls[1]).toContain('MOCK_BASE_TASK_DEF_FAMILY-to-be-run-2-registered')
+
+        // The failure is reported to the TOA without leaking the AWS message
+        expect(mockToaUpdateJobStatus).toHaveBeenCalledTimes(3)
+        expect(mockToaUpdateJobStatus).toHaveBeenNthCalledWith(1, 'to-be-run-1', { status: 'JOB-PROVISIONING' })
+        expect(mockToaUpdateJobStatus).toHaveBeenNthCalledWith(2, 'running-in-AWS-env', {
+            status: 'JOB-ERRORED',
+            message: 'Failed to launch job',
+        })
+        expect(mockToaUpdateJobStatus).toHaveBeenNthCalledWith(3, 'to-be-run-2', { status: 'JOB-PROVISIONING' })
+    })
+
     it('ignores AWS jobs if ignoreAWS set to true', async () => {
         await runAWSStudies({ ignoreAWSJobs: true })
 
