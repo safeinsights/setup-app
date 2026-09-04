@@ -145,13 +145,54 @@ export const parseK8sResponse = (statusCode: number, data: string): KubernetesAp
     return (body ?? {}) as KubernetesApiResponse
 }
 
+// Caps what a failed job can push through the TOA, the enclave's only egress. The ECS path is
+// unbounded by comparison, but the research container is untrusted.
+const MAX_LOG_LINES = 10_000
+
+// Docker multiplexes stdout and stderr into a single stream when the container has no TTY, which is
+// how research containers are created. Each frame is an 8 byte header — byte 0 the stream type, bytes
+// 4-7 a big-endian payload length — followed by the payload.
+export const demultiplexDockerLogStream = (stream: Buffer): string => {
+    const payloads: string[] = []
+    let offset = 0
+    while (offset + 8 <= stream.length) {
+        const size = stream.readUInt32BE(offset + 4)
+        payloads.push(stream.subarray(offset + 8, offset + 8 + size).toString('utf8'))
+        offset += 8 + size
+    }
+    return payloads.join('')
+}
+
+// Both the Docker and Kubernetes log endpoints prefix each line with an RFC3339Nano timestamp
+export const parseTimestampedLogLines = (text: string): LogEntry[] =>
+    text
+        .split('\n')
+        .filter((line) => line.trim().length > 0)
+        .map((line) => {
+            const [stamp, ...rest] = line.split(' ')
+            // Date cannot parse sub-millisecond precision
+            const timestamp = Date.parse(stamp.replace(/(\.\d{3})\d+/, '$1'))
+            if (Number.isNaN(timestamp)) {
+                return { timestamp: 0, message: line }
+            }
+            return { timestamp, message: rest.join(' ') }
+        })
+
 /* v8 ignore start */
-export const dockerApiCall = async (
-    method: string,
-    path: string,
-    body?: unknown,
-    ignoreResponse: boolean = false,
-): Promise<DockerApiResponse> => {
+type DockerRequest = {
+    protocol: string
+    options: {
+        hostname: string
+        port: number | undefined
+        path: string
+        method: string
+        socketPath: string | undefined
+        headers: { [key: string]: string }
+    }
+}
+
+// Shared by dockerApiCall and dockerGetContainerLogs so both reach the daemon the same way
+const buildDockerRequest = (method: string, path: string): DockerRequest => {
     const protocol = process.env.DOCKER_API_PROTOCOL ?? 'https'
     const host = process.env.DOCKER_API_HOST ?? 'localhost'
     const port = process.env.DOCKER_API_PORT ?? 443
@@ -160,14 +201,7 @@ export const dockerApiCall = async (
     path = path.startsWith('/') ? path : `/${path}`
     const url = new URL(`${protocol}://${host}:${port}/${apiVersion}${path}`)
     console.log(`Connecting to docker Engine API: ${url.toString()}`)
-    const options: {
-        hostname: string
-        port: number | undefined
-        path: string
-        method: string
-        socketPath: string | undefined
-        headers: { [key: string]: string }
-    } = {
+    const options: DockerRequest['options'] = {
         hostname: url.hostname,
         port: url.port ? parseInt(url.port, 10) : 443,
         path: url.pathname + url.search,
@@ -190,6 +224,41 @@ export const dockerApiCall = async (
         options.socketPath = socketPath
     }
     console.log(`${msg}`)
+    return { protocol, options }
+}
+
+// Reads a response body as bytes, for endpoints that do not return JSON
+const readRawResponse = (transport: typeof http | typeof https, options: object): Promise<Buffer> =>
+    new Promise((resolve, reject) => {
+        const req = transport.request(options, (response) => {
+            const chunks: Buffer[] = []
+            response.on('data', (chunk) => chunks.push(chunk))
+            response.on('end', () => {
+                if ((response.statusCode ?? 500) >= 400) {
+                    reject(new Error(`Log request failed with ${response.statusCode}`))
+                    return
+                }
+                resolve(Buffer.concat(chunks))
+            })
+        })
+        req.on('error', reject)
+        req.end()
+    })
+
+export const dockerGetContainerLogs = async (containerId: string): Promise<LogEntry[]> => {
+    const query = `stdout=1&stderr=1&timestamps=1&tail=${MAX_LOG_LINES}`
+    const { protocol, options } = buildDockerRequest('GET', `containers/${containerId}/logs?${query}`)
+    const stream = await readRawResponse(protocol === 'http' ? http : https, options)
+    return parseTimestampedLogLines(demultiplexDockerLogStream(stream))
+}
+
+export const dockerApiCall = async (
+    method: string,
+    path: string,
+    body?: unknown,
+    ignoreResponse: boolean = false,
+): Promise<DockerApiResponse> => {
+    const { protocol, options } = buildDockerRequest(method, path)
     if (method.toUpperCase() === 'POST' && body) {
         console.log(`Sending POST request to Docker API with body: ${JSON.stringify(body)}`)
         options.headers['Content-Length'] = Buffer.byteLength(JSON.stringify(body)).toString()
@@ -229,12 +298,16 @@ export const dockerApiCall = async (
     })
 }
 
-export const k8sApiCall = (
-    group: string | undefined,
-    path: string,
-    method: string,
-    body?: unknown,
-): Promise<KubernetesApiResponse> => {
+type K8sOptions = {
+    hostname: string
+    port: number | undefined
+    path: string
+    method: string
+    headers: { [key: string]: string }
+}
+
+// Shared by k8sApiCall and k8sGetPodLogs
+const buildK8sRequest = (group: string | undefined, path: string, method: string): K8sOptions => {
     const namespace = getNamespace()
     const kubeAPIServer = process.env.K8S_APISERVER || `https://kubernetes.default.svc.cluster.local`
     const apiPrefix = group === undefined ? 'api' : `apis/${group}`
@@ -243,13 +316,7 @@ export const k8sApiCall = (
     initHTTPSTrustStore()
     console.log(`K8s: Making ${method} => ${kubeAPIServerURL}`)
     const url = new URL(kubeAPIServerURL)
-    const options: {
-        hostname: string
-        port: number | undefined
-        path: string
-        method: string
-        headers: { [key: string]: string }
-    } = {
+    return {
         hostname: url.hostname,
         port: url.port ? parseInt(url.port, 10) : 443,
         path: url.pathname + url.search,
@@ -259,6 +326,22 @@ export const k8sApiCall = (
             Authorization: `Bearer ${kubeAPIServerAccountToken}`,
         },
     }
+}
+
+export const k8sGetPodLogs = async (podName: string, containerName: string): Promise<LogEntry[]> => {
+    const query = `container=${containerName}&timestamps=true&tailLines=${MAX_LOG_LINES}`
+    const options = buildK8sRequest(undefined, `pods/${podName}/log?${query}`, 'GET')
+    const body = await readRawResponse(https, options)
+    return parseTimestampedLogLines(body.toString('utf8'))
+}
+
+export const k8sApiCall = (
+    group: string | undefined,
+    path: string,
+    method: string,
+    body?: unknown,
+): Promise<KubernetesApiResponse> => {
+    const options = buildK8sRequest(group, path, method)
 
     if (method.toUpperCase() === 'POST' && body) {
         options.headers['Content-Length'] = Buffer.byteLength(JSON.stringify(body)).toString()

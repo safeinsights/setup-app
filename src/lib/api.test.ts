@@ -1,8 +1,10 @@
 import { describe, it, expect, vi } from 'vitest'
 import {
+    demultiplexDockerLogStream,
     managementAppGetReadyStudiesRequest,
     managementAppGetJobStatus,
     parseK8sResponse,
+    parseTimestampedLogLines,
     toaSendLogs,
     toaUpdateJobStatus,
 } from './api'
@@ -203,5 +205,60 @@ describe('parseK8sResponse', () => {
 
     it('throws a parse error for an unparseable body', () => {
         expect(() => parseK8sResponse(200, '<html>gateway timeout</html>')).toThrow('Failed to parse JSON')
+    })
+})
+
+const dockerLogFrame = (streamType: number, payload: string): Buffer => {
+    const body = Buffer.from(payload, 'utf8')
+    const header = Buffer.alloc(8)
+    header.writeUInt8(streamType, 0)
+    header.writeUInt32BE(body.length, 4)
+    return Buffer.concat([header, body])
+}
+
+describe('demultiplexDockerLogStream', () => {
+    it('concatenates the payloads of stdout and stderr frames', () => {
+        const stream = Buffer.concat([dockerLogFrame(1, 'out\n'), dockerLogFrame(2, 'err\n')])
+
+        expect(demultiplexDockerLogStream(stream)).toBe('out\nerr\n')
+    })
+
+    it('returns an empty string for an empty stream', () => {
+        expect(demultiplexDockerLogStream(Buffer.alloc(0))).toBe('')
+    })
+
+    it('ignores a trailing partial header', () => {
+        const stream = Buffer.concat([dockerLogFrame(1, 'out\n'), Buffer.alloc(5)])
+
+        expect(demultiplexDockerLogStream(stream)).toBe('out\n')
+    })
+})
+
+describe('parseTimestampedLogLines', () => {
+    it('splits the RFC3339 timestamp from the message', () => {
+        const text = '2026-09-04T12:34:56.789012345Z first line\n2026-09-04T12:34:57.100000000Z second line\n'
+
+        expect(parseTimestampedLogLines(text)).toEqual([
+            { timestamp: Date.parse('2026-09-04T12:34:56.789Z'), message: 'first line' },
+            { timestamp: Date.parse('2026-09-04T12:34:57.100Z'), message: 'second line' },
+        ])
+    })
+
+    it('keeps a message containing spaces intact', () => {
+        const text = '2026-09-04T12:34:56.789Z Error: something went wrong'
+
+        expect(parseTimestampedLogLines(text)).toEqual([
+            { timestamp: Date.parse('2026-09-04T12:34:56.789Z'), message: 'Error: something went wrong' },
+        ])
+    })
+
+    it('drops blank lines', () => {
+        expect(parseTimestampedLogLines('\n   \n')).toEqual([])
+    })
+
+    it('keeps the whole line when there is no parseable timestamp', () => {
+        expect(parseTimestampedLogLines('not a timestamped line')).toEqual([
+            { timestamp: 0, message: 'not a timestamped line' },
+        ])
     })
 })

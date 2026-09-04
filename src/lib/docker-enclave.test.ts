@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as api from './api'
 import * as docker from './docker'
 import { DockerEnclave } from './docker-enclave'
@@ -372,11 +372,10 @@ describe('DockerEnclave', () => {
         await expect(enclave.launchStudy(job, job.toaEndpointWithJobId)).rejects.toThrow(error)
     })
 
-    it('checkForErroredJobs', async () => {
-        const enclave = new DockerEnclave()
+    describe('checkForErroredJobs', () => {
         const failedContainer = {
             Id: '1234567890',
-            Image: 'test',
+            Image: 'test/container-1',
             Names: ['research-container-1234567890'],
             ImageID: 'sha256:1234567890',
             Command: 'test/container-1',
@@ -404,19 +403,51 @@ describe('DockerEnclave', () => {
                 Error: 'error',
             },
         }
-        const mockUpdateJobStatus = vi.mocked(api.toaUpdateJobStatus)
-        const dockerApiCall = vi
-            .mocked(api.dockerApiCall)
-            .mockResolvedValueOnce([failedContainer])
-            .mockResolvedValueOnce(detailedContainerStatus)
-        vi.mocked(docker.filterContainers).mockReturnValue([failedContainer])
-        await enclave.checkForErroredJobs()
-        expect(dockerApiCall).toHaveBeenCalledTimes(2)
-        expect(dockerApiCall).toHaveBeenCalledWith('GET', `containers/json?all=true`)
-        expect(dockerApiCall).toHaveBeenCalledWith('GET', `containers/1234567890/json`)
-        expect(mockUpdateJobStatus).nthCalledWith(1, '1234567890', {
-            status: 'JOB-ERRORED',
-            message: 'Container 1234567890 exited with message: error',
+        const testLogs = [{ timestamp: 42, message: 'boom' }]
+
+        beforeEach(() => {
+            vi.mocked(api.dockerApiCall)
+                .mockResolvedValueOnce([failedContainer])
+                .mockResolvedValueOnce(detailedContainerStatus)
+            vi.mocked(docker.filterContainers).mockReturnValue([failedContainer])
+            vi.mocked(api.dockerGetContainerLogs).mockResolvedValue(testLogs)
+        })
+
+        it('reports the failure once, forwards the logs, then removes the container', async () => {
+            vi.mocked(api.managementAppGetJobStatus).mockResolvedValue({ status: 'JOB-RUNNING' })
+
+            await new DockerEnclave().checkForErroredJobs()
+
+            expect(api.toaUpdateJobStatus).toHaveBeenCalledWith('1234567890', {
+                status: 'JOB-ERRORED',
+                message: 'Container 1234567890 exited with message: error',
+            })
+            expect(api.toaSendLogs).toHaveBeenCalledWith('1234567890', testLogs)
+            expect(api.dockerApiCall).toHaveBeenCalledWith('DELETE', 'containers/1234567890')
+        })
+
+        it('removes the container without re-reporting when the BMA already has the failure', async () => {
+            vi.mocked(api.managementAppGetJobStatus).mockResolvedValue({ status: 'JOB-ERRORED' })
+
+            await new DockerEnclave().checkForErroredJobs()
+
+            expect(api.toaUpdateJobStatus).not.toHaveBeenCalled()
+            expect(api.toaSendLogs).not.toHaveBeenCalled()
+            expect(api.dockerApiCall).toHaveBeenCalledWith('DELETE', 'containers/1234567890')
+        })
+
+        it('still reports and removes when log retrieval fails', async () => {
+            vi.mocked(api.managementAppGetJobStatus).mockResolvedValue({ status: 'JOB-RUNNING' })
+            vi.mocked(api.dockerGetContainerLogs).mockRejectedValue(new Error('no such container'))
+
+            await new DockerEnclave().checkForErroredJobs()
+
+            expect(api.toaUpdateJobStatus).toHaveBeenCalledWith('1234567890', {
+                status: 'JOB-ERRORED',
+                message: 'Container 1234567890 exited with message: error',
+            })
+            expect(api.toaSendLogs).not.toHaveBeenCalled()
+            expect(api.dockerApiCall).toHaveBeenCalledWith('DELETE', 'containers/1234567890')
         })
     })
 })
