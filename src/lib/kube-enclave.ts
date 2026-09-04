@@ -1,4 +1,4 @@
-import { k8sApiCall, toaUpdateJobStatus } from './api'
+import { k8sApiCall, k8sGetPodLogs, managementAppGetJobStatus, toaSendLogs, toaUpdateJobStatus } from './api'
 import { Enclave, IEnclave } from './enclave'
 import { createKubernetesJob, filterDeployments } from './kube'
 import {
@@ -114,6 +114,15 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
             }
         }
     }
+    // Pod first then the owning Job, matching the order used in cleanup
+    async removeFailedJob(pod: KubernetesPod): Promise<void> {
+        await this.deleteIfPresent(undefined, `pods/${pod.metadata.name}`)
+        const jobName = pod.metadata?.labels?.[LABELS.JOB_NAME]
+        if (jobName) {
+            await this.deleteIfPresent('batch', `jobs/${jobName}`)
+        }
+    }
+
     async checkForErroredJobs(): Promise<void> {
         console.log('Checking environment for errored jobs')
         try {
@@ -141,12 +150,32 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
                         )
                     ) {
                         /* v8 ignore stop */
+                        const jobId = c.metadata?.labels?.instance.toString()
+
+                        // Report once. Without this the same failure is re-sent every cycle, and the
+                        // logs below are re-uploaded with it.
+                        const bmaStatus = await managementAppGetJobStatus(jobId)
+                        if (bmaStatus.status === 'JOB-ERRORED') {
+                            console.log(`Job ${jobId} is already ${bmaStatus.status} in the BMA, removing the pod`)
+                            await this.removeFailedJob(c)
+                            continue
+                        }
+
                         const errorMsg = `Container ${c.metadata.name} exited with non 0 error code`
                         console.log(errorMsg)
-                        await toaUpdateJobStatus(c.metadata?.labels?.instance.toString(), {
-                            status: 'JOB-ERRORED',
-                            message: errorMsg,
-                        })
+                        await toaUpdateJobStatus(jobId, { status: 'JOB-ERRORED', message: errorMsg })
+
+                        // Must happen before the pod is deleted, and must not prevent deletion
+                        try {
+                            await toaSendLogs(
+                                jobId,
+                                await k8sGetPodLogs(c.metadata.name, `research-container-${jobId}`),
+                            )
+                        } catch (error: unknown) {
+                            console.error(`Failed to send logs for job ${jobId}. Cause: ${error}`)
+                        }
+
+                        await this.removeFailedJob(c)
                     }
                 }
             }
