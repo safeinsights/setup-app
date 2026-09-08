@@ -87,6 +87,7 @@ describe('registerECSTaskDefinition', () => {
             cpu: 'testCPU',
             memory: 'testMemory',
             requiresCompatibilities: undefined,
+            volumes: undefined,
             tags: testTags,
         }
         ecsMockClient.on(RegisterTaskDefinitionCommand, expectedCommandInput).resolves({})
