@@ -1,1 +1,10 @@
-deploy
+node_modules
+.*
+local
+docker-compose.yml
+eslint.config.mjs
+vitest.config.mjs
+sonar-project.properties
+trivy.yaml
+tests
+**/*.test.ts

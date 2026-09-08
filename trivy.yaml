@@ -15,8 +15,6 @@ scan:
         - .git
         - .husky
         - node_modules
-    skip-files:
-        - .env
 misconfiguration:
     scanners:
         - dockerfile

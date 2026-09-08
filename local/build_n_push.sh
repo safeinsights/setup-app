@@ -13,4 +13,5 @@ docker buildx build  -t harbor.safeinsights.org/openstax/code-builds/dev:$JOB_ID
 
 ### Example of use case
 
+# cp local/docker-auth.local.example local/docker-auth.local  # then fill in your Harbor credentials
 # ./local/build_n_push.sh local/docker-auth.local 01973642-3c76-7540-b474-6b62b6151246
