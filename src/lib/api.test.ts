@@ -1,6 +1,16 @@
 import { describe, it, expect, vi } from 'vitest'
-import { managementAppGetReadyStudiesRequest, managementAppGetJobStatus, toaSendLogs, toaUpdateJobStatus } from './api'
+import path from 'path'
+import {
+    managementAppGetReadyStudiesRequest,
+    managementAppGetJobStatus,
+    resolveDockerTransport,
+    toaSendLogs,
+    toaUpdateJobStatus,
+} from './api'
 import jwt from 'jsonwebtoken'
+
+const READABLE_SOCKET = path.join(__dirname, '../../tests/docker/test.sock')
+const MISSING_SOCKET = '/nonexistent/docker.sock'
 
 describe('managementAppGetReadyStudiesRequest', () => {
     it('should generate a token and make a GET request', async () => {
@@ -147,5 +157,50 @@ describe('toaSendLogs', () => {
         const result = await toaSendLogs('jobId456', mockLogs)
 
         expect(result).toEqual({ success: false })
+    })
+})
+
+describe('resolveDockerTransport', () => {
+    const PULL = 'images/create?fromImage=repo/image:tag'
+    const CREATE = 'containers/create?name=rc-jobId1'
+
+    it('uses the socket when it is readable, without TLS', () => {
+        expect(resolveDockerTransport(READABLE_SOCKET, 'https', CREATE)).toMatchObject({
+            useSocket: true,
+            useTls: false,
+        })
+    })
+
+    it('falls back to TLS over TCP when the socket is not readable', () => {
+        expect(resolveDockerTransport(MISSING_SOCKET, 'https', CREATE)).toMatchObject({
+            useSocket: false,
+            useTls: true,
+        })
+    })
+
+    it('sends registry credentials only when pulling an image', () => {
+        expect(resolveDockerTransport(READABLE_SOCKET, 'https', PULL).sendRegistryAuth).toBe(true)
+        expect(resolveDockerTransport(MISSING_SOCKET, 'https', PULL).sendRegistryAuth).toBe(true)
+        expect(resolveDockerTransport(READABLE_SOCKET, 'https', CREATE).sendRegistryAuth).toBe(false)
+    })
+
+    it('tolerates a leading slash on the path', () => {
+        expect(resolveDockerTransport(READABLE_SOCKET, 'https', `/${PULL}`).sendRegistryAuth).toBe(true)
+    })
+
+    it('refuses plaintext TCP without an explicit opt-in', () => {
+        expect(() => resolveDockerTransport(MISSING_SOCKET, 'http', CREATE)).toThrow(
+            'Refusing to reach the Docker Engine API over plaintext TCP',
+        )
+    })
+
+    it('allows plaintext TCP when opted in, but withholds registry credentials', () => {
+        process.env.DOCKER_API_ALLOW_INSECURE_HTTP = 'true'
+
+        expect(resolveDockerTransport(MISSING_SOCKET, 'http', PULL)).toEqual({
+            useSocket: false,
+            useTls: false,
+            sendRegistryAuth: false,
+        })
     })
 })

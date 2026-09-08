@@ -9,7 +9,7 @@ import {
     ManagementAppGetReadyStudiesResponse,
     isManagementAppGetReadyStudiesResponse,
 } from './types'
-import { hasReadPermissions } from './utils'
+import { hasReadWritePermissions } from './utils'
 
 // Functions for interacting with the Management App
 const generateManagementAppToken = (): string => {
@@ -118,6 +118,28 @@ export const toaSendLogs = async (jobId: string, logs: LogEntry[]) => {
     return { success: true }
 }
 
+// images/create is the one endpoint whose credential the daemon forwards to a registry, and the one
+// whose target is supplied by the BMA
+const isImagePull = (path: string): boolean => path.replace(/^\//, '').startsWith('images/create')
+
+// The daemon speaks plain HTTP on the Unix socket, so TLS applies to TCP transport only
+export const resolveDockerTransport = (socketPath: string, protocol: string, path: string) => {
+    const useSocket = hasReadWritePermissions(socketPath)
+    const useTls = !useSocket && protocol !== 'http'
+
+    if (!useSocket && !useTls && process.env.DOCKER_API_ALLOW_INSECURE_HTTP !== 'true') {
+        throw new Error(
+            'Refusing to reach the Docker Engine API over plaintext TCP. Mount the socket at DOCKER_SOCKET, ' +
+                'set DOCKER_API_PROTOCOL=https, or set DOCKER_API_ALLOW_INSECURE_HTTP=true to override.',
+        )
+    }
+    if (!useSocket && !useTls) {
+        console.warn('Reaching the Docker Engine API over plaintext TCP; registry credentials will be withheld')
+    }
+
+    return { useSocket, useTls, sendRegistryAuth: isImagePull(path) && (useSocket || useTls) }
+}
+
 /* v8 ignore start */
 export const dockerApiCall = async (
     method: string,
@@ -148,27 +170,24 @@ export const dockerApiCall = async (
         socketPath: undefined,
         headers: {
             'Content-Type': 'application/json',
-            'X-Registry-Auth': process.env.DOCKER_REGISTRY_AUTH ?? '',
         },
     }
-    let msg: string = ''
-    const canReadDockerSock = hasReadPermissions(socketPath, (error: Error | null) => {
-        if (error) {
-            msg = `Error Accessing file ${socketPath}. Cause: ${JSON.stringify(error)}`
-        } else {
-            msg = `The Docker socket was found with sufficient permissions at: ${socketPath}`
-        }
-    })
-    if (canReadDockerSock) {
-        options.socketPath = socketPath
+    const { useSocket, useTls, sendRegistryAuth } = resolveDockerTransport(socketPath, protocol, path)
+    if (sendRegistryAuth) {
+        options.headers['X-Registry-Auth'] = process.env.DOCKER_REGISTRY_AUTH ?? ''
     }
-    console.log(`${msg}`)
+    if (useSocket) {
+        options.socketPath = socketPath
+        console.log(`Using the Docker socket at ${socketPath}`)
+    } else {
+        console.log(`Docker socket at ${socketPath} is not readable, falling back to TCP`)
+    }
     if (method.toUpperCase() === 'POST' && body) {
         console.log(`Sending POST request to Docker API with body: ${JSON.stringify(body)}`)
         options.headers['Content-Length'] = Buffer.byteLength(JSON.stringify(body)).toString()
     }
     return new Promise((resolve, reject) => {
-        const req = (protocol === 'http' ? http : https).request(options, (response) => {
+        const req = (useTls ? https : http).request(options, (response) => {
             let data = ''
 
             response.on('data', (chunk) => {

@@ -1,9 +1,13 @@
 import { ResourceTagMapping } from '@aws-sdk/client-resource-groups-tagging-api'
 import { describe, expect, it } from 'vitest'
+import fs from 'fs'
+import os from 'os'
+import path from 'path'
 import {
     ensureValueWithError,
     filterManagementAppJobs,
     filterOrphanTaskDefinitions,
+    hasReadWritePermissions,
     toManagementAppTagValue,
     sanitize,
 } from '../lib/utils'
@@ -173,5 +177,28 @@ describe('sanitize()', () => {
         const input = '😀 hello 🌍!'
         const expected = '_hello_'
         expect(sanitize(input)).toBe(expected)
+    })
+})
+
+describe('hasReadWritePermissions', () => {
+    it('returns true for a file the process can read and write', () => {
+        expect(hasReadWritePermissions(path.join(__dirname, '../../tests/service-account-files/token'))).toBe(true)
+    })
+
+    it('returns false when the file does not exist', () => {
+        expect(hasReadWritePermissions('/nonexistent/docker.sock')).toBe(false)
+    })
+
+    // Root bypasses the permission bits, so this can only be asserted as an unprivileged user
+    it.skipIf(process.getuid?.() === 0)('returns false for a readable file that cannot be written', () => {
+        const readOnly = path.join(os.tmpdir(), `setup-app-readonly-${process.pid}`)
+        fs.writeFileSync(readOnly, '')
+        fs.chmodSync(readOnly, 0o444)
+
+        try {
+            expect(hasReadWritePermissions(readOnly)).toBe(false)
+        } finally {
+            fs.unlinkSync(readOnly)
+        }
     })
 })
