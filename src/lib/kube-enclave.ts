@@ -3,6 +3,7 @@ import { Enclave, IEnclave } from './enclave'
 import { createKubernetesJob, filterDeployments } from './kube'
 import {
     CONTAINER_TYPES,
+    KubernetesApiError,
     KubernetesApiJobsResponse,
     KubernetesApiResponse,
     KubernetesJob,
@@ -38,15 +39,9 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
     }
 
     async getAllStudiesInEnclave(): Promise<KubernetesJob[]> {
-        try {
-            const jobs: KubernetesApiResponse = (await k8sApiCall('batch', 'jobs', 'GET')) as KubernetesApiJobsResponse
-            console.log(`Pulled the following ${jobs?.items?.length} jobs.`)
-            return jobs.items.flatMap((j) => j as KubernetesJob)
-        } catch (error: unknown) {
-            const err = error as Error & { cause: string }
-            console.error(`Error getting jobs. Please check the logs for more details. Cause: ${err['cause']}`)
-        }
-        return []
+        const jobs: KubernetesApiResponse = (await k8sApiCall('batch', 'jobs', 'GET')) as KubernetesApiJobsResponse
+        console.log(`Pulled the following ${jobs?.items?.length} jobs.`)
+        return jobs.items.flatMap((j) => j as KubernetesJob)
     }
 
     async getDeployedStudies(): Promise<KubernetesJob[]> {
@@ -65,17 +60,25 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
             const response: KubernetesApiResponse = await k8sApiCall('batch', 'jobs', 'POST', kubeJob)
             console.log(`${JSON.stringify(response)}`)
             console.log(`Successfully deployed ${job.title} with run id ${job.jobId}`)
-            /* v8 ignore start */
-            if (('status' in response && response['status'] === 'Failure') || !('status' in response)) {
-                console.error(`Failed to deploy study container`)
-            }
-            /* v8 ignore stop */
         } catch (error: unknown) {
-            const errMsg = `K8s API Call Error: Failed to deploy ${job.title} with run id ${job.jobId}. Cause: ${JSON.stringify(error)}`
+            const errMsg = `K8s API Call Error: Failed to deploy ${job.title} with run id ${job.jobId}. Cause: ${error}`
             console.error(errMsg)
             throw new Error(errMsg, { cause: error })
         }
     }
+
+    async deleteIfPresent(group: string | undefined, path: string): Promise<void> {
+        try {
+            await k8sApiCall(group, path, 'DELETE')
+        } catch (error: unknown) {
+            if (error instanceof KubernetesApiError && error.statusCode === 404) {
+                console.log(`Nothing to delete at ${path}, it is already gone`)
+                return
+            }
+            throw error
+        }
+    }
+
     async cleanup(): Promise<void> {
         console.log('Cleaning up the enclave!')
         const jobsInEnclave = await this.getAllStudiesInEnclave()
@@ -102,11 +105,11 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
                     if (jobContainers && jobContainers.length > 0) {
                         for (const c of jobContainers) {
                             console.log(`Deleting container: ${JSON.stringify(c.metadata.name)}`)
-                            await k8sApiCall(undefined, `pods/${c.metadata.name}`, 'DELETE')
+                            await this.deleteIfPresent(undefined, `pods/${c.metadata.name}`)
                         }
                     }
                     /* v8 ignore stop */
-                    await k8sApiCall('batch', `jobs/${job.metadata.name}`, `DELETE`)
+                    await this.deleteIfPresent('batch', `jobs/${job.metadata.name}`)
                 }
             }
         }

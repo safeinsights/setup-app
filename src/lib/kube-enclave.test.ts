@@ -6,6 +6,7 @@ import { createKubernetesJob } from './kube'
 import { KubernetesEnclave } from './kube-enclave'
 import {
     CONTAINER_TYPES,
+    KubernetesApiError,
     KubernetesApiJobsResponse,
     KubernetesJob,
     KubernetesPod,
@@ -15,6 +16,22 @@ import {
 
 vi.mock('./kube')
 vi.mock('./api')
+
+// A job cleanup will act on: managed by us, a research container, and finished successfully
+const completedJob = {
+    metadata: {
+        name: 'job-1',
+        namespace: 'ns',
+        labels: {
+            'managed-by': CONTAINER_TYPES.SETUP_APP,
+            component: CONTAINER_TYPES.RESEARCH_CONTAINER,
+            instance: '1234567890',
+        },
+    },
+    status: {
+        conditions: [{ type: 'Complete', status: 'True' }],
+    },
+} as unknown as KubernetesJob
 
 describe('KubernetesEnclave', () => {
     it('filterJobsInEnclave should return jobs that are not in the enclave', () => {
@@ -311,12 +328,11 @@ describe('KubernetesEnclave', () => {
         expect(jobs).toEqual([])
         expect(k8sApiCall).toHaveBeenCalledWith('batch', 'jobs', 'GET')
     })
-    it('getAllStudiesInEnclave: should return an empty array if an error occured', async () => {
-        const k8sApiCall = vi.mocked(api.k8sApiCall).mockRejectedValue(new Error('Error'))
+    it('getAllStudiesInEnclave: should propagate an error rather than reporting no jobs', async () => {
+        const k8sApiCall = vi.mocked(api.k8sApiCall).mockRejectedValue(new KubernetesApiError(500, { kind: 'Status' }))
         const enclave = new KubernetesEnclave()
-        const jobs = await enclave.getAllStudiesInEnclave()
 
-        expect(jobs).toEqual([])
+        await expect(enclave.getAllStudiesInEnclave()).rejects.toThrow(KubernetesApiError)
         expect(k8sApiCall).toHaveBeenCalledWith('batch', 'jobs', 'GET')
     })
     it('getAllStudiesInEnclave: should return a list of jobs if they exist', async () => {
@@ -433,6 +449,28 @@ describe('KubernetesEnclave', () => {
 
         await enclave.cleanup()
         expect(api.k8sApiCall).toBeCalledTimes(2)
+    })
+
+    it('cleanup: treats a 404 on delete as already done', async () => {
+        const enclave = new KubernetesEnclave()
+        vi.spyOn(enclave, 'getAllStudiesInEnclave').mockResolvedValue([completedJob])
+
+        vi.mocked(api.k8sApiCall)
+            .mockResolvedValueOnce({ items: [] }) // pods lookup
+            .mockRejectedValue(new KubernetesApiError(404, { kind: 'Status', status: 'Failure' }))
+
+        await expect(enclave.cleanup()).resolves.toBeUndefined()
+    })
+
+    it('cleanup: propagates a delete failure that is not a 404', async () => {
+        const enclave = new KubernetesEnclave()
+        vi.spyOn(enclave, 'getAllStudiesInEnclave').mockResolvedValue([completedJob])
+
+        vi.mocked(api.k8sApiCall)
+            .mockResolvedValueOnce({ items: [] }) // pods lookup
+            .mockRejectedValue(new KubernetesApiError(403, { kind: 'Status', status: 'Failure' }))
+
+        await expect(enclave.cleanup()).rejects.toThrow(KubernetesApiError)
     })
 
     it('cleanup: should not delete jobs that are not completed', async () => {
