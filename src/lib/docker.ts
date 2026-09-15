@@ -1,6 +1,6 @@
 import { dockerApiCall } from './api'
 import { CONTAINER_TYPES, DockerApiContainersResponse, DockerApiResponse } from './types'
-import { hasReadPermissions, sanitize } from './utils'
+import { sanitize } from './utils'
 
 async function pullContainer(imageLocation: string): Promise<DockerApiResponse> {
     const path = `images/create?fromImage=${imageLocation}`
@@ -66,4 +66,4 @@ function filterContainers(
     return []
 }
 
-export { createContainerObject, filterContainers, hasReadPermissions, pullContainer }
+export { createContainerObject, filterContainers, pullContainer }

@@ -58,23 +58,15 @@ export const ensureValueWithError = <T>(value: T | null | undefined, message?: s
     return value
 }
 
-/* v8 ignore start */
-export const hasReadPermissions = (
-    filePath: string,
-    callback: (error: Error | null, hasPermissions: boolean) => void,
-): boolean => {
-    let hasPermissions = false
-    fs.access(filePath, fs.constants.R_OK, (error) => {
-        if (error) {
-            callback(error, false)
-            hasPermissions = false
-        } else {
-            callback(null, true)
-        }
-    })
-    return hasPermissions
+// Connecting to a Unix socket needs write permission, not just read
+export const hasReadWritePermissions = (filePath: string): boolean => {
+    try {
+        fs.accessSync(filePath, fs.constants.R_OK | fs.constants.W_OK)
+        return true
+    } catch {
+        return false
+    }
 }
-/* v8 ignore end */
 
 export const sanitize = (input: string): string => {
     // \w is [A-Za-z0-9_], so anything NOT in that set is a “special” char.

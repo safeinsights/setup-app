@@ -10,7 +10,7 @@ import {
     ManagementAppGetReadyStudiesResponse,
     isManagementAppGetReadyStudiesResponse,
 } from './types'
-import { hasReadPermissions } from './utils'
+import { hasReadWritePermissions } from './utils'
 
 // Functions for interacting with the Management App
 const generateManagementAppToken = (): string => {
@@ -119,6 +119,28 @@ export const toaSendLogs = async (jobId: string, logs: LogEntry[]) => {
     return { success: true }
 }
 
+// images/create is the one endpoint whose credential the daemon forwards to a registry, and the one
+// whose target is supplied by the BMA
+const isImagePull = (path: string): boolean => path.replace(/^\//, '').startsWith('images/create')
+
+// The daemon speaks plain HTTP on the Unix socket, so TLS applies to TCP transport only
+export const resolveDockerTransport = (socketPath: string, protocol: string, path: string) => {
+    const useSocket = hasReadWritePermissions(socketPath)
+    const useTls = !useSocket && protocol !== 'http'
+
+    if (!useSocket && !useTls && process.env.DOCKER_API_ALLOW_INSECURE_HTTP !== 'true') {
+        throw new Error(
+            'Refusing to reach the Docker Engine API over plaintext TCP. Mount the socket at DOCKER_SOCKET, ' +
+                'set DOCKER_API_PROTOCOL=https, or set DOCKER_API_ALLOW_INSECURE_HTTP=true to override.',
+        )
+    }
+    if (!useSocket && !useTls) {
+        console.warn('Reaching the Docker Engine API over plaintext TCP; registry credentials will be withheld')
+    }
+
+    return { useSocket, useTls, sendRegistryAuth: isImagePull(path) && (useSocket || useTls) }
+}
+
 export const parseK8sResponse = (statusCode: number, data: string): KubernetesApiResponse => {
     let body: unknown = undefined
     if (data.length > 0) {
@@ -180,7 +202,7 @@ export const parseTimestampedLogLines = (text: string): LogEntry[] =>
 
 /* v8 ignore start */
 type DockerRequest = {
-    protocol: string
+    useTls: boolean
     options: {
         hostname: string
         port: number | undefined
@@ -209,22 +231,19 @@ const buildDockerRequest = (method: string, path: string): DockerRequest => {
         socketPath: undefined,
         headers: {
             'Content-Type': 'application/json',
-            'X-Registry-Auth': process.env.DOCKER_REGISTRY_AUTH ?? '',
         },
     }
-    let msg: string = ''
-    const canReadDockerSock = hasReadPermissions(socketPath, (error: Error | null) => {
-        if (error) {
-            msg = `Error Accessing file ${socketPath}. Cause: ${JSON.stringify(error)}`
-        } else {
-            msg = `The Docker socket was found with sufficient permissions at: ${socketPath}`
-        }
-    })
-    if (canReadDockerSock) {
-        options.socketPath = socketPath
+    const { useSocket, useTls, sendRegistryAuth } = resolveDockerTransport(socketPath, protocol, path)
+    if (sendRegistryAuth) {
+        options.headers['X-Registry-Auth'] = process.env.DOCKER_REGISTRY_AUTH ?? ''
     }
-    console.log(`${msg}`)
-    return { protocol, options }
+    if (useSocket) {
+        options.socketPath = socketPath
+        console.log(`Using the Docker socket at ${socketPath}`)
+    } else {
+        console.log(`Docker socket at ${socketPath} is not readable, falling back to TCP`)
+    }
+    return { useTls, options }
 }
 
 // Reads a response body as bytes, for endpoints that do not return JSON
@@ -247,8 +266,8 @@ const readRawResponse = (transport: typeof http | typeof https, options: object)
 
 export const dockerGetContainerLogs = async (containerId: string): Promise<LogEntry[]> => {
     const query = `stdout=1&stderr=1&timestamps=1&tail=${MAX_LOG_LINES}`
-    const { protocol, options } = buildDockerRequest('GET', `containers/${containerId}/logs?${query}`)
-    const stream = await readRawResponse(protocol === 'http' ? http : https, options)
+    const { useTls, options } = buildDockerRequest('GET', `containers/${containerId}/logs?${query}`)
+    const stream = await readRawResponse(useTls ? https : http, options)
     return parseTimestampedLogLines(demultiplexDockerLogStream(stream))
 }
 
@@ -258,13 +277,13 @@ export const dockerApiCall = async (
     body?: unknown,
     ignoreResponse: boolean = false,
 ): Promise<DockerApiResponse> => {
-    const { protocol, options } = buildDockerRequest(method, path)
+    const { useTls, options } = buildDockerRequest(method, path)
     if (method.toUpperCase() === 'POST' && body) {
         console.log(`Sending POST request to Docker API with body: ${JSON.stringify(body)}`)
         options.headers['Content-Length'] = Buffer.byteLength(JSON.stringify(body)).toString()
     }
     return new Promise((resolve, reject) => {
-        const req = (protocol === 'http' ? http : https).request(options, (response) => {
+        const req = (useTls ? https : http).request(options, (response) => {
             let data = ''
 
             response.on('data', (chunk) => {
