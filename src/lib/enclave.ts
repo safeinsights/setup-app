@@ -55,7 +55,12 @@ export class Enclave<T> implements IEnclave<T> {
 
             /* v8 ignore end */
         }
-        this.cleanup()
+
+        try {
+            await this.cleanup()
+        } catch (error: unknown) {
+            console.error(`ERROR :::: Error cleaning up the enclave. Cause: ${error}`)
+        }
     }
     // The following methods are individually tested in the derived classes
     /* v8 ignore start */

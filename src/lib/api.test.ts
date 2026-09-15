@@ -3,10 +3,12 @@ import path from 'path'
 import {
     managementAppGetReadyStudiesRequest,
     managementAppGetJobStatus,
+    parseK8sResponse,
     resolveDockerTransport,
     toaSendLogs,
     toaUpdateJobStatus,
 } from './api'
+import { KubernetesApiError } from './types'
 import jwt from 'jsonwebtoken'
 
 const READABLE_SOCKET = path.join(__dirname, '../../tests/docker/test.sock')
@@ -202,5 +204,54 @@ describe('resolveDockerTransport', () => {
             useTls: false,
             sendRegistryAuth: false,
         })
+    })
+})
+
+describe('parseK8sResponse', () => {
+    it('returns the parsed body for a success', () => {
+        const jobList = { kind: 'JobList', items: [{ metadata: { name: 'job-1' } }] }
+
+        expect(parseK8sResponse(200, JSON.stringify(jobList))).toEqual(jobList)
+    })
+
+    it('treats an empty body on a 2xx as a success', () => {
+        // A 204 carries no body; that is not a parse failure
+        expect(parseK8sResponse(204, '')).toEqual({})
+    })
+
+    it('throws with the status and body for a rejected request', () => {
+        const status = { kind: 'Status', status: 'Failure', code: 409, reason: 'AlreadyExists' }
+
+        try {
+            parseK8sResponse(409, JSON.stringify(status))
+            expect.unreachable('should have thrown')
+        } catch (error: unknown) {
+            expect(error).toBeInstanceOf(KubernetesApiError)
+            expect((error as KubernetesApiError).statusCode).toBe(409)
+            expect((error as KubernetesApiError).body).toEqual(status)
+        }
+    })
+
+    it('throws for a server error', () => {
+        expect(() => parseK8sResponse(500, JSON.stringify({ kind: 'Status', message: 'boom' }))).toThrow(
+            KubernetesApiError,
+        )
+    })
+
+    it('throws for a Failure Status even when the HTTP status looks fine', () => {
+        expect(() => parseK8sResponse(200, JSON.stringify({ kind: 'Status', status: 'Failure' }))).toThrow(
+            KubernetesApiError,
+        )
+    })
+
+    it('does not mistake a Job own status field for a failure', () => {
+        // A Job carries its own unrelated `status`, which is why `kind` has to be checked too
+        const job = { kind: 'Job', status: 'Failure', metadata: { name: 'job-1' } }
+
+        expect(parseK8sResponse(200, JSON.stringify(job))).toEqual(job)
+    })
+
+    it('throws a parse error for an unparseable body', () => {
+        expect(() => parseK8sResponse(200, '<html>gateway timeout</html>')).toThrow('Failed to parse JSON')
     })
 })

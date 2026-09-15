@@ -9,11 +9,11 @@ export default defineConfig({
         setupFiles: ['tests/vitest.setup.ts'],
         mockReset: true,
         reporters: ['verbose'],
-        include: ['src/lib/*.(test).{js,jsx,ts,tsx}'],
+        include: ['src/{lib,scripts}/*.(test).{js,jsx,ts,tsx}'],
         coverage: {
             enabled: true, // skipFull: true,
             thresholds: { 100: true },
-            include: ['src/lib/*.{js,jsx,ts,tsx}'],
+            include: ['src/{lib,scripts}/*.{js,jsx,ts,tsx}'],
             reportsDirectory: 'tmp/code-coverage/unit',
             clean: true,
             coverageReportOptions: {
