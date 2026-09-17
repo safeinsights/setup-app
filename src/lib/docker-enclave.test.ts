@@ -436,6 +436,15 @@ describe('DockerEnclave', () => {
             expect(api.dockerApiCall).toHaveBeenCalledWith('DELETE', 'containers/1234567890')
         })
 
+        it('keeps going when one container cannot be processed', async () => {
+            vi.mocked(api.managementAppGetJobStatus).mockRejectedValue(new Error('BMA unavailable'))
+
+            await expect(new DockerEnclave().checkForErroredJobs()).resolves.toBeUndefined()
+
+            expect(api.toaUpdateJobStatus).not.toHaveBeenCalled()
+            expect(api.dockerApiCall).not.toHaveBeenCalledWith('DELETE', 'containers/1234567890')
+        })
+
         it('still reports and removes when log retrieval fails', async () => {
             vi.mocked(api.managementAppGetJobStatus).mockResolvedValue({ status: 'JOB-RUNNING' })
             vi.mocked(api.dockerGetContainerLogs).mockRejectedValue(new Error('no such container'))

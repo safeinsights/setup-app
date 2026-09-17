@@ -659,6 +659,17 @@ describe('KubernetesEnclave', () => {
             expect(api.k8sApiCall).not.toHaveBeenCalledWith('batch', 'jobs/undefined', 'DELETE')
         })
 
+        it('keeps going when one pod cannot be processed', async () => {
+            const enclave = new KubernetesEnclave()
+            setUp(enclave, 1)
+            vi.mocked(api.managementAppGetJobStatus).mockRejectedValue(new Error('BMA unavailable'))
+
+            await expect(enclave.checkForErroredJobs()).resolves.toBeUndefined()
+
+            expect(api.toaUpdateJobStatus).not.toHaveBeenCalled()
+            expect(api.k8sApiCall).not.toHaveBeenCalledWith(undefined, 'pods/pod-1', 'DELETE')
+        })
+
         it('still reports and deletes when log retrieval fails', async () => {
             const enclave = new KubernetesEnclave()
             setUp(enclave, 1)

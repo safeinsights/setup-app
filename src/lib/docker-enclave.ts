@@ -132,36 +132,40 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
             ['exited'],
         )
         for (const container of exitedContainers) {
-            const containerExitResult: DockerApiContainerResponse = (await dockerApiCall(
-                'GET',
-                `containers/${container.Id}/json`,
-            )) as DockerApiContainerResponse
-            /* v8 ignore start */
-            if (containerExitResult?.State?.ExitCode !== 0) {
-                /* v8 ignore stop */
-                const jobId = container.Labels?.instance.toString()
+            try {
+                const containerExitResult: DockerApiContainerResponse = (await dockerApiCall(
+                    'GET',
+                    `containers/${container.Id}/json`,
+                )) as DockerApiContainerResponse
+                /* v8 ignore start */
+                if (containerExitResult?.State?.ExitCode !== 0) {
+                    /* v8 ignore stop */
+                    const jobId = container.Labels?.instance.toString()
 
-                // Report once. Without this the same failure is re-sent every cycle, and the logs
-                // below are re-uploaded with it.
-                const bmaStatus = await managementAppGetJobStatus(jobId)
-                if (bmaStatus.status === 'JOB-ERRORED') {
-                    console.log(`Job ${jobId} is already ${bmaStatus.status} in the BMA, removing the container`)
+                    // Report once. Without this the same failure is re-sent every cycle, and the logs
+                    // below are re-uploaded with it.
+                    const bmaStatus = await managementAppGetJobStatus(jobId)
+                    if (bmaStatus.status === 'JOB-ERRORED') {
+                        console.log(`Job ${jobId} is already ${bmaStatus.status} in the BMA, removing the container`)
+                        await this.removeContainer(container.Id)
+                        continue
+                    }
+
+                    const errorMsg = `Container ${container.Id} exited with message: ${containerExitResult.State.Error}`
+                    console.log(errorMsg)
+                    await toaUpdateJobStatus(jobId, { status: 'JOB-ERRORED', message: errorMsg })
+
+                    // Must happen before the container is removed, and must not prevent removal
+                    try {
+                        await toaSendLogs(jobId, await dockerGetContainerLogs(container.Id))
+                    } catch (error: unknown) {
+                        console.error(`Failed to send logs for job ${jobId}. Cause: ${error}`)
+                    }
+
                     await this.removeContainer(container.Id)
-                    continue
                 }
-
-                const errorMsg = `Container ${container.Id} exited with message: ${containerExitResult.State.Error}`
-                console.log(errorMsg)
-                await toaUpdateJobStatus(jobId, { status: 'JOB-ERRORED', message: errorMsg })
-
-                // Must happen before the container is removed, and must not prevent removal
-                try {
-                    await toaSendLogs(jobId, await dockerGetContainerLogs(container.Id))
-                } catch (error: unknown) {
-                    console.error(`Failed to send logs for job ${jobId}. Cause: ${error}`)
-                }
-
-                await this.removeContainer(container.Id)
+            } catch (error: unknown) {
+                console.error(`Failed to process container ${container.Id}. Cause: ${error}`)
             }
         }
     }
