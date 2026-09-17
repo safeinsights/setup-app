@@ -170,6 +170,7 @@ export const parseK8sResponse = (statusCode: number, data: string): KubernetesAp
 // Caps what a failed job can push through the TOA, the enclave's only egress. The ECS path is
 // unbounded by comparison, but the research container is untrusted.
 const MAX_LOG_LINES = 10_000
+const MAX_LOG_BYTES = 5_000_000
 
 // Docker multiplexes stdout and stderr into a single stream when the container has no TTY, which is
 // how research containers are created. Each frame is an 8 byte header — byte 0 the stream type, bytes
@@ -250,15 +251,26 @@ const buildDockerRequest = (method: string, path: string): DockerRequest => {
 const readRawResponse = (transport: typeof http | typeof https, options: object): Promise<Buffer> =>
     new Promise((resolve, reject) => {
         const req = transport.request(options, (response) => {
+            if ((response.statusCode ?? 500) >= 400) {
+                response.resume()
+                reject(new Error(`Log request failed with ${response.statusCode}`))
+                return
+            }
             const chunks: Buffer[] = []
-            response.on('data', (chunk) => chunks.push(chunk))
-            response.on('end', () => {
-                if ((response.statusCode ?? 500) >= 400) {
-                    reject(new Error(`Log request failed with ${response.statusCode}`))
+            let total = 0
+            response.on('data', (chunk: Buffer) => {
+                if (total + chunk.length >= MAX_LOG_BYTES) {
+                    console.warn(`Log response exceeded ${MAX_LOG_BYTES} bytes, truncating`)
+                    chunks.push(chunk.subarray(0, MAX_LOG_BYTES - total))
+                    response.destroy()
+                    resolve(Buffer.concat(chunks))
                     return
                 }
-                resolve(Buffer.concat(chunks))
+                total += chunk.length
+                chunks.push(chunk)
             })
+            response.on('error', reject)
+            response.on('end', () => resolve(Buffer.concat(chunks)))
         })
         req.on('error', reject)
         req.end()
