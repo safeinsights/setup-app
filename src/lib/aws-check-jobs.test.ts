@@ -160,6 +160,98 @@ describe('checkForErroredJobs()', () => {
         expect(vi.mocked(api.toaSendLogs)).toHaveBeenCalledWith('jobId2', testLogs)
         expect(vi.mocked(aws.deleteECSTaskDefinitions)).toHaveBeenCalledOnce()
     })
+    it('keeps going when a task has no jobId tag', async () => {
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+        vi.mocked(aws.getAllTasksWithJobId).mockResolvedValue([{ ResourceARN: 'arn1' }, { ResourceARN: 'arn2' }])
+
+        const mockToaUpdateJobStatus = vi.mocked(api.toaUpdateJobStatus)
+        vi.mocked(aws.describeECSTasks).mockResolvedValue({
+            tasks: [
+                {
+                    containers: [{ exitCode: 1 }],
+                    stopCode: TaskStopCode.ESSENTIAL_CONTAINER_EXITED,
+                    tags: [],
+                    taskArn: 'testArn1',
+                },
+                {
+                    containers: [{ exitCode: 1 }],
+                    stopCode: TaskStopCode.ESSENTIAL_CONTAINER_EXITED,
+                    tags: [{ key: aws.JOB_ID_TAG_KEY, value: 'jobId2' }],
+                    taskArn: 'testArn2',
+                },
+            ],
+            $metadata: {},
+        })
+        vi.mocked(api.managementAppGetJobStatus).mockResolvedValue({ status: 'teststatus' })
+
+        await expect(checkForAWSErroredJobs()).resolves.toBeUndefined()
+
+        expect(mockToaUpdateJobStatus).toHaveBeenCalledOnce()
+        expect(mockToaUpdateJobStatus).toHaveBeenCalledWith('jobId2', {
+            status: 'JOB-ERRORED',
+            message: 'Task container stopped with non-zero exit code',
+        })
+        expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Failed to process ECS task'))
+        expect(vi.mocked(aws.deleteECSTaskDefinitions)).toHaveBeenCalledOnce()
+    })
+    it('keeps going when fetching job status from the management app fails', async () => {
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+        vi.mocked(aws.getAllTasksWithJobId).mockResolvedValue([{ ResourceARN: 'arn1' }, { ResourceARN: 'arn2' }])
+
+        const mockToaUpdateJobStatus = vi.mocked(api.toaUpdateJobStatus)
+        const erroredTask = (jobId: string, taskArn: string) => ({
+            containers: [{ exitCode: 1 }],
+            stopCode: TaskStopCode.ESSENTIAL_CONTAINER_EXITED,
+            tags: [{ key: aws.JOB_ID_TAG_KEY, value: jobId }],
+            taskArn,
+        })
+        vi.mocked(aws.describeECSTasks).mockResolvedValue({
+            tasks: [erroredTask('jobId1', 'testArn1'), erroredTask('jobId2', 'testArn2')],
+            $metadata: {},
+        })
+        vi.mocked(api.managementAppGetJobStatus)
+            .mockRejectedValueOnce(new Error('management app unavailable'))
+            .mockResolvedValue({ status: 'teststatus' })
+
+        await expect(checkForAWSErroredJobs()).resolves.toBeUndefined()
+
+        expect(mockToaUpdateJobStatus).toHaveBeenCalledOnce()
+        expect(mockToaUpdateJobStatus).toHaveBeenCalledWith('jobId2', {
+            status: 'JOB-ERRORED',
+            message: 'Task container stopped with non-zero exit code',
+        })
+        expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Failed to process ECS task'))
+        expect(vi.mocked(aws.deleteECSTaskDefinitions)).toHaveBeenCalledOnce()
+    })
+    it('keeps going when updating job status in TOA fails', async () => {
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+        vi.mocked(aws.getAllTasksWithJobId).mockResolvedValue([{ ResourceARN: 'arn1' }, { ResourceARN: 'arn2' }])
+
+        const mockToaUpdateJobStatus = vi.mocked(api.toaUpdateJobStatus)
+        const failedToStartTask = (jobId: string) => ({
+            stopCode: TaskStopCode.TASK_FAILED_TO_START,
+            tags: [{ key: aws.JOB_ID_TAG_KEY, value: jobId }],
+        })
+        vi.mocked(aws.describeECSTasks).mockResolvedValue({
+            tasks: [failedToStartTask('jobId1'), failedToStartTask('jobId2')],
+            $metadata: {},
+        })
+        mockToaUpdateJobStatus.mockRejectedValueOnce(new Error('TOA unavailable'))
+
+        await expect(checkForAWSErroredJobs()).resolves.toBeUndefined()
+
+        expect(mockToaUpdateJobStatus).toHaveBeenCalledTimes(2)
+        expect(mockToaUpdateJobStatus).toHaveBeenNthCalledWith(1, 'jobId1', {
+            status: 'JOB-ERRORED',
+            message: 'Task failed to start',
+        })
+        expect(mockToaUpdateJobStatus).toHaveBeenNthCalledWith(2, 'jobId2', {
+            status: 'JOB-ERRORED',
+            message: 'Task failed to start',
+        })
+        expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Failed to process ECS task'))
+        expect(vi.mocked(aws.deleteECSTaskDefinitions)).toHaveBeenCalledOnce()
+    })
     it('does not make call to TOA for task that exits with zero exit code', async () => {
         vi.mocked(aws.getAllTasksWithJobId).mockResolvedValue([
             {
