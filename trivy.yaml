@@ -4,6 +4,7 @@ debug: false
 severity:
     - HIGH
     - CRITICAL
+ignorefile: .trivyignore.yaml
 scan:
     scanners:
         - vuln
