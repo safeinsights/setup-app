@@ -45,6 +45,27 @@ export async function checkForAWSErroredJobs(): Promise<void> {
         ensureValueWithError(process.env.MANAGEMENT_APP_MEMBER_ID, 'Env var MANAGEMENT_APP_MEMBER_ID not found'),
     )
 
+    try {
+        await reportErroredTasks(ecsClient, taggingClient, cluster, managementAppTag)
+    } catch (error: unknown) {
+        // Still tidy up so a failed lookup doesn't leave orphan task definitions behind,
+        // but never let a cleanup failure hide the original error
+        await cleanupTaskDefs(ecsClient, taggingClient, managementAppTag).catch((cleanupError: unknown) => {
+            console.error(`Failed to clean up task definitions. Cause: ${cleanupError}`)
+        })
+        throw error
+    }
+
+    // Tidy AWS environment
+    await cleanupTaskDefs(ecsClient, taggingClient, managementAppTag)
+}
+
+async function reportErroredTasks(
+    ecsClient: ECSClient,
+    taggingClient: ResourceGroupsTaggingAPIClient,
+    cluster: string,
+    managementAppTag: string,
+): Promise<void> {
     const tasks = await getAllTasksWithJobId(taggingClient, managementAppTag)
 
     const taskArns: string[] = []
@@ -59,7 +80,6 @@ export async function checkForAWSErroredJobs(): Promise<void> {
 
     if (taskArns.length == 0) {
         // There are no tasks to look into
-        await cleanupTaskDefs(ecsClient, taggingClient, managementAppTag)
         return
     }
 
@@ -110,7 +130,4 @@ export async function checkForAWSErroredJobs(): Promise<void> {
             console.error(`Failed to process ECS task ${job.taskArn ?? '(unknown ARN)'}. Cause: ${error}`)
         }
     }
-
-    // Tidy AWS environment
-    await cleanupTaskDefs(ecsClient, taggingClient, managementAppTag)
 }
