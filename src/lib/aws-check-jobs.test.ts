@@ -25,8 +25,70 @@ describe('checkForErroredJobs()', () => {
         await checkForAWSErroredJobs()
 
         expect(mockDescribeECSTasks).not.toHaveBeenCalled()
+        expect(vi.mocked(aws.deleteECSTaskDefinitions)).toHaveBeenCalledOnce()
         const deleteECSTaskDefinitionsCalls = vi.mocked(aws.deleteECSTaskDefinitions).mock.calls
         expect(deleteECSTaskDefinitionsCalls[0][1]).toEqual(['run-finished'])
+    })
+
+    it('still cleans up task definitions and rethrows when listing tasks fails', async () => {
+        const lookupError = new Error('tagging API unavailable')
+        vi.mocked(aws.getAllTasksWithJobId).mockRejectedValue(lookupError)
+
+        await expect(checkForAWSErroredJobs()).rejects.toBe(lookupError)
+
+        expect(vi.mocked(aws.describeECSTasks)).not.toHaveBeenCalled()
+        expect(vi.mocked(aws.deleteECSTaskDefinitions)).toHaveBeenCalledOnce()
+        expect(vi.mocked(aws.deleteECSTaskDefinitions)).toHaveBeenCalledWith(expect.any(ECSClient), ['run-finished'])
+    })
+
+    it('still cleans up task definitions and rethrows when describing tasks fails', async () => {
+        const lookupError = new Error('ECS unavailable')
+        vi.mocked(aws.getAllTasksWithJobId).mockResolvedValue([{ ResourceARN: 'arn1' }, { ResourceARN: 'arn2' }])
+        vi.mocked(aws.describeECSTasks).mockRejectedValue(lookupError)
+
+        await expect(checkForAWSErroredJobs()).rejects.toBe(lookupError)
+
+        expect(vi.mocked(aws.describeECSTasks)).toHaveBeenCalledOnce()
+        expect(vi.mocked(api.toaUpdateJobStatus)).not.toHaveBeenCalled()
+        expect(vi.mocked(aws.deleteECSTaskDefinitions)).toHaveBeenCalledOnce()
+        expect(vi.mocked(aws.deleteECSTaskDefinitions)).toHaveBeenCalledWith(expect.any(ECSClient), ['run-finished'])
+    })
+
+    it('rethrows the original lookup error and logs the cleanup error when both fail', async () => {
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+        const lookupError = new Error('ECS unavailable')
+        const cleanupError = new Error('management app unavailable')
+        vi.mocked(aws.getAllTasksWithJobId).mockResolvedValue([{ ResourceARN: 'arn1' }])
+        vi.mocked(aws.describeECSTasks).mockRejectedValue(lookupError)
+        vi.mocked(api.managementAppGetReadyStudiesRequest).mockRejectedValue(cleanupError)
+
+        await expect(checkForAWSErroredJobs()).rejects.toBe(lookupError)
+
+        expect(vi.mocked(api.managementAppGetReadyStudiesRequest)).toHaveBeenCalledOnce()
+        expect(vi.mocked(aws.deleteECSTaskDefinitions)).not.toHaveBeenCalled()
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+            expect.stringContaining('Failed to clean up task definitions. Cause: Error: management app unavailable'),
+        )
+    })
+
+    it('propagates a cleanup failure when the lookup succeeds', async () => {
+        const cleanupError = new Error('delete failed')
+        vi.mocked(aws.getAllTasksWithJobId).mockResolvedValue([])
+        vi.mocked(aws.deleteECSTaskDefinitions).mockRejectedValue(cleanupError)
+
+        await expect(checkForAWSErroredJobs()).rejects.toBe(cleanupError)
+
+        expect(vi.mocked(aws.deleteECSTaskDefinitions)).toHaveBeenCalledOnce()
+    })
+
+    it('does not look up or clean up anything when a required env var is missing', async () => {
+        delete process.env.ECS_CLUSTER
+
+        await expect(checkForAWSErroredJobs()).rejects.toThrow('Env var ECS_CLUSTER not found')
+
+        expect(vi.mocked(aws.getAllTasksWithJobId)).not.toHaveBeenCalled()
+        expect(vi.mocked(aws.getAllTaskDefinitionsWithJobId)).not.toHaveBeenCalled()
+        expect(vi.mocked(aws.deleteECSTaskDefinitions)).not.toHaveBeenCalled()
     })
 
     it('only looks at tasks and task definitions from our own management app', async () => {
