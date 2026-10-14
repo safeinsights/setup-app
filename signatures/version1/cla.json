@@ -1,3 +1,12 @@
 {
-  "signedContributors": []
+  "signedContributors": [
+    {
+      "name": "megan-nash-ea",
+      "id": 113937583,
+      "comment_id": 6171536319,
+      "created_at": "2026-10-14T15:08:49Z",
+      "repoId": 872632252,
+      "pullRequestNo": 74
+    }
+  ]
 }
