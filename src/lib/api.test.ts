@@ -1,6 +1,20 @@
 import { describe, it, expect, vi } from 'vitest'
-import { managementAppGetReadyStudiesRequest, managementAppGetJobStatus, toaSendLogs, toaUpdateJobStatus } from './api'
+import path from 'path'
+import {
+    demultiplexDockerLogStream,
+    managementAppGetReadyStudiesRequest,
+    managementAppGetJobStatus,
+    parseK8sResponse,
+    parseTimestampedLogLines,
+    resolveDockerTransport,
+    toaSendLogs,
+    toaUpdateJobStatus,
+} from './api'
+import { KubernetesApiError } from './types'
 import jwt from 'jsonwebtoken'
+
+const READABLE_SOCKET = path.join(__dirname, '../../tests/docker/test.sock')
+const MISSING_SOCKET = '/nonexistent/docker.sock'
 
 describe('managementAppGetReadyStudiesRequest', () => {
     it('should generate a token and make a GET request', async () => {
@@ -147,5 +161,154 @@ describe('toaSendLogs', () => {
         const result = await toaSendLogs('jobId456', mockLogs)
 
         expect(result).toEqual({ success: false })
+    })
+})
+
+describe('resolveDockerTransport', () => {
+    const PULL = 'images/create?fromImage=repo/image:tag'
+    const CREATE = 'containers/create?name=rc-jobId1'
+
+    it('uses the socket when it is readable, without TLS', () => {
+        expect(resolveDockerTransport(READABLE_SOCKET, 'https', CREATE)).toMatchObject({
+            useSocket: true,
+            useTls: false,
+        })
+    })
+
+    it('falls back to TLS over TCP when the socket is not readable', () => {
+        expect(resolveDockerTransport(MISSING_SOCKET, 'https', CREATE)).toMatchObject({
+            useSocket: false,
+            useTls: true,
+        })
+    })
+
+    it('sends registry credentials only when pulling an image', () => {
+        expect(resolveDockerTransport(READABLE_SOCKET, 'https', PULL).sendRegistryAuth).toBe(true)
+        expect(resolveDockerTransport(MISSING_SOCKET, 'https', PULL).sendRegistryAuth).toBe(true)
+        expect(resolveDockerTransport(READABLE_SOCKET, 'https', CREATE).sendRegistryAuth).toBe(false)
+    })
+
+    it('tolerates a leading slash on the path', () => {
+        expect(resolveDockerTransport(READABLE_SOCKET, 'https', `/${PULL}`).sendRegistryAuth).toBe(true)
+    })
+
+    it('refuses plaintext TCP without an explicit opt-in', () => {
+        expect(() => resolveDockerTransport(MISSING_SOCKET, 'http', CREATE)).toThrow(
+            'Refusing to reach the Docker Engine API over plaintext TCP',
+        )
+    })
+
+    it('allows plaintext TCP when opted in, but withholds registry credentials', () => {
+        process.env.DOCKER_API_ALLOW_INSECURE_HTTP = 'true'
+
+        expect(resolveDockerTransport(MISSING_SOCKET, 'http', PULL)).toEqual({
+            useSocket: false,
+            useTls: false,
+            sendRegistryAuth: false,
+        })
+    })
+})
+
+describe('parseK8sResponse', () => {
+    it('returns the parsed body for a success', () => {
+        const jobList = { kind: 'JobList', items: [{ metadata: { name: 'job-1' } }] }
+
+        expect(parseK8sResponse(200, JSON.stringify(jobList))).toEqual(jobList)
+    })
+
+    it('treats an empty body on a 2xx as a success', () => {
+        // A 204 carries no body; that is not a parse failure
+        expect(parseK8sResponse(204, '')).toEqual({})
+    })
+
+    it('throws with the status and body for a rejected request', () => {
+        const status = { kind: 'Status', status: 'Failure', code: 409, reason: 'AlreadyExists' }
+
+        try {
+            parseK8sResponse(409, JSON.stringify(status))
+            expect.unreachable('should have thrown')
+        } catch (error: unknown) {
+            expect(error).toBeInstanceOf(KubernetesApiError)
+            expect((error as KubernetesApiError).statusCode).toBe(409)
+            expect((error as KubernetesApiError).body).toEqual(status)
+        }
+    })
+
+    it('throws for a server error', () => {
+        expect(() => parseK8sResponse(500, JSON.stringify({ kind: 'Status', message: 'boom' }))).toThrow(
+            KubernetesApiError,
+        )
+    })
+
+    it('throws for a Failure Status even when the HTTP status looks fine', () => {
+        expect(() => parseK8sResponse(200, JSON.stringify({ kind: 'Status', status: 'Failure' }))).toThrow(
+            KubernetesApiError,
+        )
+    })
+
+    it('does not mistake a Job own status field for a failure', () => {
+        // A Job carries its own unrelated `status`, which is why `kind` has to be checked too
+        const job = { kind: 'Job', status: 'Failure', metadata: { name: 'job-1' } }
+
+        expect(parseK8sResponse(200, JSON.stringify(job))).toEqual(job)
+    })
+
+    it('throws a parse error for an unparseable body', () => {
+        expect(() => parseK8sResponse(200, '<html>gateway timeout</html>')).toThrow('Failed to parse JSON')
+    })
+})
+
+const dockerLogFrame = (streamType: number, payload: string): Buffer => {
+    const body = Buffer.from(payload, 'utf8')
+    const header = Buffer.alloc(8)
+    header.writeUInt8(streamType, 0)
+    header.writeUInt32BE(body.length, 4)
+    return Buffer.concat([header, body])
+}
+
+describe('demultiplexDockerLogStream', () => {
+    it('concatenates the payloads of stdout and stderr frames', () => {
+        const stream = Buffer.concat([dockerLogFrame(1, 'out\n'), dockerLogFrame(2, 'err\n')])
+
+        expect(demultiplexDockerLogStream(stream)).toBe('out\nerr\n')
+    })
+
+    it('returns an empty string for an empty stream', () => {
+        expect(demultiplexDockerLogStream(Buffer.alloc(0))).toBe('')
+    })
+
+    it('ignores a trailing partial header', () => {
+        const stream = Buffer.concat([dockerLogFrame(1, 'out\n'), Buffer.alloc(5)])
+
+        expect(demultiplexDockerLogStream(stream)).toBe('out\n')
+    })
+})
+
+describe('parseTimestampedLogLines', () => {
+    it('splits the RFC3339 timestamp from the message', () => {
+        const text = '2026-09-04T12:34:56.789012345Z first line\n2026-09-04T12:34:57.100000000Z second line\n'
+
+        expect(parseTimestampedLogLines(text)).toEqual([
+            { timestamp: Date.parse('2026-09-04T12:34:56.789Z'), message: 'first line' },
+            { timestamp: Date.parse('2026-09-04T12:34:57.100Z'), message: 'second line' },
+        ])
+    })
+
+    it('keeps a message containing spaces intact', () => {
+        const text = '2026-09-04T12:34:56.789Z Error: something went wrong'
+
+        expect(parseTimestampedLogLines(text)).toEqual([
+            { timestamp: Date.parse('2026-09-04T12:34:56.789Z'), message: 'Error: something went wrong' },
+        ])
+    })
+
+    it('drops blank lines', () => {
+        expect(parseTimestampedLogLines('\n   \n')).toEqual([])
+    })
+
+    it('keeps the whole line when there is no parseable timestamp', () => {
+        expect(parseTimestampedLogLines('not a timestamped line')).toEqual([
+            { timestamp: 0, message: 'not a timestamped line' },
+        ])
     })
 })

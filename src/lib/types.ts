@@ -70,6 +70,16 @@ export type KubernetesApiJobsResponse = {
 
 export type KubernetesApiResponse = KubernetesApiJobsResponse | KubernetesJob | KubernetesPod
 
+export class KubernetesApiError extends Error {
+    constructor(
+        readonly statusCode: number,
+        readonly body: unknown,
+    ) {
+        super(`K8s API responded ${statusCode}: ${JSON.stringify(body)}`)
+        this.name = 'KubernetesApiError'
+    }
+}
+
 export type DockerApiResponse =
     | Error
     | DockerApiSuccessResponse

@@ -6,6 +6,7 @@ import { createKubernetesJob } from './kube'
 import { KubernetesEnclave } from './kube-enclave'
 import {
     CONTAINER_TYPES,
+    KubernetesApiError,
     KubernetesApiJobsResponse,
     KubernetesJob,
     KubernetesPod,
@@ -15,6 +16,22 @@ import {
 
 vi.mock('./kube')
 vi.mock('./api')
+
+// A job cleanup will act on: managed by us, a research container, and finished successfully
+const completedJob = {
+    metadata: {
+        name: 'job-1',
+        namespace: 'ns',
+        labels: {
+            'managed-by': CONTAINER_TYPES.SETUP_APP,
+            component: CONTAINER_TYPES.RESEARCH_CONTAINER,
+            instance: '1234567890',
+        },
+    },
+    status: {
+        conditions: [{ type: 'Complete', status: 'True' }],
+    },
+} as unknown as KubernetesJob
 
 describe('KubernetesEnclave', () => {
     it('filterJobsInEnclave should return jobs that are not in the enclave', () => {
@@ -311,12 +328,11 @@ describe('KubernetesEnclave', () => {
         expect(jobs).toEqual([])
         expect(k8sApiCall).toHaveBeenCalledWith('batch', 'jobs', 'GET')
     })
-    it('getAllStudiesInEnclave: should return an empty array if an error occured', async () => {
-        const k8sApiCall = vi.mocked(api.k8sApiCall).mockRejectedValue(new Error('Error'))
+    it('getAllStudiesInEnclave: should propagate an error rather than reporting no jobs', async () => {
+        const k8sApiCall = vi.mocked(api.k8sApiCall).mockRejectedValue(new KubernetesApiError(500, { kind: 'Status' }))
         const enclave = new KubernetesEnclave()
-        const jobs = await enclave.getAllStudiesInEnclave()
 
-        expect(jobs).toEqual([])
+        await expect(enclave.getAllStudiesInEnclave()).rejects.toThrow(KubernetesApiError)
         expect(k8sApiCall).toHaveBeenCalledWith('batch', 'jobs', 'GET')
     })
     it('getAllStudiesInEnclave: should return a list of jobs if they exist', async () => {
@@ -435,6 +451,28 @@ describe('KubernetesEnclave', () => {
         expect(api.k8sApiCall).toBeCalledTimes(2)
     })
 
+    it('cleanup: treats a 404 on delete as already done', async () => {
+        const enclave = new KubernetesEnclave()
+        vi.spyOn(enclave, 'getAllStudiesInEnclave').mockResolvedValue([completedJob])
+
+        vi.mocked(api.k8sApiCall)
+            .mockResolvedValueOnce({ items: [] }) // pods lookup
+            .mockRejectedValue(new KubernetesApiError(404, { kind: 'Status', status: 'Failure' }))
+
+        await expect(enclave.cleanup()).resolves.toBeUndefined()
+    })
+
+    it('cleanup: propagates a delete failure that is not a 404', async () => {
+        const enclave = new KubernetesEnclave()
+        vi.spyOn(enclave, 'getAllStudiesInEnclave').mockResolvedValue([completedJob])
+
+        vi.mocked(api.k8sApiCall)
+            .mockResolvedValueOnce({ items: [] }) // pods lookup
+            .mockRejectedValue(new KubernetesApiError(403, { kind: 'Status', status: 'Failure' }))
+
+        await expect(enclave.cleanup()).rejects.toThrow(KubernetesApiError)
+    })
+
     it('cleanup: should not delete jobs that are not completed', async () => {
         const enclave = new KubernetesEnclave()
         const job: KubernetesJob = {
@@ -535,159 +573,115 @@ describe('KubernetesEnclave', () => {
         expect(api.k8sApiCall).not.toHaveBeenCalledWith('batch', `jobs/job-1`, 'DELETE')
     })
 
-    it('checkForErroredJobs should log an error message if a container exits with a non-zero exit code', async () => {
-        const enclave = new KubernetesEnclave()
+    describe('checkForErroredJobs', () => {
+        const researchLabels = {
+            'managed-by': CONTAINER_TYPES.SETUP_APP,
+            component: CONTAINER_TYPES.RESEARCH_CONTAINER,
+            instance: '1234567890',
+        }
+        const job = {
+            metadata: { name: 'job-1', namespace: 'ns', labels: researchLabels },
+        } as unknown as KubernetesJob
+        const podWithExitCode = (exitCode: number) =>
+            ({
+                metadata: {
+                    name: 'pod-1',
+                    namespace: 'ns',
+                    labels: { ...researchLabels, 'job-name': 'job-1' },
+                },
+                status: {
+                    containerStatuses: [{ ready: false, started: false, state: { terminated: { exitCode } } }],
+                },
+            }) as unknown as KubernetesPod
+        const testLogs = [{ timestamp: 42, message: 'boom' }]
 
-        const erroredJob: KubernetesJob = {
-            metadata: {
-                name: 'job-1',
-                namespace: 'ns',
-                labels: {
-                    'managed-by': CONTAINER_TYPES.SETUP_APP,
-                    component: CONTAINER_TYPES.RESEARCH_CONTAINER,
-                    instance: '1234567890',
-                },
-            },
-            spec: {
-                selector: {
-                    matchLabels: {
-                        'managed-by': CONTAINER_TYPES.SETUP_APP,
-                        component: CONTAINER_TYPES.RESEARCH_CONTAINER,
-                        instance: '1234567890',
-                    },
-                },
-                template: {
-                    spec: {
-                        containers: [{ name: 'research-container-1234567890' }],
-                    },
-                },
-            },
-            status: {
-                conditions: [
-                    {
-                        type: 'Complete',
-                        status: 'False',
-                    },
-                ],
-            },
+        const setUp = (enclave: KubernetesEnclave, exitCode: number) => {
+            vi.spyOn(enclave, 'getAllStudiesInEnclave').mockResolvedValue([job])
+            vi.mocked(api.k8sApiCall).mockResolvedValue({ items: [podWithExitCode(exitCode)] })
+            vi.mocked(api.k8sGetPodLogs).mockResolvedValue(testLogs)
         }
 
-        const erroredPod: KubernetesPod = {
-            metadata: {
-                name: 'pod-1',
-                namespace: 'ns',
-                labels: {
-                    'managed-by': CONTAINER_TYPES.SETUP_APP,
-                    component: CONTAINER_TYPES.RESEARCH_CONTAINER,
-                    instance: '1234567890',
-                },
-            },
-            status: {
-                containerStatuses: [
-                    {
-                        ready: false,
-                        started: false,
-                        state: {
-                            terminated: {
-                                exitCode: 1,
-                                reason: '',
-                            },
-                        },
-                    },
-                ],
-            },
-        }
+        it('reports the failure once, forwards the pod logs, then deletes the pod and its job', async () => {
+            const enclave = new KubernetesEnclave()
+            setUp(enclave, 1)
+            vi.mocked(api.managementAppGetJobStatus).mockResolvedValue({ status: 'JOB-RUNNING' })
 
-        vi.spyOn(enclave, 'getAllStudiesInEnclave').mockResolvedValue([erroredJob])
-        vi.mocked(api.k8sApiCall).mockResolvedValueOnce({
-            items: [erroredPod],
+            await enclave.checkForErroredJobs()
+
+            expect(api.toaUpdateJobStatus).toHaveBeenCalledWith('1234567890', {
+                status: 'JOB-ERRORED',
+                message: 'Container pod-1 exited with non 0 error code',
+            })
+            expect(api.k8sGetPodLogs).toHaveBeenCalledWith('pod-1', 'research-container-1234567890')
+            expect(api.toaSendLogs).toHaveBeenCalledWith('1234567890', testLogs)
+            expect(api.k8sApiCall).toHaveBeenCalledWith(undefined, 'pods/pod-1', 'DELETE')
+            expect(api.k8sApiCall).toHaveBeenCalledWith('batch', 'jobs/job-1', 'DELETE')
         })
 
-        const toaUpdateJobStatus = vi.fn()
-        vi.mocked(api.toaUpdateJobStatus).mockImplementation(toaUpdateJobStatus)
+        it('does not report a container that exited cleanly', async () => {
+            const enclave = new KubernetesEnclave()
+            setUp(enclave, 0)
 
-        await enclave.checkForErroredJobs()
+            await enclave.checkForErroredJobs()
 
-        expect(toaUpdateJobStatus).toHaveBeenCalledWith('1234567890', {
-            status: 'JOB-ERRORED',
-            message: `Container pod-1 exited with non 0 error code`,
-        })
-    })
-
-    it('checkForErroredJobs should not log an error message if a container exits with a zero exit code', async () => {
-        const enclave = new KubernetesEnclave()
-
-        const successfulJob: KubernetesJob = {
-            metadata: {
-                name: 'job-1',
-                namespace: 'ns',
-                labels: {
-                    'managed-by': CONTAINER_TYPES.SETUP_APP,
-                    component: CONTAINER_TYPES.RESEARCH_CONTAINER,
-                    instance: '1234567890',
-                },
-            },
-            spec: {
-                selector: {
-                    matchLabels: {
-                        'managed-by': CONTAINER_TYPES.SETUP_APP,
-                        component: CONTAINER_TYPES.RESEARCH_CONTAINER,
-                        instance: '1234567890',
-                    },
-                },
-                template: {
-                    spec: {
-                        containers: [{ name: 'research-container-1234567890' }],
-                    },
-                },
-            },
-            status: {
-                conditions: [
-                    {
-                        type: 'Complete',
-                        status: 'False',
-                    },
-                ],
-            },
-        }
-
-        const successfulPod: KubernetesPod = {
-            metadata: {
-                name: 'pod-1',
-                namespace: 'ns',
-                labels: {
-                    'managed-by': CONTAINER_TYPES.SETUP_APP,
-                    component: CONTAINER_TYPES.RESEARCH_CONTAINER,
-                    instance: '1234567890',
-                },
-            },
-            status: {
-                containerStatuses: [
-                    {
-                        ready: false,
-                        started: false,
-                        state: {
-                            terminated: {
-                                exitCode: 1,
-                                reason: '',
-                            },
-                        },
-                    },
-                ],
-            },
-        }
-
-        vi.spyOn(enclave, 'getAllStudiesInEnclave').mockResolvedValue([successfulJob])
-        vi.mocked(api.k8sApiCall).mockResolvedValueOnce({
-            items: [successfulPod],
+            expect(api.toaUpdateJobStatus).not.toHaveBeenCalled()
+            expect(api.toaSendLogs).not.toHaveBeenCalled()
         })
 
-        const toaUpdateJobStatus = vi.fn()
-        vi.mocked(api.toaUpdateJobStatus).mockImplementation(toaUpdateJobStatus)
+        it('deletes without re-reporting when the BMA already has the failure', async () => {
+            const enclave = new KubernetesEnclave()
+            setUp(enclave, 1)
+            vi.mocked(api.managementAppGetJobStatus).mockResolvedValue({ status: 'JOB-ERRORED' })
 
-        await enclave.checkForErroredJobs()
+            await enclave.checkForErroredJobs()
 
-        expect(toaUpdateJobStatus).toHaveBeenCalled()
+            expect(api.toaUpdateJobStatus).not.toHaveBeenCalled()
+            expect(api.toaSendLogs).not.toHaveBeenCalled()
+            expect(api.k8sApiCall).toHaveBeenCalledWith('batch', 'jobs/job-1', 'DELETE')
+        })
+
+        it('deletes only the pod when it carries no job-name label', async () => {
+            const enclave = new KubernetesEnclave()
+            const orphanPod = {
+                metadata: { name: 'pod-1', namespace: 'ns', labels: researchLabels },
+                status: {
+                    containerStatuses: [{ ready: false, started: false, state: { terminated: { exitCode: 1 } } }],
+                },
+            } as unknown as KubernetesPod
+            vi.spyOn(enclave, 'getAllStudiesInEnclave').mockResolvedValue([job])
+            vi.mocked(api.k8sApiCall).mockResolvedValue({ items: [orphanPod] })
+            vi.mocked(api.k8sGetPodLogs).mockResolvedValue(testLogs)
+            vi.mocked(api.managementAppGetJobStatus).mockResolvedValue({ status: 'JOB-RUNNING' })
+
+            await enclave.checkForErroredJobs()
+
+            expect(api.k8sApiCall).toHaveBeenCalledWith(undefined, 'pods/pod-1', 'DELETE')
+            expect(api.k8sApiCall).not.toHaveBeenCalledWith('batch', 'jobs/undefined', 'DELETE')
+        })
+
+        it('keeps going when one pod cannot be processed', async () => {
+            const enclave = new KubernetesEnclave()
+            setUp(enclave, 1)
+            vi.mocked(api.managementAppGetJobStatus).mockRejectedValue(new Error('BMA unavailable'))
+
+            await expect(enclave.checkForErroredJobs()).resolves.toBeUndefined()
+
+            expect(api.toaUpdateJobStatus).not.toHaveBeenCalled()
+            expect(api.k8sApiCall).not.toHaveBeenCalledWith(undefined, 'pods/pod-1', 'DELETE')
+        })
+
+        it('still reports and deletes when log retrieval fails', async () => {
+            const enclave = new KubernetesEnclave()
+            setUp(enclave, 1)
+            vi.mocked(api.managementAppGetJobStatus).mockResolvedValue({ status: 'JOB-RUNNING' })
+            vi.mocked(api.k8sGetPodLogs).mockRejectedValue(new Error('pod gone'))
+
+            await enclave.checkForErroredJobs()
+
+            expect(api.toaUpdateJobStatus).toHaveBeenCalledOnce()
+            expect(api.toaSendLogs).not.toHaveBeenCalled()
+            expect(api.k8sApiCall).toHaveBeenCalledWith('batch', 'jobs/job-1', 'DELETE')
+        })
     })
 
     it('checkForErroredJobs should handle an error when fetching jobs', async () => {

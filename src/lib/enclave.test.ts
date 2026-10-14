@@ -70,4 +70,18 @@ describe('Enclave', () => {
         expect(toaUpdateJobStatus).toHaveBeenCalledWith('jobId1', { status: 'JOB-PROVISIONING' })
         expect(enclave.cleanup).toHaveBeenCalledOnce()
     })
+
+    it('logs and continues when cleanup fails', async () => {
+        vi.mocked(api.managementAppGetReadyStudiesRequest).mockResolvedValue({ jobs: [] })
+
+        enclave.filterJobsInEnclave = vi.fn().mockReturnValue({ jobs: [] })
+        enclave.getDeployedStudies = vi.fn().mockResolvedValue([])
+        enclave.cleanup = vi.fn().mockRejectedValue(new Error('cleanup exploded'))
+        const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+        await expect(enclave.runStudies()).resolves.toBeUndefined()
+
+        expect(enclave.cleanup).toHaveBeenCalledOnce()
+        expect(consoleError).toHaveBeenCalledWith(expect.stringContaining('cleanup exploded'))
+    })
 })

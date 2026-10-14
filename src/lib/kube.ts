@@ -44,7 +44,7 @@ function createKubernetesJob(imageLocation: string, jobId: string, studyTitle: s
     const containerEnv: Array<{ name: string; value: string }> = [
         { name: 'TRUSTED_OUTPUT_ENDPOINT', value: toaEndpointWithJobId },
     ]
-    for (const envName of ['GCP_PROJECT', 'BQ_DATASET', 'BQ_TABLE', 'GCP_BILLING_PROJECT']) {
+    for (const envName of ['BQ_PROJECT', 'BQ_DATASET', 'BQ_TABLE', 'BQ_BILLING_PROJECT']) {
         const value = process.env[envName]
         if (value) {
             containerEnv.push({ name: envName, value })

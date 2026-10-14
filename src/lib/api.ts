@@ -5,11 +5,12 @@ import { LogEntry } from './aws'
 import { getKubeAPIServiceAccountToken, getNamespace, initHTTPSTrustStore } from './kube'
 import {
     DockerApiResponse,
+    KubernetesApiError,
     KubernetesApiResponse,
     ManagementAppGetReadyStudiesResponse,
     isManagementAppGetReadyStudiesResponse,
 } from './types'
-import { hasReadPermissions } from './utils'
+import { hasReadWritePermissions } from './utils'
 
 // Functions for interacting with the Management App
 const generateManagementAppToken = (): string => {
@@ -118,13 +119,103 @@ export const toaSendLogs = async (jobId: string, logs: LogEntry[]) => {
     return { success: true }
 }
 
+// images/create is the one endpoint whose credential the daemon forwards to a registry, and the one
+// whose target is supplied by the BMA
+const isImagePull = (path: string): boolean => path.replace(/^\//, '').startsWith('images/create')
+
+// The daemon speaks plain HTTP on the Unix socket, so TLS applies to TCP transport only
+export const resolveDockerTransport = (socketPath: string, protocol: string, path: string) => {
+    const useSocket = hasReadWritePermissions(socketPath)
+    const useTls = !useSocket && protocol !== 'http'
+
+    if (!useSocket && !useTls && process.env.DOCKER_API_ALLOW_INSECURE_HTTP !== 'true') {
+        throw new Error(
+            'Refusing to reach the Docker Engine API over plaintext TCP. Mount the socket at DOCKER_SOCKET, ' +
+                'set DOCKER_API_PROTOCOL=https, or set DOCKER_API_ALLOW_INSECURE_HTTP=true to override.',
+        )
+    }
+    if (!useSocket && !useTls) {
+        console.warn('Reaching the Docker Engine API over plaintext TCP; registry credentials will be withheld')
+    }
+
+    return { useSocket, useTls, sendRegistryAuth: isImagePull(path) && (useSocket || useTls) }
+}
+
+export const parseK8sResponse = (statusCode: number, data: string): KubernetesApiResponse => {
+    let body: unknown = undefined
+    if (data.length > 0) {
+        try {
+            body = JSON.parse(data)
+        } catch {
+            throw new Error(`Failed to parse JSON from K8s API (status ${statusCode}): ${data}`)
+        }
+    }
+
+    // A rejected request answers with a Status object. Match on `kind` as well, since a Job carries
+    // its own unrelated `status` field.
+    const isFailureStatus =
+        typeof body === 'object' &&
+        body !== null &&
+        (body as { kind?: unknown }).kind === 'Status' &&
+        (body as { status?: unknown }).status === 'Failure'
+
+    if (statusCode >= 400 || isFailureStatus) {
+        throw new KubernetesApiError(statusCode, body)
+    }
+
+    // A 2xx with no body (a 204, for instance) is a success, not a parse failure
+    return (body ?? {}) as KubernetesApiResponse
+}
+
+// Caps what a failed job can push through the TOA, the enclave's only egress. The ECS path is
+// unbounded by comparison, but the research container is untrusted.
+const MAX_LOG_LINES = 10_000
+const MAX_LOG_BYTES = 5_000_000
+
+// Docker multiplexes stdout and stderr into a single stream when the container has no TTY, which is
+// how research containers are created. Each frame is an 8 byte header — byte 0 the stream type, bytes
+// 4-7 a big-endian payload length — followed by the payload.
+export const demultiplexDockerLogStream = (stream: Buffer): string => {
+    const payloads: string[] = []
+    let offset = 0
+    while (offset + 8 <= stream.length) {
+        const size = stream.readUInt32BE(offset + 4)
+        payloads.push(stream.subarray(offset + 8, offset + 8 + size).toString('utf8'))
+        offset += 8 + size
+    }
+    return payloads.join('')
+}
+
+// Both the Docker and Kubernetes log endpoints prefix each line with an RFC3339Nano timestamp
+export const parseTimestampedLogLines = (text: string): LogEntry[] =>
+    text
+        .split('\n')
+        .filter((line) => line.trim().length > 0)
+        .map((line) => {
+            const [stamp, ...rest] = line.split(' ')
+            // Date cannot parse sub-millisecond precision
+            const timestamp = Date.parse(stamp.replace(/(\.\d{3})\d+/, '$1'))
+            if (Number.isNaN(timestamp)) {
+                return { timestamp: 0, message: line }
+            }
+            return { timestamp, message: rest.join(' ') }
+        })
+
 /* v8 ignore start */
-export const dockerApiCall = async (
-    method: string,
-    path: string,
-    body?: unknown,
-    ignoreResponse: boolean = false,
-): Promise<DockerApiResponse> => {
+type DockerRequest = {
+    useTls: boolean
+    options: {
+        hostname: string
+        port: number | undefined
+        path: string
+        method: string
+        socketPath: string | undefined
+        headers: { [key: string]: string }
+    }
+}
+
+// Shared by dockerApiCall and dockerGetContainerLogs so both reach the daemon the same way
+const buildDockerRequest = (method: string, path: string): DockerRequest => {
     const protocol = process.env.DOCKER_API_PROTOCOL ?? 'https'
     const host = process.env.DOCKER_API_HOST ?? 'localhost'
     const port = process.env.DOCKER_API_PORT ?? 443
@@ -133,14 +224,7 @@ export const dockerApiCall = async (
     path = path.startsWith('/') ? path : `/${path}`
     const url = new URL(`${protocol}://${host}:${port}/${apiVersion}${path}`)
     console.log(`Connecting to docker Engine API: ${url.toString()}`)
-    const options: {
-        hostname: string
-        port: number | undefined
-        path: string
-        method: string
-        socketPath: string | undefined
-        headers: { [key: string]: string }
-    } = {
+    const options: DockerRequest['options'] = {
         hostname: url.hostname,
         port: url.port ? parseInt(url.port, 10) : 443,
         path: url.pathname + url.search,
@@ -148,27 +232,70 @@ export const dockerApiCall = async (
         socketPath: undefined,
         headers: {
             'Content-Type': 'application/json',
-            'X-Registry-Auth': process.env.DOCKER_REGISTRY_AUTH ?? '',
         },
     }
-    let msg: string = ''
-    const canReadDockerSock = hasReadPermissions(socketPath, (error: Error | null) => {
-        if (error) {
-            msg = `Error Accessing file ${socketPath}. Cause: ${JSON.stringify(error)}`
-        } else {
-            msg = `The Docker socket was found with sufficient permissions at: ${socketPath}`
-        }
-    })
-    if (canReadDockerSock) {
-        options.socketPath = socketPath
+    const { useSocket, useTls, sendRegistryAuth } = resolveDockerTransport(socketPath, protocol, path)
+    if (sendRegistryAuth) {
+        options.headers['X-Registry-Auth'] = process.env.DOCKER_REGISTRY_AUTH ?? ''
     }
-    console.log(`${msg}`)
+    if (useSocket) {
+        options.socketPath = socketPath
+        console.log(`Using the Docker socket at ${socketPath}`)
+    } else {
+        console.log(`Docker socket at ${socketPath} is not readable, falling back to TCP`)
+    }
+    return { useTls, options }
+}
+
+// Reads a response body as bytes, for endpoints that do not return JSON
+const readRawResponse = (transport: typeof http | typeof https, options: object): Promise<Buffer> =>
+    new Promise((resolve, reject) => {
+        const req = transport.request(options, (response) => {
+            if ((response.statusCode ?? 500) >= 400) {
+                response.resume()
+                reject(new Error(`Log request failed with ${response.statusCode}`))
+                return
+            }
+            const chunks: Buffer[] = []
+            let total = 0
+            response.on('data', (chunk: Buffer) => {
+                if (total + chunk.length >= MAX_LOG_BYTES) {
+                    console.warn(`Log response exceeded ${MAX_LOG_BYTES} bytes, truncating`)
+                    chunks.push(chunk.subarray(0, MAX_LOG_BYTES - total))
+                    response.destroy()
+                    resolve(Buffer.concat(chunks))
+                    return
+                }
+                total += chunk.length
+                chunks.push(chunk)
+            })
+            response.on('error', reject)
+            response.on('end', () => resolve(Buffer.concat(chunks)))
+        })
+        req.on('error', reject)
+        req.end()
+    })
+
+export const dockerGetContainerLogs = async (containerId: string): Promise<LogEntry[]> => {
+    const query = `stdout=1&stderr=1&timestamps=1&tail=${MAX_LOG_LINES}`
+    const { useTls, options } = buildDockerRequest('GET', `containers/${containerId}/logs?${query}`)
+    const stream = await readRawResponse(useTls ? https : http, options)
+    return parseTimestampedLogLines(demultiplexDockerLogStream(stream))
+}
+
+export const dockerApiCall = async (
+    method: string,
+    path: string,
+    body?: unknown,
+    ignoreResponse: boolean = false,
+): Promise<DockerApiResponse> => {
+    const { useTls, options } = buildDockerRequest(method, path)
     if (method.toUpperCase() === 'POST' && body) {
         console.log(`Sending POST request to Docker API with body: ${JSON.stringify(body)}`)
         options.headers['Content-Length'] = Buffer.byteLength(JSON.stringify(body)).toString()
     }
     return new Promise((resolve, reject) => {
-        const req = (protocol === 'http' ? http : https).request(options, (response) => {
+        const req = (useTls ? https : http).request(options, (response) => {
             let data = ''
 
             response.on('data', (chunk) => {
@@ -202,12 +329,16 @@ export const dockerApiCall = async (
     })
 }
 
-export const k8sApiCall = (
-    group: string | undefined,
-    path: string,
-    method: string,
-    body?: unknown,
-): Promise<KubernetesApiResponse> => {
+type K8sOptions = {
+    hostname: string
+    port: number | undefined
+    path: string
+    method: string
+    headers: { [key: string]: string }
+}
+
+// Shared by k8sApiCall and k8sGetPodLogs
+const buildK8sRequest = (group: string | undefined, path: string, method: string): K8sOptions => {
     const namespace = getNamespace()
     const kubeAPIServer = process.env.K8S_APISERVER || `https://kubernetes.default.svc.cluster.local`
     const apiPrefix = group === undefined ? 'api' : `apis/${group}`
@@ -216,13 +347,7 @@ export const k8sApiCall = (
     initHTTPSTrustStore()
     console.log(`K8s: Making ${method} => ${kubeAPIServerURL}`)
     const url = new URL(kubeAPIServerURL)
-    const options: {
-        hostname: string
-        port: number | undefined
-        path: string
-        method: string
-        headers: { [key: string]: string }
-    } = {
+    return {
         hostname: url.hostname,
         port: url.port ? parseInt(url.port, 10) : 443,
         path: url.pathname + url.search,
@@ -232,6 +357,22 @@ export const k8sApiCall = (
             Authorization: `Bearer ${kubeAPIServerAccountToken}`,
         },
     }
+}
+
+export const k8sGetPodLogs = async (podName: string, containerName: string): Promise<LogEntry[]> => {
+    const query = `container=${containerName}&timestamps=true&tailLines=${MAX_LOG_LINES}`
+    const options = buildK8sRequest(undefined, `pods/${podName}/log?${query}`, 'GET')
+    const body = await readRawResponse(https, options)
+    return parseTimestampedLogLines(body.toString('utf8'))
+}
+
+export const k8sApiCall = (
+    group: string | undefined,
+    path: string,
+    method: string,
+    body?: unknown,
+): Promise<KubernetesApiResponse> => {
+    const options = buildK8sRequest(group, path, method)
 
     if (method.toUpperCase() === 'POST' && body) {
         options.headers['Content-Length'] = Buffer.byteLength(JSON.stringify(body)).toString()
@@ -247,9 +388,10 @@ export const k8sApiCall = (
 
             response.on('end', () => {
                 try {
-                    resolve(JSON.parse(data))
+                    // Fail closed if node somehow gave us no status
+                    resolve(parseK8sResponse(response.statusCode ?? 500, data))
                 } catch (error: unknown) {
-                    reject(new Error(`Failed to parse JSON: ${JSON.stringify(error)}`))
+                    reject(error)
                 }
             })
         })
