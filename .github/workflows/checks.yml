@@ -38,6 +38,8 @@ jobs:
                   severity: 'HIGH,CRITICAL'
                   exit-code: '1'
             - name: Run SonarQube SAST Scan
+              # Fork PRs don't get repo secrets, so Sonar can't reach the server
+              if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
               uses: SonarSource/sonarqube-scan-action@v6
               env:
                   SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
