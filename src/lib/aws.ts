@@ -100,6 +100,7 @@ export async function registerECSTaskDefinition(
         cpu: baseTaskDefinition.cpu,
         memory: baseTaskDefinition.memory,
         requiresCompatibilities: baseTaskDefinition.requiresCompatibilities,
+        volumes: baseTaskDefinition.volumes,
         tags: tags,
     })
     const result = await client.send(command)
