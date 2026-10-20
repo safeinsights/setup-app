@@ -1,0 +1,3 @@
+# A team owner is not satisfied by the author's own membership, so every PR needs a second
+# shotter-devs member. Not all-devs: it contains bot accounts. See OTTER-681.
+* @safeinsights/shotter-devs
