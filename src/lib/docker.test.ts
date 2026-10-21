@@ -73,6 +73,20 @@ describe('docker', () => {
             },
         })
     })
+    it('createContainerObject: forwards env vars named in RESEARCH_CONTAINER_ENV, skipping unset and blank names', () => {
+        process.env.RESEARCH_CONTAINER_ENV = ' AWS_ACCESS_KEY_ID,, NOT_SET_ANYWHERE , HIGHLIGHTS_S3_BUCKET_PREFIX'
+        process.env.AWS_ACCESS_KEY_ID = 'AKIAEXAMPLE'
+        process.env.HIGHLIGHTS_S3_BUCKET_PREFIX = '/tutor/v2/'
+        delete process.env.NOT_SET_ANYWHERE
+
+        const container = createContainerObject('my-image', '1234567890', 'My Study Title', 'https://toa/api/job/1')
+
+        expect(container.Env).toEqual([
+            'TRUSTED_OUTPUT_ENDPOINT=https://toa/api/job/1',
+            'AWS_ACCESS_KEY_ID=AKIAEXAMPLE',
+            'HIGHLIGHTS_S3_BUCKET_PREFIX=/tutor/v2/',
+        ])
+    })
     it('filterContainers: filters containers by state and labels', () => {
         const containers: DockerApiContainersResponse[] = [
             {

@@ -63,6 +63,7 @@ To start the Setup app using Docker, the following environment variables must be
 - `DOCKER_API_PROTOCOL`: `http` or `https`, defaulting to `https`. Only applies to TCP; socket connections are always plain HTTP, which is what the daemon speaks there.
 - `DOCKER_API_ALLOW_INSECURE_HTTP`: Set to `true` to permit plaintext TCP. Without it, an `http` TCP connection is refused rather than sending traffic in the clear. Registry credentials are withheld on plaintext TCP either way.
 - `DOCKER_API_VERSION`: Specifies the version of the Docker Engine API to use when building URLs for REST requests.
+- `RESEARCH_CONTAINER_ENV`: Comma-separated names of setup-app environment variables to copy into each research container (for example AWS credentials and `HIGHLIGHTS_*` data locations), the Docker counterpart of the `BQ_*` forwarding in Kubernetes mode. Unset names are skipped.
 - `DOCKER_REGISTRY_AUTH`: A base64-encoded value used to authenticate against private registries. More details could be found [here](https://docs.docker.com/reference/api/engine/version/v1.48/#section/Authentication). Sent only when pulling an image, since the daemon forwards it to whatever registry the image location resolves to.
 
 #### Reaching the Docker Engine API over TCP (Development)
@@ -111,6 +112,13 @@ TOKEN=$(aws ecr get-authorization-token --output text --query 'authorizationData
 ```
 
 This command retrieves an authorization token that can be used to authenticate with private Docker registries.
+
+### Local enclave stack
+
+The [experiments](https://github.com/safeinsights/experiments) repo's `local-enclave/` runs this app
+in DOCKER mode together with the trusted-output-app and a stand-in for the management app, from
+sibling checkouts; `RESEARCH_CONTAINER_ENV` is what lets it hand research containers the data
+variables.
 
 ### Usage
 
