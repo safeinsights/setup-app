@@ -56,4 +56,11 @@ describe('poll', () => {
 
         expect(runStudiesModule.runStudies).toHaveBeenCalledTimes(2)
     })
+
+    it('fails at startup on an invalid research Job config', async () => {
+        process.env.DEPLOYMENT_ENVIRONMENT = 'KUBERNETES'
+        process.env.RESEARCH_CONTAINER_RESOURCES = 'not json'
+
+        await expect(import('./poll')).rejects.toThrow('RESEARCH_CONTAINER_RESOURCES is not valid JSON')
+    })
 })

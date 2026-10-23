@@ -33,6 +33,42 @@ function initHTTPSTrustStore(): void {
     /* v8 ignore end */
 }
 
+type ResearchJobConfig = {
+    resources?: Record<string, unknown>
+    activeDeadlineSeconds?: number
+}
+
+// Optional research Job sizing from RESEARCH_CONTAINER_RESOURCES (JSON of a Kubernetes container
+// `resources` block) and RESEARCH_CONTAINER_TIMEOUT_SECONDS. Throws on malformed values; poll.ts calls
+// this at startup so a bad config fails the deploy instead of every study.
+function getResearchJobConfig(): ResearchJobConfig {
+    const config: ResearchJobConfig = {}
+
+    const resources = process.env.RESEARCH_CONTAINER_RESOURCES
+    if (resources) {
+        let parsed: unknown
+        try {
+            parsed = JSON.parse(resources)
+        } catch {
+            throw new Error('RESEARCH_CONTAINER_RESOURCES is not valid JSON')
+        }
+        if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+            throw new Error('RESEARCH_CONTAINER_RESOURCES must be a JSON object')
+        }
+        config.resources = parsed as Record<string, unknown>
+    }
+
+    const timeout = process.env.RESEARCH_CONTAINER_TIMEOUT_SECONDS
+    if (timeout) {
+        if (!/^[1-9]\d*$/.test(timeout)) {
+            throw new Error('RESEARCH_CONTAINER_TIMEOUT_SECONDS must be a positive integer')
+        }
+        config.activeDeadlineSeconds = parseInt(timeout)
+    }
+
+    return config
+}
+
 function createKubernetesJob(imageLocation: string, jobId: string, studyTitle: string, toaEndpointWithJobId: string) {
     const name = `research-container-${jobId}`
     studyTitle = sanitize(studyTitle.toLowerCase())
@@ -51,6 +87,8 @@ function createKubernetesJob(imageLocation: string, jobId: string, studyTitle: s
         }
     }
 
+    const { resources, activeDeadlineSeconds } = getResearchJobConfig()
+
     const podSpec: Record<string, unknown> = {
         containers: [
             {
@@ -58,6 +96,7 @@ function createKubernetesJob(imageLocation: string, jobId: string, studyTitle: s
                 image: imageLocation,
                 ports: [],
                 env: containerEnv,
+                ...(resources && { resources }),
             },
         ],
         restartPolicy: 'Never',
@@ -68,6 +107,12 @@ function createKubernetesJob(imageLocation: string, jobId: string, studyTitle: s
     // (and only so) the research container can read BigQuery. Omitted when unset (AWS path).
     if (process.env.RESEARCH_SERVICE_ACCOUNT) {
         podSpec.serviceAccountName = process.env.RESEARCH_SERVICE_ACCOUNT
+    }
+
+    // Pod-level, not Job-level: a Job deadline deletes the pod, so checkForErroredJobs would
+    // never see the failure. A pod deadline leaves a Failed pod (exit 137) that it reports.
+    if (activeDeadlineSeconds) {
+        podSpec.activeDeadlineSeconds = activeDeadlineSeconds
     }
 
     const deployment = {
@@ -85,6 +130,12 @@ function createKubernetesJob(imageLocation: string, jobId: string, studyTitle: s
             },
         },
         spec: {
+            // setup-app reports the first failed pod as JOB-ERRORED and deletes the Job, so
+            // retries would only race that. Evictions (e.g. node upgrades) still get a new pod.
+            backoffLimit: 0,
+            podFailurePolicy: {
+                rules: [{ action: 'Ignore', onPodConditions: [{ type: 'DisruptionTarget' }] }],
+            },
             template: {
                 metadata: {
                     labels: {
@@ -116,4 +167,11 @@ function filterDeployments(
     return []
 }
 
-export { createKubernetesJob, filterDeployments, getKubeAPIServiceAccountToken, getNamespace, initHTTPSTrustStore }
+export {
+    createKubernetesJob,
+    filterDeployments,
+    getKubeAPIServiceAccountToken,
+    getNamespace,
+    getResearchJobConfig,
+    initHTTPSTrustStore,
+}
