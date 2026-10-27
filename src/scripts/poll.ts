@@ -1,6 +1,11 @@
 import { checkForErroredJobs } from '../lib/check-jobs'
 import { runStudies } from '../lib/run-studies'
 import { createResilientCycle } from '../lib/poller'
+import { getResearchJobConfig } from '../lib/kube'
+
+if (process.env.DEPLOYMENT_ENVIRONMENT === 'KUBERNETES') {
+    getResearchJobConfig()
+}
 
 const pollStudiesInterval = parseInt(process.env.POLL_STUDIES_INTERVAL_SECONDS ?? '30')
 const pollForErroredJobsInterval = parseInt(process.env.POLL_ERRORED_JOBS_INTERVAL_SECONDS ?? '60')
