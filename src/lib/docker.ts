@@ -24,6 +24,20 @@ function createContainerObject(
     const name = `research-container-${jobId}`
     studyTitle = sanitize(studyTitle.toLowerCase())
     console.log(`Creating Docker container job: ${name}`)
+    // Research container env: always the TOA endpoint, plus any setup-app env vars named in
+    // RESEARCH_CONTAINER_ENV (comma-separated), the Docker-mode counterpart of the BQ_* forwarding
+    // in kube.ts. Unset names are skipped so a stale list cannot inject empty values.
+    const env = [`TRUSTED_OUTPUT_ENDPOINT=${toaEndpointWithjobId}`]
+    const forwarded = (process.env.RESEARCH_CONTAINER_ENV ?? '')
+        .split(',')
+        .map((envName) => envName.trim())
+        .filter(Boolean)
+    for (const envName of forwarded) {
+        const value = process.env[envName]
+        if (value) {
+            env.push(`${envName}=${value}`)
+        }
+    }
     const container: {
         Image: string
         Labels: { [key: string]: string }
@@ -38,7 +52,7 @@ function createContainerObject(
             instance: jobId,
             'managed-by': CONTAINER_TYPES.SETUP_APP,
         },
-        Env: [`TRUSTED_OUTPUT_ENDPOINT=${toaEndpointWithjobId}`],
+        Env: env,
     }
 
     if (network) {
