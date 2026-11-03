@@ -215,6 +215,10 @@ describe('KubernetesEnclave', () => {
                 },
             },
             spec: {
+                backoffLimit: 0,
+                podFailurePolicy: {
+                    rules: [{ action: 'Ignore', onPodConditions: [{ type: 'DisruptionTarget' }] }],
+                },
                 template: {
                     metadata: {
                         labels: {

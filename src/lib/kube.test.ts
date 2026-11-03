@@ -7,6 +7,7 @@ import {
     filterDeployments,
     getKubeAPIServiceAccountToken,
     getNamespace,
+    getResearchJobConfig,
     initHTTPSTrustStore,
 } from './kube'
 import { CONTAINER_TYPES, KubernetesJob } from './types'
@@ -83,6 +84,10 @@ describe('Get Service Account items', () => {
                 },
             },
             spec: {
+                backoffLimit: 0,
+                podFailurePolicy: {
+                    rules: [{ action: 'Ignore', onPodConditions: [{ type: 'DisruptionTarget' }] }],
+                },
                 template: {
                     metadata: {
                         labels: {
@@ -147,6 +152,46 @@ describe('Get Service Account items', () => {
 
         expect(podSpec.serviceAccountName).toBeUndefined()
         expect(podSpec.containers[0].env).toEqual([{ name: 'TRUSTED_OUTPUT_ENDPOINT', value: 'https://toa/42' }])
+    })
+
+    it('createKubernetesJob: applies configured resources and pod-level timeout', () => {
+        process.env.RESEARCH_CONTAINER_RESOURCES = JSON.stringify({
+            requests: { cpu: '10', memory: '64Gi' },
+            limits: { memory: '64Gi' },
+        })
+        process.env.RESEARCH_CONTAINER_TIMEOUT_SECONDS = '86400'
+
+        const job = createKubernetesJob('my-image', '42', 'Study', 'https://toa/42')
+        const podSpec = job.spec.template.spec as {
+            activeDeadlineSeconds?: number
+            containers: Array<{ resources?: unknown }>
+        }
+
+        expect(podSpec.activeDeadlineSeconds).toBe(86400)
+        expect(podSpec.containers[0].resources).toEqual({
+            requests: { cpu: '10', memory: '64Gi' },
+            limits: { memory: '64Gi' },
+        })
+        expect(job.spec).not.toHaveProperty('activeDeadlineSeconds')
+    })
+
+    it('getResearchJobConfig: returns nothing when unset', () => {
+        expect(getResearchJobConfig()).toEqual({})
+    })
+
+    it('getResearchJobConfig: rejects invalid JSON', () => {
+        process.env.RESEARCH_CONTAINER_RESOURCES = '{requests:'
+        expect(() => getResearchJobConfig()).toThrow('RESEARCH_CONTAINER_RESOURCES is not valid JSON')
+    })
+
+    it.each(['[]', 'null', '"64Gi"'])('getResearchJobConfig: rejects non-object resources %s', (value) => {
+        process.env.RESEARCH_CONTAINER_RESOURCES = value
+        expect(() => getResearchJobConfig()).toThrow('RESEARCH_CONTAINER_RESOURCES must be a JSON object')
+    })
+
+    it.each(['0', '-5', '1.5', '1h', '01'])('getResearchJobConfig: rejects timeout %s', (value) => {
+        process.env.RESEARCH_CONTAINER_TIMEOUT_SECONDS = value
+        expect(() => getResearchJobConfig()).toThrow('RESEARCH_CONTAINER_TIMEOUT_SECONDS must be a positive integer')
     })
 
     it('filterDeployments: filters deployments by labels', () => {
