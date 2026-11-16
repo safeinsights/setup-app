@@ -399,8 +399,8 @@ describe('DockerEnclave', () => {
                 Dead: true,
                 StartedAt: '',
                 FinishedAt: '',
-                ExitCode: 10,
-                Error: 'error',
+                ExitCode: 1,
+                Error: '',
             },
         }
         const testLogs = [{ timestamp: 42, message: 'boom' }]
@@ -420,7 +420,7 @@ describe('DockerEnclave', () => {
 
             expect(api.toaUpdateJobStatus).toHaveBeenCalledWith('1234567890', {
                 status: 'JOB-ERRORED',
-                message: 'Container 1234567890 exited with message: error',
+                message: 'Container 1234567890 exited with code 1',
             })
             expect(api.toaSendLogs).toHaveBeenCalledWith('1234567890', testLogs)
             expect(api.dockerApiCall).toHaveBeenCalledWith('DELETE', 'containers/1234567890')
@@ -453,10 +453,90 @@ describe('DockerEnclave', () => {
 
             expect(api.toaUpdateJobStatus).toHaveBeenCalledWith('1234567890', {
                 status: 'JOB-ERRORED',
-                message: 'Container 1234567890 exited with message: error',
+                message: 'Container 1234567890 exited with code 1',
             })
             expect(api.toaSendLogs).not.toHaveBeenCalled()
             expect(api.dockerApiCall).toHaveBeenCalledWith('DELETE', 'containers/1234567890')
+        })
+
+        it('appends the Docker error when one is set', async () => {
+            vi.mocked(api.dockerApiCall)
+                .mockReset()
+                .mockResolvedValueOnce([failedContainer])
+                .mockResolvedValueOnce({
+                    ...detailedContainerStatus,
+                    State: {
+                        ...detailedContainerStatus.State,
+                        ExitCode: 127,
+                        Error: 'exec: "python": executable file not found in $PATH',
+                    },
+                })
+            vi.mocked(api.managementAppGetJobStatus).mockResolvedValue({ status: 'JOB-RUNNING' })
+
+            await new DockerEnclave().checkForErroredJobs()
+
+            expect(api.toaUpdateJobStatus).toHaveBeenCalledWith('1234567890', {
+                status: 'JOB-ERRORED',
+                message:
+                    'Container 1234567890 exited with code 127: exec: "python": executable file not found in $PATH',
+            })
+        })
+
+        it('notes when the container was OOM killed', async () => {
+            vi.mocked(api.dockerApiCall)
+                .mockReset()
+                .mockResolvedValueOnce([failedContainer])
+                .mockResolvedValueOnce({
+                    ...detailedContainerStatus,
+                    State: { ...detailedContainerStatus.State, ExitCode: 137, OOMKilled: true, Error: '' },
+                })
+            vi.mocked(api.managementAppGetJobStatus).mockResolvedValue({ status: 'JOB-RUNNING' })
+
+            await new DockerEnclave().checkForErroredJobs()
+
+            expect(api.toaUpdateJobStatus).toHaveBeenCalledWith('1234567890', {
+                status: 'JOB-ERRORED',
+                message: 'Container 1234567890 exited with code 137 (OOM killed)',
+            })
+        })
+
+        it('puts the OOM-killed note before the Docker error', async () => {
+            vi.mocked(api.dockerApiCall)
+                .mockReset()
+                .mockResolvedValueOnce([failedContainer])
+                .mockResolvedValueOnce({
+                    ...detailedContainerStatus,
+                    State: {
+                        ...detailedContainerStatus.State,
+                        ExitCode: 137,
+                        OOMKilled: true,
+                        Error: 'some docker error',
+                    },
+                })
+            vi.mocked(api.managementAppGetJobStatus).mockResolvedValue({ status: 'JOB-RUNNING' })
+
+            await new DockerEnclave().checkForErroredJobs()
+
+            expect(api.toaUpdateJobStatus).toHaveBeenCalledWith('1234567890', {
+                status: 'JOB-ERRORED',
+                message: 'Container 1234567890 exited with code 137 (OOM killed): some docker error',
+            })
+        })
+
+        it('reports an unknown exit code when Docker does not give one', async () => {
+            const { ExitCode, ...stateWithoutExitCode } = detailedContainerStatus.State
+            vi.mocked(api.dockerApiCall)
+                .mockReset()
+                .mockResolvedValueOnce([failedContainer])
+                .mockResolvedValueOnce({ ...detailedContainerStatus, State: stateWithoutExitCode })
+            vi.mocked(api.managementAppGetJobStatus).mockResolvedValue({ status: 'JOB-RUNNING' })
+
+            await new DockerEnclave().checkForErroredJobs()
+
+            expect(api.toaUpdateJobStatus).toHaveBeenCalledWith('1234567890', {
+                status: 'JOB-ERRORED',
+                message: 'Container 1234567890 exited with code unknown',
+            })
         })
     })
 })
