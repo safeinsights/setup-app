@@ -151,7 +151,11 @@ class DockerEnclave extends Enclave<DockerApiContainersResponse> implements IEnc
                         continue
                     }
 
-                    const errorMsg = `Container ${container.Id} exited with message: ${containerExitResult.State.Error}`
+                    const { ExitCode, OOMKilled, Error: stateError } = containerExitResult.State
+                    const errorMsg =
+                        `Container ${container.Id} exited with code ${ExitCode ?? 'unknown'}` +
+                        (OOMKilled ? ' (OOM killed)' : '') +
+                        (stateError ? `: ${stateError}` : '')
                     console.log(errorMsg)
                     await toaUpdateJobStatus(jobId, { status: 'JOB-ERRORED', message: errorMsg })
 
