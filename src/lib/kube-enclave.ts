@@ -144,11 +144,10 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
             /* v8 ignore start */
             if (containers && containers.length > 0) {
                 for (const c of containers) {
-                    if (
-                        c.status?.containerStatuses?.some(
-                            (d) => 'terminated' in d.state && d.state['terminated'].exitCode !== 0,
-                        )
-                    ) {
+                    const failedStatus = c.status?.containerStatuses?.find(
+                        (d) => 'terminated' in d.state && d.state['terminated'].exitCode !== 0,
+                    )
+                    if (failedStatus) {
                         /* v8 ignore stop */
                         try {
                             const jobId = c.metadata?.labels?.instance.toString()
@@ -162,7 +161,16 @@ class KubernetesEnclave extends Enclave<KubernetesJob> implements IEnclave<Kuber
                                 continue
                             }
 
-                            const errorMsg = `Container ${c.metadata.name} exited with non 0 error code`
+                            // terminated.message is left out on purpose: the research container writes it,
+                            // so it would bypass log review on its way to the BMA.
+                            const { exitCode, reason } = failedStatus.state['terminated']
+                            let reasonSuffix = ''
+                            if (reason === 'OOMKilled') {
+                                reasonSuffix = ' (OOM killed)'
+                            } else if (reason && reason !== 'Error') {
+                                reasonSuffix = ` (${reason})`
+                            }
+                            const errorMsg = `Container ${c.metadata.name} exited with code ${exitCode ?? 'unknown'}${reasonSuffix}`
                             console.log(errorMsg)
                             await toaUpdateJobStatus(jobId, { status: 'JOB-ERRORED', message: errorMsg })
 

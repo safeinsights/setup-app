@@ -586,7 +586,7 @@ describe('KubernetesEnclave', () => {
         const job = {
             metadata: { name: 'job-1', namespace: 'ns', labels: researchLabels },
         } as unknown as KubernetesJob
-        const podWithExitCode = (exitCode: number) =>
+        const podWithExitCode = (exitCode?: number, reason?: string) =>
             ({
                 metadata: {
                     name: 'pod-1',
@@ -594,14 +594,14 @@ describe('KubernetesEnclave', () => {
                     labels: { ...researchLabels, 'job-name': 'job-1' },
                 },
                 status: {
-                    containerStatuses: [{ ready: false, started: false, state: { terminated: { exitCode } } }],
+                    containerStatuses: [{ ready: false, started: false, state: { terminated: { exitCode, reason } } }],
                 },
             }) as unknown as KubernetesPod
         const testLogs = [{ timestamp: 42, message: 'boom' }]
 
-        const setUp = (enclave: KubernetesEnclave, exitCode: number) => {
+        const setUp = (enclave: KubernetesEnclave, exitCode?: number, reason?: string) => {
             vi.spyOn(enclave, 'getAllStudiesInEnclave').mockResolvedValue([job])
-            vi.mocked(api.k8sApiCall).mockResolvedValue({ items: [podWithExitCode(exitCode)] })
+            vi.mocked(api.k8sApiCall).mockResolvedValue({ items: [podWithExitCode(exitCode, reason)] })
             vi.mocked(api.k8sGetPodLogs).mockResolvedValue(testLogs)
         }
 
@@ -614,12 +614,50 @@ describe('KubernetesEnclave', () => {
 
             expect(api.toaUpdateJobStatus).toHaveBeenCalledWith('1234567890', {
                 status: 'JOB-ERRORED',
-                message: 'Container pod-1 exited with non 0 error code',
+                message: 'Container pod-1 exited with code 1',
             })
             expect(api.k8sGetPodLogs).toHaveBeenCalledWith('pod-1', 'research-container-1234567890')
             expect(api.toaSendLogs).toHaveBeenCalledWith('1234567890', testLogs)
             expect(api.k8sApiCall).toHaveBeenCalledWith(undefined, 'pods/pod-1', 'DELETE')
             expect(api.k8sApiCall).toHaveBeenCalledWith('batch', 'jobs/job-1', 'DELETE')
+        })
+
+        it.each([
+            {
+                name: 'leaves out the generic Error reason',
+                exitCode: 1,
+                reason: 'Error',
+                expected: 'exited with code 1',
+            },
+            {
+                name: 'shows OOMKilled the same way as Docker mode',
+                exitCode: 137,
+                reason: 'OOMKilled',
+                expected: 'exited with code 137 (OOM killed)',
+            },
+            {
+                name: 'shows any other reason as-is',
+                exitCode: 128,
+                reason: 'ContainerCannotRun',
+                expected: 'exited with code 128 (ContainerCannotRun)',
+            },
+            {
+                name: 'falls back to unknown when the exit code is missing',
+                exitCode: undefined,
+                reason: undefined,
+                expected: 'exited with code unknown',
+            },
+        ])('$name', async ({ exitCode, reason, expected }) => {
+            const enclave = new KubernetesEnclave()
+            setUp(enclave, exitCode, reason)
+            vi.mocked(api.managementAppGetJobStatus).mockResolvedValue({ status: 'JOB-RUNNING' })
+            const log = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+            await enclave.checkForErroredJobs()
+
+            const message = `Container pod-1 ${expected}`
+            expect(api.toaUpdateJobStatus).toHaveBeenCalledWith('1234567890', { status: 'JOB-ERRORED', message })
+            expect(log).toHaveBeenCalledWith(message)
         })
 
         it('does not report a container that exited cleanly', async () => {
