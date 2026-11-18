@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
-import { checkForAWSErroredJobs } from './aws-check-jobs'
+import { checkForAWSErroredJobs, LOG_DELIVERY_GRACE_MS } from './aws-check-jobs'
 import * as api from './api'
 import * as aws from './aws'
 import { ECSClient, TaskStopCode } from '@aws-sdk/client-ecs'
@@ -221,6 +221,117 @@ describe('checkForErroredJobs()', () => {
         expect(vi.mocked(api.toaSendLogs)).toHaveBeenCalledOnce()
         expect(vi.mocked(api.toaSendLogs)).toHaveBeenCalledWith('jobId2', testLogs)
         expect(vi.mocked(aws.deleteECSTaskDefinitions)).toHaveBeenCalledOnce()
+    })
+    describe('when CloudWatch has no logs for a failed task yet', () => {
+        const stoppedTask = (stoppedAt: Date) => ({
+            containers: [{ exitCode: 1 }],
+            stopCode: TaskStopCode.ESSENTIAL_CONTAINER_EXITED,
+            tags: [{ key: aws.JOB_ID_TAG_KEY, value: 'jobId1' }],
+            taskArn: 'arn:aws:ecs:us-east-1:123:task/cluster/task1',
+            stoppedAt,
+        })
+
+        beforeEach(() => {
+            vi.mocked(aws.getAllTasksWithJobId).mockResolvedValue([{ ResourceARN: 'arn1' }])
+            vi.mocked(api.managementAppGetJobStatus).mockResolvedValue({ status: 'JOB-RUNNING' })
+        })
+
+        it('waits for the next poll instead of marking the job errored', async () => {
+            vi.mocked(aws.describeECSTasks).mockResolvedValue({
+                tasks: [stoppedTask(new Date(Date.now() - 30 * 1000))],
+                $metadata: {},
+            })
+            vi.mocked(aws.getLogsForTask).mockResolvedValue([])
+
+            await checkForAWSErroredJobs()
+
+            expect(vi.mocked(aws.getLogsForTask)).toHaveBeenCalledWith('task1', 'jobId1')
+            expect(vi.mocked(api.toaUpdateJobStatus)).not.toHaveBeenCalled()
+            expect(vi.mocked(api.toaSendLogs)).not.toHaveBeenCalled()
+        })
+
+        it('marks the job errored and sends the logs once they show up', async () => {
+            const testLogs = [{ timestamp: 42, message: 'Error in main.R' }]
+            vi.mocked(aws.describeECSTasks).mockResolvedValue({
+                tasks: [stoppedTask(new Date(Date.now() - 90 * 1000))],
+                $metadata: {},
+            })
+            vi.mocked(aws.getLogsForTask).mockResolvedValue(testLogs)
+
+            await checkForAWSErroredJobs()
+
+            expect(vi.mocked(api.toaUpdateJobStatus)).toHaveBeenCalledWith('jobId1', {
+                status: 'JOB-ERRORED',
+                message: 'Task container stopped with non-zero exit code',
+            })
+            expect(vi.mocked(api.toaSendLogs)).toHaveBeenCalledWith('jobId1', testLogs)
+        })
+
+        it('still marks the job errored when sending the logs fails', async () => {
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+            vi.mocked(aws.describeECSTasks).mockResolvedValue({
+                tasks: [stoppedTask(new Date(Date.now() - 90 * 1000))],
+                $metadata: {},
+            })
+            vi.mocked(aws.getLogsForTask).mockResolvedValue([{ timestamp: 42, message: 'Error in main.R' }])
+            vi.mocked(api.toaSendLogs).mockRejectedValue(new Error('TOA unavailable'))
+
+            await expect(checkForAWSErroredJobs()).resolves.toBeUndefined()
+
+            expect(vi.mocked(api.toaUpdateJobStatus)).toHaveBeenCalledOnce()
+            expect(consoleErrorSpy).toHaveBeenCalledWith(
+                expect.stringContaining('Failed to send logs for job jobId1. Cause: Error: TOA unavailable'),
+            )
+        })
+
+        it('waits while the task is still stopping and has no stoppedAt yet', async () => {
+            vi.mocked(aws.describeECSTasks).mockResolvedValue({
+                tasks: [{ ...stoppedTask(new Date()), stoppedAt: undefined, lastStatus: 'DEPROVISIONING' }],
+                $metadata: {},
+            })
+            vi.mocked(aws.getLogsForTask).mockResolvedValue([])
+
+            await checkForAWSErroredJobs()
+
+            expect(vi.mocked(api.toaUpdateJobStatus)).not.toHaveBeenCalled()
+            expect(vi.mocked(api.toaSendLogs)).not.toHaveBeenCalled()
+        })
+
+        it('falls back to stoppingAt when stoppedAt is missing', async () => {
+            vi.mocked(aws.describeECSTasks).mockResolvedValue({
+                tasks: [
+                    {
+                        ...stoppedTask(new Date()),
+                        stoppedAt: undefined,
+                        stoppingAt: new Date(Date.now() - LOG_DELIVERY_GRACE_MS - 1000),
+                        lastStatus: 'DEPROVISIONING',
+                    },
+                ],
+                $metadata: {},
+            })
+            vi.mocked(aws.getLogsForTask).mockResolvedValue([])
+
+            await checkForAWSErroredJobs()
+
+            expect(vi.mocked(api.toaUpdateJobStatus)).toHaveBeenCalledOnce()
+            expect(vi.mocked(api.toaSendLogs)).toHaveBeenCalledWith('jobId1', [])
+        })
+
+        it('gives up waiting and marks the job errored with empty logs after the grace period', async () => {
+            vi.mocked(aws.describeECSTasks).mockResolvedValue({
+                tasks: [stoppedTask(new Date(Date.now() - LOG_DELIVERY_GRACE_MS - 1000))],
+                $metadata: {},
+            })
+            vi.mocked(aws.getLogsForTask).mockResolvedValue([])
+
+            await checkForAWSErroredJobs()
+
+            expect(vi.mocked(api.toaUpdateJobStatus)).toHaveBeenCalledWith('jobId1', {
+                status: 'JOB-ERRORED',
+                message: 'Task container stopped with non-zero exit code',
+            })
+            expect(vi.mocked(api.toaSendLogs)).toHaveBeenCalledWith('jobId1', [])
+        })
     })
     it('keeps going when a task has no jobId tag', async () => {
         const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})

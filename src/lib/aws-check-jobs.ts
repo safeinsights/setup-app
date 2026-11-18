@@ -11,11 +11,22 @@ import {
     getAllTasksWithJobId,
     getLogsForTask,
     JOB_ID_TAG_KEY,
+    type LogEntry,
 } from '../lib/aws'
 import { ensureValueWithError, filterOrphanTaskDefinitions, toManagementAppTagValue } from '../lib/utils'
-import { ECSClient, TaskStopCode } from '@aws-sdk/client-ecs'
+import { ECSClient, type Task, TaskStopCode } from '@aws-sdk/client-ecs'
 import { ResourceGroupsTaggingAPIClient } from '@aws-sdk/client-resource-groups-tagging-api'
 import 'dotenv/config'
+
+// CloudWatch can take a few minutes to make a stopped task's logs readable
+export const LOG_DELIVERY_GRACE_MS = 5 * 60 * 1000
+
+// ECS sets stopCode and exitCode while the task is still stopping, before stoppedAt is filled in
+function logsMayStillArrive(task: Task): boolean {
+    const stoppedAt = task.stoppedAt ?? task.executionStoppedAt ?? task.stoppingAt
+    if (stoppedAt === undefined) return task.lastStatus !== 'STOPPED'
+    return Date.now() - stoppedAt.getTime() < LOG_DELIVERY_GRACE_MS
+}
 
 async function cleanupTaskDefs(
     ecsClient: ECSClient,
@@ -111,17 +122,30 @@ async function reportErroredTasks(
                             continue
                         }
 
+                        let logs: LogEntry[] | undefined
+                        try {
+                            const taskId = ensureValueWithError(job.taskArn?.split('/').at(-1))
+                            logs = await getLogsForTask(taskId, jobId)
+                        } catch (error: unknown) {
+                            console.error(`Failed to get logs for job ${jobId}. Cause: ${error}`)
+                        }
+
+                        if (logs?.length === 0 && logsMayStillArrive(job)) {
+                            console.log(`No logs in CloudWatch yet for job ${jobId}, checking again next poll`)
+                            continue
+                        }
+
                         await toaUpdateJobStatus(jobId, {
                             status: 'JOB-ERRORED',
                             message: 'Task container stopped with non-zero exit code',
                         })
 
-                        try {
-                            const taskId = ensureValueWithError(job.taskArn?.split('/').at(-1))
-                            const logs = await getLogsForTask(taskId, jobId)
-                            await toaSendLogs(jobId, logs)
-                        } catch (error: unknown) {
-                            console.error(`Failed to send logs for job ${jobId}. Cause: ${error}`)
+                        if (logs) {
+                            try {
+                                await toaSendLogs(jobId, logs)
+                            } catch (error: unknown) {
+                                console.error(`Failed to send logs for job ${jobId}. Cause: ${error}`)
+                            }
                         }
                     }
                 }
