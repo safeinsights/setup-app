@@ -284,6 +284,39 @@ describe('checkForErroredJobs()', () => {
             )
         })
 
+        it('waits while the task is still stopping and has no stoppedAt yet', async () => {
+            vi.mocked(aws.describeECSTasks).mockResolvedValue({
+                tasks: [{ ...stoppedTask(new Date()), stoppedAt: undefined, lastStatus: 'DEPROVISIONING' }],
+                $metadata: {},
+            })
+            vi.mocked(aws.getLogsForTask).mockResolvedValue([])
+
+            await checkForAWSErroredJobs()
+
+            expect(vi.mocked(api.toaUpdateJobStatus)).not.toHaveBeenCalled()
+            expect(vi.mocked(api.toaSendLogs)).not.toHaveBeenCalled()
+        })
+
+        it('falls back to stoppingAt when stoppedAt is missing', async () => {
+            vi.mocked(aws.describeECSTasks).mockResolvedValue({
+                tasks: [
+                    {
+                        ...stoppedTask(new Date()),
+                        stoppedAt: undefined,
+                        stoppingAt: new Date(Date.now() - LOG_DELIVERY_GRACE_MS - 1000),
+                        lastStatus: 'DEPROVISIONING',
+                    },
+                ],
+                $metadata: {},
+            })
+            vi.mocked(aws.getLogsForTask).mockResolvedValue([])
+
+            await checkForAWSErroredJobs()
+
+            expect(vi.mocked(api.toaUpdateJobStatus)).toHaveBeenCalledOnce()
+            expect(vi.mocked(api.toaSendLogs)).toHaveBeenCalledWith('jobId1', [])
+        })
+
         it('gives up waiting and marks the job errored with empty logs after the grace period', async () => {
             vi.mocked(aws.describeECSTasks).mockResolvedValue({
                 tasks: [stoppedTask(new Date(Date.now() - LOG_DELIVERY_GRACE_MS - 1000))],
