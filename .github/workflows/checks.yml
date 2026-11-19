@@ -13,9 +13,9 @@ jobs:
         timeout-minutes: 60
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v6
-            - uses: pnpm/action-setup@v6
-            - uses: actions/setup-node@v6
+            - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+            - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+            - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
               with:
                   node-version: lts/*
                   cache: 'pnpm'
@@ -37,21 +37,15 @@ jobs:
                   scanners: 'license'
                   severity: 'HIGH,CRITICAL'
                   exit-code: '1'
-            - name: Run SonarQube SAST Scan
-              # Fork PRs don't get repo secrets, so Sonar can't reach the server
-              if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
-              uses: SonarSource/sonarqube-scan-action@v6
-              env:
-                  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-                  SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-            # If you wish to fail your job when the Quality Gate is red, uncomment the
-            # following lines. This would typically be used to fail a deployment.
-            # - name: Check SonarQube SAST Sca
-            #   uses: SonarSource/sonarqube-quality-gate-action@v1
-            #   timeout-minutes: 5
-            #   env:
-            #       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
             - name: Typecheck
               run: pnpm run typecheck
             - name: Tests
               run: pnpm run test
+
+    # SAST with Semgrep CE from ci-workflows; findings at ERROR fail the job. It needs no secret,
+    # so it also runs on fork PRs. `pull-requests: write` is only for the report comment.
+    semgrep:
+        permissions:
+            contents: read
+            pull-requests: write
+        uses: safeinsights/ci-workflows/.github/workflows/semgrep.yaml@1e3e7f0a9fd39fa71bccf5aaa7c802464071bc9c # v4.1.0
