@@ -1,7 +1,8 @@
 vulnerabilities:
-    # No fixed braces release exists (3.0.3 is latest); it is only reached via
-    # micromatch in dev tooling, never the production bundle. Re-check on expiry.
-    - id: CVE-2026-93687
+    # No fixed picomatch release exists (4.0.7 is latest) and the GHSA is withdrawn, but NVD still
+    # carries the CVE. Only lint and build tooling reaches it, with fixed globs, never user input.
+    # Re-check on expiry.
+    - id: CVE-2026-112366
       paths:
           - pnpm-lock.yaml
-      expired_at: 2026-11-05
+      expired_at: 2026-12-22
